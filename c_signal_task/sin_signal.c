@@ -48,6 +48,14 @@ static const int16_t sintbl[512]={
 -1608,-1206,-804,-402
 };
 
+
+short get_index_tbl_index(long step, short tbl_count){
+    short full_shift = 53;
+    long residue = 6128;
+    return (step*full_shift + step*residue/10000)%tbl_count;
+}
+
+
 void main()
 {
     long pt_num = 18*8000;
@@ -57,7 +65,7 @@ void main()
     //--> one step correspond to 53 in indexes
     short signal[pt_num];
     for(long i=0; i<pt_num; i++){
-        signal[i] = sintbl[(i*53)%512];
+        signal[i] = sintbl[get_index_tbl_index(i, 512)];
     }
 
     FILE* f;
