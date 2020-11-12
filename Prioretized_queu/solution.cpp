@@ -2,7 +2,8 @@
 #include <vector>
 #include <algorithm>
 #include <utility>
-#include <numeric>
+#include <unordered_map>
+#include <string>
 
 #define LEFT(I) 2*I+1
 #define RIGHT(I) 2*(I+1)
@@ -12,13 +13,11 @@ class PriorityQueu{
     /*
      * Takes vector as input so key of each element --> its index in vector*/
 private:
-    std::vector<size_t> pos_to_key_ = {}; 	//pos = idx in prior_queu, key = idx
-    std::vector<size_t> key_to_pos_ = {}; 	//key = idx, pos = idx in prior_queu
-    size_t next_key_ = {};
-    //key -> index in queu
-    //take (key + corresponding priority)
-    //Order keys according to priorities so can pop next one
-    //want const access to priority of given key
+    //TODO make key and priority - template paramters
+    //TODO check stuff for copying
+    //TODO write other methods which are now commented
+    std::unordered_map<size_t, std::string> pos_to_key_ = {}; 	//pos = idx in prior_queu, key = idx
+    std::unordered_map<std::string, size_t> key_to_pos_ = {}; 	//key = idx, pos = idx in prior_queu
     std::vector<int> prior_queu_ = {};
 
     size_t MaxHeapify(size_t idx){
@@ -30,7 +29,7 @@ private:
         size_t max_idx = right==prior_queu_.size() ? left : std::max(left, right, comp);
         if(prior_queu_[max_idx]<=prior_queu_[idx]){return idx;}
         std::swap(prior_queu_[idx], prior_queu_[max_idx]);
-        size_t swapped_key = pos_to_key_[max_idx];
+        std::string swapped_key = pos_to_key_[max_idx];
         key_to_pos_[swapped_key] = idx;
         std::swap(pos_to_key_[idx], pos_to_key_[max_idx]);
         return MaxHeapify(max_idx);
@@ -38,16 +37,18 @@ private:
 
     void BuildHeap(){
         for(size_t i=prior_queu_.size()/2+1; i!=0; i--){
-            key_to_pos_[i-1] = MaxHeapify(i-1);
+            std::string key = pos_to_key_[i-1];
+            key_to_pos_[key] = MaxHeapify(i-1);
         }
     }
 public:
     PriorityQueu() = default;
-    PriorityQueu(std::vector<int>&& priorities): prior_queu_(priorities){
-        key_to_pos_.resize(prior_queu_.size());
-        std::iota(key_to_pos_.begin(), key_to_pos_.end(), 0);
-        pos_to_key_.resize(prior_queu_.size());
-        std::iota(pos_to_key_.begin(), pos_to_key_.end(), 0);
+    PriorityQueu(std::vector<int>&& priorities, std::vector<std::string>&& keys)
+        : prior_queu_(priorities){
+        for(size_t i=0; i<prior_queu_.size(); i++){
+            key_to_pos_[keys[i]] = i;
+            pos_to_key_[i] = keys[i];
+        }
         BuildHeap();
     }
 
@@ -55,41 +56,36 @@ public:
         return std::is_heap(prior_queu_.begin(), prior_queu_.end());
     }
 
-    int GetVal(size_t key) const {
-        size_t pos = key_to_pos_[key];
+    int GetPriority(const std::string& key) const {
+        size_t pos = key_to_pos_.at(key);
         return prior_queu_[pos];
     }
-
-    bool Insert(size_t key, int priority){}
-    size_t Maximum() const {} //returns max priority element key
-    size_t PopMaximum(){} 	//returns and delete max priority key
+    /*
+    bool Insert(size_t key, int priority){ return true;}
+    size_t Maximum() const {return 0;} //returns max priority element key
+    size_t PopMaximum(){return 0;} 	//returns and delete max priority key
     void ChangePriority(size_t key, int new_priority){} 	//changes priority of element
-
+*/
     void PrintQueu() const {
         for(size_t i=0; i<key_to_pos_.size(); i++){
-            printf("P = %i;\tK = %zu\n", prior_queu_[i], pos_to_key_[i]);
+            printf("P = %i;\tK = %s\n", prior_queu_[i], pos_to_key_.at(i).c_str());
         }
     }
 };
 
 
 
-
-
-
 int main(){
-    std::vector<int> vec = {1,2,3,4,5,6,7,8,9,10};
-    PriorityQueu pq(std::move(vec));
+    std::vector<int> vec = {1,2,3,4,5,6,7};
+    std::vector<std::string> keys = {"one", "two", "three", "four", "five", "six", "seven"};
+    PriorityQueu pq(std::move(vec), std::move(keys));
 
     pq.PrintQueu();
 
-    for(size_t i=0; i<vec.size(); i++){
-        std::cout << "key = " << i << " --> " << pq.GetVal(i) << " ? " << i+1 << "\n";
+    for(const auto& el : keys){
+        printf("K = %s;\t P = %i\n", el.c_str(), pq.GetPriority(el));
     }
 
     std::cout << pq.CheckHeapity();
-
-
-
     return 0;
 }
