@@ -1,9 +1,11 @@
 ﻿#include <vector>
 #include <algorithm>
 #include <string>
+#include <random>
 
-#define CATCH_CONFIG_MAIN
+//#define CATCH_CONFIG_MAIN
 #include<catch2/catch.hpp>
+#include<benchmark/benchmark.h>
 
 #define LEFT(x) 2*x+1
 #define RIGHT(x) 2*x+2
@@ -79,7 +81,7 @@ int get_nth_quick(std::vector<int> vec, const size_t el_num){
 
 
 
-
+/*
 TEST_CASE("Heap itself test", "[heap]"){
     std::vector<int> tst = {12,54,7,213,9,0,12,6,95,124,1};
     build_heap(tst);
@@ -121,3 +123,112 @@ TEST_CASE("Quick sort nth", "[quick]"){
     CHECK(get_nth_quick(tst2, 10) == 3);
 
 }
+*/
+std::vector<int> generate_rnd(const size_t size, const size_t seed){
+    std::mt19937 rnd(seed);
+    std::uniform_int_distribution<int> dist_val(-500, 500);
+    std::vector<int> vec;
+    vec.reserve(size);
+    for(size_t i=0; i<size; i++){
+      vec.push_back(dist_val(rnd));
+    }
+    return vec;
+}
+
+//BENCHMARKS
+
+static void HeapNth_AVG(benchmark::State& state) {
+  std::vector<int> vec = generate_rnd(10000, 42);
+  std::mt19937 rnd(42u);
+  std::uniform_int_distribution<size_t> dist_idx(0, vec.size()-1);
+  for (auto _ : state) {
+    get_nth_heap(vec, dist_idx(rnd));
+  }
+}
+
+
+static void QuickNth_AVG(benchmark::State& state) {
+  std::vector<int> vec = generate_rnd(10000, 42);
+  std::mt19937 rnd(42u);
+  std::uniform_int_distribution<size_t> dist_idx(0, vec.size()-1);
+  for (auto _ : state) {
+    get_nth_quick(vec, dist_idx(rnd));
+  }
+}
+
+static void HeapNth_BEGIN(benchmark::State& state) {
+  std::vector<int> vec = generate_rnd(10000, 42);
+  std::mt19937 rnd(42u);
+  std::uniform_int_distribution<size_t> dist_idx(0, 100);
+  for (auto _ : state) {
+    get_nth_heap(vec, dist_idx(rnd));
+  }
+}
+
+
+static void QuickNth_BEGIN(benchmark::State& state) {
+  std::vector<int> vec = generate_rnd(10000, 42);
+  std::mt19937 rnd(42u);
+  std::uniform_int_distribution<size_t> dist_idx(0, 100);
+  for (auto _ : state) {
+    get_nth_quick(vec, dist_idx(rnd));
+  }
+}
+
+static void HeapNth_END(benchmark::State& state) {
+  std::vector<int> vec = generate_rnd(10000, 42);
+  std::mt19937 rnd(42u);
+  std::uniform_int_distribution<size_t> dist_idx(vec.size()-100, vec.size()-1);
+  for (auto _ : state) {
+    get_nth_heap(vec, dist_idx(rnd));
+  }
+}
+
+
+static void QuickNth_END(benchmark::State& state) {
+  std::vector<int> vec = generate_rnd(10000, 42);
+  std::mt19937 rnd(42u);
+  std::uniform_int_distribution<size_t> dist_idx(vec.size()-100, vec.size()-1);
+  for (auto _ : state) {
+    get_nth_quick(vec, dist_idx(rnd));
+  }
+}
+
+static void HeapNth_MID(benchmark::State& state) {
+  std::vector<int> vec = generate_rnd(10000, 42);
+  std::mt19937 rnd(42u);
+  std::uniform_int_distribution<size_t> dist_idx(vec.size()/2-50, vec.size()/2+50);
+  for (auto _ : state) {
+    get_nth_heap(vec, dist_idx(rnd));
+  }
+}
+
+
+static void QuickNth_MID(benchmark::State& state) {
+  std::vector<int> vec = generate_rnd(10000, 42);
+  std::mt19937 rnd(42u);
+  std::uniform_int_distribution<size_t> dist_idx(vec.size()/2-50, vec.size()/2+50);
+  for (auto _ : state) {
+    get_nth_quick(vec, dist_idx(rnd));
+  }
+}
+
+
+BENCHMARK(HeapNth_AVG);
+BENCHMARK(QuickNth_AVG);
+
+BENCHMARK(HeapNth_BEGIN);
+BENCHMARK(QuickNth_BEGIN);
+
+BENCHMARK(HeapNth_MID);
+BENCHMARK(QuickNth_MID);
+
+BENCHMARK(HeapNth_END);
+BENCHMARK(QuickNth_END);
+
+
+BENCHMARK_MAIN();
+
+
+
+

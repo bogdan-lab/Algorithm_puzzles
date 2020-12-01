@@ -22,10 +22,13 @@ endif ()
 include(../cmake/conan.cmake)
 conan_check(VERSION 1.14.4 REQUIRED)
 conan_cmake_run(REQUIRES
-                catch2/2.13.3
+                benchmark/1.5.2
+		catch2/2.13.3
         OPTIONS BASIC_SETUP CMAKE_TARGETS
         BUILD missing)
 
 
-target_link_libraries(solution PRIVATE full_set_of_warnings CONAN_PKG::catch2)
+target_link_libraries(solution PRIVATE full_set_of_warnings
+                                        CONAN_PKG::catch2
+                                        CONAN_PKG::benchmark)
 
