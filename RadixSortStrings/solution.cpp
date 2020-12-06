@@ -50,6 +50,31 @@ std::vector<size_t> count_sort(const std::vector<size_t>& vec){
 }
 
 
+void inplace_count_sort(std::vector<size_t>& vec){
+    if(vec.empty()) return;
+    size_t max_el = *(std::max_element(vec.begin(), vec.end()));
+    std::vector<size_t> count_idx(max_el+1, 0);
+    for(size_t i=0; i<vec.size(); i++){
+        count_idx[vec[i]]++;
+    }
+    for(size_t i=0; i<count_idx.size()-1; i++){
+        count_idx[i+1]+=count_idx[i];
+    }
+    std::vector<size_t> correct_idx(vec.size(), 0);
+    for(size_t i=vec.size(); i>0; i--){
+        correct_idx[i-1] = count_idx[vec[i-1]]-1;
+        count_idx[vec[i-1]]--;
+    }
+    for(size_t i=0; i<vec.size(); i++){
+        size_t move_idx = correct_idx[i];
+        while(move_idx!=i){
+            std::swap(vec[i], vec[move_idx]);
+            std::swap(correct_idx[i], correct_idx[move_idx]);
+            move_idx = correct_idx[i];
+        }
+    }
+}
+
 TEST_CASE("Equal length test", "[]"){
     std::vector<std::string> tst = {"dd", "bb", "aa", "cc", "hh", "jj", "kk"};
     radix_string_sort(tst);
@@ -78,4 +103,16 @@ TEST_CASE("Test counting sort", "[]"){
     std::vector<size_t> tst2 = {1,1,1,1,1,1,1,1,1,1};
     std::vector<size_t> got2 = count_sort(tst2);
     CHECK(std::is_sorted(got2.begin(), got2.end()));
+}
+
+TEST_CASE("Test in-pace-counting sort", "[]"){
+    std::vector<size_t> tst = {3,6,1,3,8,9,4,0,0,12,5};
+    inplace_count_sort(tst);
+    CHECK(std::is_sorted(tst.begin(), tst.end()));
+    std::vector<size_t> tst1;
+    inplace_count_sort(tst1);
+    CHECK(std::is_sorted(tst1.begin(), tst1.end()));
+    std::vector<size_t> tst2 = {1,1,1,1,1,1,1,1,1,1};
+    inplace_count_sort(tst2);
+    CHECK(std::is_sorted(tst2.begin(), tst2.end()));
 }
