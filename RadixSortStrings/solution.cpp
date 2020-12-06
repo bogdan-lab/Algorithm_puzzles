@@ -14,11 +14,13 @@ std::vector<size_t> count_sort(const std::vector<size_t>& vec);
 void inplace_count_sort(std::vector<size_t>& vec);
 size_t get_max_el(const std::vector<std::string>& vec, const size_t col_idx);
 std::vector<size_t> count_elements(const std::vector<std::string>& vec, const size_t col_idx);
-void particular_count_sort(std::vector<std::string>& vec, const size_t col_idx);
+void particular_count_sort(std::vector<std::string>& vec, const size_t col_idx,
+                           const size_t start, const size_t end);
 
 
 size_t convert_s_to_i(const std::string& s, const size_t col_idx){
-    return col_idx<s.size() ? static_cast<size_t>(s[col_idx]) : static_cast<size_t>(0u);
+    if(col_idx>s.size()) exit(1);
+    return static_cast<size_t>(s[col_idx]);
 }
 
 size_t get_max_str_len(const std::vector<std::string>& vec){
@@ -38,11 +40,45 @@ void stable_sort_by_col(std::vector<std::string>& vec, size_t col_idx){
     });
 }
 
-void radix_string_sort(std::vector<std::string>& vec){
+std::vector<size_t> count_sort_by_size(std::vector<std::string>& vec){
     size_t max_str_len = get_max_str_len(vec);
-    for(size_t i=max_str_len; i>0; i--){
-        //stable_sort_by_col(vec, i-1);
-        particular_count_sort(vec, i-1);
+    std::vector<size_t> count_by_size(max_str_len+1, 0);
+    for(size_t i=0; i<vec.size(); i++){
+        count_by_size[vec[i].size()]++;
+    }
+    for(size_t i=0; i<count_by_size.size()-1; i++){
+        count_by_size[i+1] += count_by_size[i];
+    }
+    std::vector<size_t> tmp = count_by_size;
+    std::vector<size_t> correct_idx(vec.size(), 0u);
+    for(size_t i=vec.size(); i>0; i--){
+        size_t val = vec[i-1].size();
+        correct_idx[i-1] = tmp[val]-1;
+        tmp[val]--;
+    }
+    for(size_t i=0; i<vec.size(); i++){
+        size_t move_to = correct_idx[i];
+        while(move_to != i){
+            std::swap(vec[move_to], vec[i]);
+            std::swap(correct_idx[i], correct_idx[move_to]);
+            move_to = correct_idx[i];
+        }
+    }
+    return count_by_size;
+}
+
+void radix_string_sort(std::vector<std::string>& vec){
+    std::vector<size_t> count_by_size = count_sort_by_size(vec);
+    //here all strings are sorted by length and count_by_size contains info about
+    //where and how many of those strings we have
+    for(size_t i=0; i<count_by_size.size()-1; i++){
+        if(count_by_size[i]==count_by_size[i+1]) continue;
+        size_t start = count_by_size[i];
+        size_t end = count_by_size[i+1];
+        size_t str_size = i+1;
+        for(size_t j=str_size; j>0; j--){
+            particular_count_sort(vec, j-1, start, end);
+        }
     }
 }
 
@@ -92,38 +128,41 @@ void inplace_count_sort(std::vector<size_t>& vec){
 }
 
 
-size_t get_max_el(const std::vector<std::string>& vec, const size_t col_idx){
+size_t get_max_el(const std::vector<std::string>& vec, const size_t col_idx,
+                  const size_t start, const size_t end){
     size_t max_el = 0;
-    for(size_t i=0; i<vec.size(); i++){
+    for(size_t i=start; i<end; i++){
         size_t num = convert_s_to_i(vec[i], col_idx);
         if(num>max_el) max_el = num;
     }
     return max_el;
 }
 
-std::vector<size_t> count_elements(const std::vector<std::string>& vec, const size_t col_idx){
-    size_t max_el = get_max_el(vec, col_idx);
+std::vector<size_t> count_elements(const std::vector<std::string>& vec, const size_t col_idx,
+                                   const size_t start, const size_t end){
+    size_t max_el = get_max_el(vec, col_idx, start, end);
     std::vector<size_t> count_idx(max_el+1, 0);
-    for(size_t i=0; i<vec.size(); i++){
+    for(size_t i=start; i<end; i++){
         size_t idx = convert_s_to_i(vec[i], col_idx);
         count_idx[idx]++;
     }
     return count_idx;
 }
 
-void particular_count_sort(std::vector<std::string>& vec, const size_t col_idx){
-    if(vec.empty()) return;
-    std::vector<size_t> count_idx = count_elements(vec, col_idx);
+void particular_count_sort(std::vector<std::string>& vec, const size_t col_idx,
+                           const size_t start, const size_t end){
+    if(vec.size()<=1) return;
+    std::vector<size_t> count_idx = count_elements(vec, col_idx, start, end);
     for(size_t i=0; i<count_idx.size()-1; i++){
         count_idx[i+1]+=count_idx[i];
     }
     std::vector<size_t> correct_idx(vec.size(), 0);
-    for(size_t i=vec.size(); i>0; i--){
+    for(size_t i=end; i>start; i--){
         size_t idx = convert_s_to_i(vec[i-1], col_idx);
-        correct_idx[i-1] = count_idx[idx]-1;
+        correct_idx[i-1] = start + count_idx[idx]-1;
         count_idx[idx]--;
     }
-    for(size_t i=0; i<vec.size(); i++){
+    for(size_t i=start; i<end; i++){
         size_t move_idx = correct_idx[i];
         while(move_idx!=i){
             std::swap(vec[i], vec[move_idx]);
@@ -133,30 +172,40 @@ void particular_count_sort(std::vector<std::string>& vec, const size_t col_idx){
     }
 }
 
+bool my_compare(const std::string& lhs, const std::string& rhs){
+    if(lhs.size()==rhs.size()) return lhs<rhs;
+    return lhs.size()<rhs.size();
+}
+
 
 TEST_CASE("Equal length test", "[]"){
     std::vector<std::string> tst = {"dd", "bb", "aa", "cc", "hh", "jj", "kk"};
     radix_string_sort(tst);
-    CHECK(std::is_sorted(tst.begin(), tst.end()));
+    CHECK(std::is_sorted(tst.begin(), tst.end(), my_compare));
     std::vector<std::string> tst1 = {"as", "sd", "al", "aa", "am", "ak", "ab"};
     radix_string_sort(tst1);
-    CHECK(std::is_sorted(tst1.begin(), tst1.end()));
+    CHECK(std::is_sorted(tst1.begin(), tst1.end(), my_compare));
     std::vector<std::string> tst2;
     radix_string_sort(tst2);
-    CHECK(std::is_sorted(tst2.begin(), tst2.end()));
+    CHECK(std::is_sorted(tst2.begin(), tst2.end(), my_compare));
     std::vector<std::string> tst3 = {"a","a", "a", "a", "a", "a", "a", "a", "a", "a" };
-    CHECK(std::is_sorted(tst3.begin(), tst3.end()));
+    radix_string_sort(tst3);
+    CHECK(std::is_sorted(tst3.begin(), tst3.end(), my_compare));
+    std::vector<std::string> tst4 = {"name"};
+    radix_string_sort(tst4);
+    CHECK(std::is_sorted(tst4.begin(), tst4.end(), my_compare));
 }
 
 TEST_CASE("Different length test", "[]"){
     std::vector<std::string> tst = {"a", "ba", "ajfdsa", "adl", "aaa", "bfd", "b"};
+    std::sort(tst.begin(), tst.end());
     radix_string_sort(tst);
-    CHECK(std::is_sorted(tst.begin(), tst.end()));
+    CHECK(std::is_sorted(tst.begin(), tst.end(), my_compare));
     std::vector<std::string> tst1 = {"This", "task", "is", "finished", "without",
                                     "generalizing", "approach", "!", "anyway",
                                      "I", "am", "happy", "with", "it"};
     radix_string_sort(tst1);
-    CHECK(std::is_sorted(tst1.begin(), tst1.end()));
+    CHECK(std::is_sorted(tst1.begin(), tst1.end(), my_compare));
 }
 
 TEST_CASE("Test counting sort", "[]"){
