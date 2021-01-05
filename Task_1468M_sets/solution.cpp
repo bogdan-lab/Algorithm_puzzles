@@ -1,17 +1,17 @@
 ﻿#include <algorithm>
 #include <iostream>
 #include <vector>
-#include <set>
 #include <iterator>
 #include <sstream>
 
-using SetHolder = std::vector<std::set<int>>;
+using SetHolder = std::vector<std::vector<int>>;
 
 
-bool compare_two_sets(const std::set<int>& lhs, const std::set<int>& rhs){
+bool compare_two_sets(const std::vector<int>& lhs, const std::vector<int>& rhs){
+    if(lhs.size()<=1 || rhs.size()<=1) return false;
     size_t dup_num = 0;
-    for(const auto& el : lhs){
-        dup_num += rhs.count(el);
+    for(size_t i=0; i<lhs.size(); i++){
+        if(std::binary_search(rhs.begin(), rhs.end(), lhs[i])) dup_num++;
         if(dup_num>=2) return true;
     }
     return false;
@@ -20,15 +20,15 @@ bool compare_two_sets(const std::set<int>& lhs, const std::set<int>& rhs){
 void process_set(std::istream& input=std::cin){
     size_t n;
     size_t k;
-    int tmp;
     input >> n;
     SetHolder entire_set(n);
     for(size_t i=0; i<n; i++){
         input >> k;
-        for(size_t j=0; j<k; j++){
-            input >> tmp;
-            entire_set[i].insert(tmp);
-        }
+        entire_set[i].reserve(k);
+        std::copy_n(std::istream_iterator<int>(input), k, std::back_inserter(entire_set[i]));
+        auto new_end = std::unique(entire_set[i].begin(), entire_set[i].end());
+        for(int idx=0; idx<new_end-entire_set[i].end(); idx++) entire_set[i].pop_back();
+        std::sort(entire_set[i].begin(), entire_set[i].end());
     }
     //Check for pair
     for(size_t i=0; i<n; i++){
@@ -51,6 +51,7 @@ void solve(std::istream& input=std::cin){
 }
 
 int main(){
+    std::ios_base::sync_with_stdio (false);
     std::stringstream ss;
     ss << R"(3
           4
