@@ -13,9 +13,17 @@ bool compare_two_sets(const std::vector<int>& lhs, const std::vector<int>& rhs){
     auto lhs_end_it = std::upper_bound(lhs.cbegin(), lhs.cend(), rhs.back());
     auto rhs_start_it = std::lower_bound(rhs.cbegin(), rhs.cend(), lhs.front());
     auto rhs_end_it = std::upper_bound(rhs.cbegin(), rhs.cend(), lhs.back());
+    std::vector<int>::const_iterator val_start = lhs_start_it;
+    std::vector<int>::const_iterator val_end = lhs_end_it;
+    std::vector<int>::const_iterator search_start = rhs_start_it;
+    std::vector<int>::const_iterator search_end = rhs_end_it;
+    if(lhs_end_it-lhs_start_it > rhs_end_it-rhs_start_it){
+        std::swap(val_start, search_start);
+        std::swap(val_end, search_end);
+    }
     size_t dup_num = 0;
-    for(auto it = lhs_start_it; it!=lhs_end_it; it++){
-        dup_num += std::binary_search(rhs_start_it, rhs_end_it, *it);
+    for(auto it = val_start; it!=val_end; it++){
+        dup_num += std::binary_search(search_start, search_end, *it);
         if(dup_num>=2) return true;
     }
     return false;
@@ -31,7 +39,7 @@ void process_set(std::istream& input=std::cin){
         entire_set[i].reserve(k);
         std::copy_n(std::istream_iterator<int>(input), k, std::back_inserter(entire_set[i]));
         auto new_end = std::unique(entire_set[i].begin(), entire_set[i].end());
-        for(int idx=0; idx<new_end-entire_set[i].end(); idx++) entire_set[i].pop_back();
+        entire_set[i].erase(new_end, entire_set[i].end());
         std::sort(entire_set[i].begin(), entire_set[i].end());
     }
     //Check for pair
