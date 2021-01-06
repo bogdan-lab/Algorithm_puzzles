@@ -9,9 +9,13 @@ using SetHolder = std::vector<std::vector<int>>;
 
 bool compare_two_sets(const std::vector<int>& lhs, const std::vector<int>& rhs){
     if(lhs.size()<=1 || rhs.size()<=1) return false;
+    auto lhs_start_it = std::lower_bound(lhs.cbegin(), lhs.cend(), rhs.front());
+    auto lhs_end_it = std::upper_bound(lhs.cbegin(), lhs.cend(), rhs.back());
+    auto rhs_start_it = std::lower_bound(rhs.cbegin(), rhs.cend(), lhs.front());
+    auto rhs_end_it = std::upper_bound(rhs.cbegin(), rhs.cend(), lhs.back());
     size_t dup_num = 0;
-    for(size_t i=0; i<lhs.size(); i++){
-        if(std::binary_search(rhs.begin(), rhs.end(), lhs[i])) dup_num++;
+    for(auto it = lhs_start_it; it!=lhs_end_it; it++){
+        dup_num += std::binary_search(rhs_start_it, rhs_end_it, *it);
         if(dup_num>=2) return true;
     }
     return false;

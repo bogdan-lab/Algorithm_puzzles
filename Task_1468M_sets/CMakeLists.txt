@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required(VERSION 3.10)
 
-project(Fence_1468M
+project(task_1468M
 	LANGUAGES CXX)
 
 add_executable(solution
