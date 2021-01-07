@@ -3,50 +3,44 @@
 #include <vector>
 #include <iterator>
 #include <sstream>
+#include <unordered_set>
+#include <random>
+#include<time.h>
 
-using SetHolder = std::vector<std::vector<int>>;
+using ElCollection = std::unordered_set<int>;
+using SetHolder = std::vector<ElCollection>;
 
-
-bool compare_two_sets(const std::vector<int>& lhs, const std::vector<int>& rhs){
-    if(lhs.size()<=1 || rhs.size()<=1) return false;
-    auto lhs_start_it = std::lower_bound(lhs.cbegin(), lhs.cend(), rhs.front());
-    auto lhs_end_it = std::upper_bound(lhs.cbegin(), lhs.cend(), rhs.back());
-    auto rhs_start_it = std::lower_bound(rhs.cbegin(), rhs.cend(), lhs.front());
-    auto rhs_end_it = std::upper_bound(rhs.cbegin(), rhs.cend(), lhs.back());
-    std::vector<int>::const_iterator val_start = lhs_start_it;
-    std::vector<int>::const_iterator val_end = lhs_end_it;
-    std::vector<int>::const_iterator search_start = rhs_start_it;
-    std::vector<int>::const_iterator search_end = rhs_end_it;
-    if(lhs_end_it-lhs_start_it > rhs_end_it-rhs_start_it){
-        std::swap(val_start, search_start);
-        std::swap(val_end, search_end);
-    }
+bool compare_two_sets(const ElCollection& lhs, const ElCollection& rhs){
     size_t dup_num = 0;
-    for(auto it = val_start; it!=val_end; it++){
-        dup_num += std::binary_search(search_start, search_end, *it);
+    for(const auto& el : lhs){
+        dup_num += rhs.count(el);
         if(dup_num>=2) return true;
     }
     return false;
 }
 
-void process_set(std::istream& input=std::cin){
+
+void process_set(std::mt19937& rnd, std::istream& input=std::cin){
     size_t n;
     size_t k;
     input >> n;
     SetHolder entire_set(n);
     for(size_t i=0; i<n; i++){
         input >> k;
-        entire_set[i].reserve(k);
-        std::copy_n(std::istream_iterator<int>(input), k, std::back_inserter(entire_set[i]));
-        auto new_end = std::unique(entire_set[i].begin(), entire_set[i].end());
-        entire_set[i].erase(new_end, entire_set[i].end());
-        std::sort(entire_set[i].begin(), entire_set[i].end());
+        std::copy_n(std::istream_iterator<int>(input), k,
+                    std::insert_iterator<ElCollection>(entire_set[i], entire_set[i].end()));
     }
+    //For better average performance
+    std::vector<size_t> idxes(n);
+    std::iota(idxes.begin(), idxes.end(), 0);
+    std::shuffle(idxes.begin(), idxes.end(), rnd);
     //Check for pair
     for(size_t i=0; i<n; i++){
+        size_t lhs_idx = idxes[i];
         for(size_t j=i+1; j<n; j++){
-            if(compare_two_sets(entire_set[i], entire_set[j])){
-                std::cout << i+1 << " " << j+1 << '\n';
+            size_t rhs_idx = idxes[j];
+            if(compare_two_sets(entire_set[lhs_idx], entire_set[rhs_idx])){
+                std::cout << lhs_idx+1 << " " << rhs_idx+1 << '\n';
                 return;
             }
         }
@@ -54,11 +48,11 @@ void process_set(std::istream& input=std::cin){
     std::cout << -1 << '\n';
 }
 
-void solve(std::istream& input=std::cin){
+void solve(std::mt19937& rnd, std::istream& input=std::cin){
     size_t t;
     input >> t;
     for(size_t i=0; i<t; i++){
-        process_set(input);
+        process_set(rnd, input);
     }
 }
 
@@ -78,6 +72,7 @@ int main(){
           2
           3 1 3 5
           3 4 3 2)";
-    solve();
+    std::mt19937 rnd(static_cast<unsigned int>(time(NULL)));
+    solve(rnd);
     return 0;
 }
