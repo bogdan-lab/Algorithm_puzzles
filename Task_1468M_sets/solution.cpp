@@ -7,9 +7,71 @@
 #include <random>
 #include <time.h>
 #include <utility>
+#include <chrono>
+
 
 using ElCollection = std::unordered_set<int>;
 using SetHolder = std::vector<ElCollection>;
+
+bool compare_two_sets(const ElCollection& lhs, const ElCollection& rhs);
+void fill_minmax_stat(std::vector<int>& min_el, std::vector<int>& max_el,
+                      const SetHolder& entire_set);
+std::string process_set(std::mt19937& rnd, std::istream& input=std::cin);
+void solve(std::mt19937& rnd, std::istream& input=std::cin);
+std::stringstream prepare_test(std::mt19937& rnd, const size_t t,
+                               const size_t n, const size_t k);
+void fill_random_numbers(std::stringstream& ss, const size_t k, std::mt19937& rnd);
+
+
+int main(){
+    std::ios_base::sync_with_stdio (false);
+    std::cin.tie(nullptr);
+    std::stringstream ss;
+    ss << R"(3
+          4
+          2 1 10
+          3 1 3 5
+          5 5 4 3 2 1
+          3 10 20 30
+          3
+          4 1 2 3 4
+          4 2 3 4 5
+          4 3 4 5 6
+          2
+          3 1 3 5
+          3 4 3 2)";
+    std::mt19937 rnd(static_cast<unsigned int>(time(NULL)));
+    //std::stringstream test = prepare_test(rnd, 1, 800, 250);
+    std::stringstream test = prepare_test(rnd, 1, 500, 400);
+    //std::cout << test.str();
+    auto start = std::chrono::high_resolution_clock::now();
+    solve(rnd, test);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end-start);
+    std::cout << "\n test duration = " << duration.count() << " ms ; NEED <1000ms!!\n";
+    return 0;
+}
+
+
+std::stringstream prepare_test(std::mt19937& rnd, const size_t t,
+                               const size_t n, const size_t k){
+    std::stringstream ss;
+    ss << t << '\n';
+    ss << n << '\n';
+    for(size_t i=0; i<n; i++){
+        ss << k;
+        fill_random_numbers(ss, k, rnd);
+    }
+    return ss;
+}
+
+void fill_random_numbers(std::stringstream& ss, const size_t k, std::mt19937& rnd){
+    std::uniform_int_distribution<size_t> dist(1, 1000'000'000);
+    for(size_t i=0; i<k; i++){
+        ss << ' ' << dist(rnd);
+    }
+    ss << '\n';
+}
 
 bool compare_two_sets(const ElCollection& lhs, const ElCollection& rhs){
     size_t dup_num = 0;
@@ -30,7 +92,7 @@ void fill_minmax_stat(std::vector<int>& min_el, std::vector<int>& max_el,
     }
 }
 
-std::string process_set(std::mt19937& rnd, std::istream& input=std::cin){
+std::string process_set(std::mt19937& rnd, std::istream& input){
     size_t n;
     size_t k;
     input >> n;
@@ -64,7 +126,7 @@ std::string process_set(std::mt19937& rnd, std::istream& input=std::cin){
     return "-1\n";
 }
 
-void solve(std::mt19937& rnd, std::istream& input=std::cin){
+void solve(std::mt19937& rnd, std::istream& input){
     size_t t;
     input >> t;
     std::string answer;
@@ -75,24 +137,3 @@ void solve(std::mt19937& rnd, std::istream& input=std::cin){
     std::cout << answer;
 }
 
-int main(){
-    std::ios_base::sync_with_stdio (false);
-    std::cin.tie(nullptr);
-    std::stringstream ss;
-    ss << R"(3
-          4
-          2 1 10
-          3 1 3 5
-          5 5 4 3 2 1
-          3 10 20 30
-          3
-          4 1 2 3 4
-          4 2 3 4 5
-          4 3 4 5 6
-          2
-          3 1 3 5
-          3 4 3 2)";
-    std::mt19937 rnd(static_cast<unsigned int>(time(NULL)));
-    solve(rnd);
-    return 0;
-}
