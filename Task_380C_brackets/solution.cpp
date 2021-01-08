@@ -5,9 +5,7 @@
 #include <algorithm>
 #include <string>
 #include <iterator>
-#include <stack>
-
-static const std::unordered_map<char, char> EXPECTED{{'(', ')'}, {')', '('}};
+#include <utility>
 
 void solve(std::istream& input=std::cin);
 void process_requests(const std::string& brackets, const std::vector<size_t>& bnds);
@@ -28,7 +26,7 @@ int main(){
           8 12
           5 11
           2 10)";
-    solve(ss);
+    solve(std::cin);
     return 0;
 }
 
@@ -44,33 +42,28 @@ void solve(std::istream &input){
     bnds.reserve(m);
     std::copy_n(std::istream_iterator<size_t>(input), 2*m, std::back_inserter(bnds));
     std::for_each(bnds.begin(), bnds.end(), [](size_t& el){return el-1;});
-    process_requests(brackets, bnds);
+    process_requests(std::move(brackets), bnds);
 }
 
 
 void process_requests(const std::string& brackets, const std::vector<size_t>& bnds){
     for(size_t i=0; i<bnds.size()/2; i++){
-        std::cout << get_max_length(brackets, bnds[2*i], bnds[2*i+1]) << '\n';
+        std::cout << get_max_length(brackets, bnds[2*i]-1, bnds[2*i+1]-1) << '\n';
     }
 }
 
-size_t get_max_length(const std::string &brackets, const size_t start,
+size_t get_max_length(const std::string& brackets, const size_t start,
                       const size_t finish){
-    if(finish-start==0) return 0;
-    size_t max_len = 0;
-    std::stack<char> buff;
-    buff.push(brackets[start]);
-    size_t curr_size = 0;
-    for(size_t i=start+1; i<finish+1; i++){
-        if(!buff.empty() && brackets[i]==EXPECTED.at(buff.top())){
-            curr_size++;
-            max_len = std::max(max_len, curr_size);
-            buff.pop();
-        }
-        else{
-            curr_size = 0;
-            buff.push(brackets[i]);
-        }
+    if(finish<=start) return 0;
+    size_t begin = brackets.find('(', start);
+    if(begin==std::string::npos) return 0;
+    size_t end = brackets.rfind(')', finish);
+    if(end==std::string::npos || end<=begin) return 0;
+    size_t count_right = 0;
+    size_t count_left = 0;
+    for(size_t i=begin; i<end+1; i++){
+        count_right += brackets[i]=='(';
+        count_left += brackets[i]==')';
     }
-    return max_len;
+    return 2*std::min(count_right, count_left);
 }
