@@ -9,8 +9,49 @@
 #include <utility>
 #include <chrono>
 
+class MyHashTable{
+private:
+    std::vector<int> data_;
+    std::vector<int> buckets_;
+    size_t mod_;
 
-using ElCollection = std::unordered_set<int>;
+
+    size_t get_next(size_t i) const {return i*i; }
+public:
+    MyHashTable() = delete;
+    explicit MyHashTable(size_t g_mod, size_t size, size_t mult):
+        buckets_(mult*size, -1), mod_(g_mod){
+        data_.reserve(size);
+    }
+    void insert(int val){
+        data_.push_back(val);
+        size_t i=1;
+        size_t idx = static_cast<size_t>(val) % mod_;
+        while(buckets_[idx]!=-1){
+            idx = get_next(i);
+            while(idx >= buckets_.size()) idx-=buckets_.size();
+            i++;
+        }
+        buckets_[idx] = val;
+    }
+
+    size_t count(const int val) const {
+        size_t idx = static_cast<size_t>(val) % mod_;
+        size_t i=0;
+        while(buckets_[idx]!=-1){
+            if(buckets_[idx]==val) return 1;
+            idx = get_next(i);
+            while(idx>=buckets_.size()) idx-=buckets_.size();
+            i++;
+        }
+        return 0;
+    }
+    auto begin() const {return data_.begin();}
+    auto end() const {return data_.end();}
+
+};
+
+using ElCollection = MyHashTable;
 using SetHolder = std::vector<ElCollection>;
 
 bool compare_two_sets(const ElCollection& lhs, const ElCollection& rhs);
@@ -96,13 +137,21 @@ std::string process_set(std::mt19937& rnd, std::istream& input){
     size_t n;
     size_t k;
     input >> n;
-    SetHolder entire_set(n);
+    SetHolder entire_set;
+    entire_set.reserve(n);
+    int tmp;
     for(size_t i=0; i<n; i++){ 	 	//O(n)
         input >> k;
-        entire_set[i].max_load_factor(1.0);
-        entire_set[i].reserve(k);
-        std::copy_n(std::istream_iterator<int>(input), k,
-                    std::insert_iterator<ElCollection>(entire_set[i], entire_set[i].end()));
+        //entire_set[i].max_load_factor(1.0);
+        //entire_set[i].reserve(k);
+        //std::copy_n(std::istream_iterator<int>(input), k,
+        //            std::insert_iterator<ElCollection>(entire_set[i], entire_set[i].end()));
+        ElCollection current_set(k, k, 10);
+        for(size_t j=0; j<k; j++){
+            input >> tmp;
+            current_set.insert(tmp);
+        }
+        entire_set.push_back(current_set);
     }
     std::vector<int> minimum_el_in_set(n);
     std::vector<int> maximum_el_in_set(n);
@@ -129,11 +178,8 @@ std::string process_set(std::mt19937& rnd, std::istream& input){
 void solve(std::mt19937& rnd, std::istream& input){
     size_t t;
     input >> t;
-    std::string answer;
-    answer.reserve(600000);
     for(size_t i=0; i<t; i++){
-        answer += process_set(rnd, input);
+        std::cout << process_set(rnd, input);
     }
-    std::cout << answer;
 }
 
