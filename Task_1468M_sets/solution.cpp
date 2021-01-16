@@ -19,7 +19,7 @@ private:
     size_t get_next(size_t i) const {return i*i; }
 public:
     MyHashTable() = delete;
-    explicit MyHashTable(size_t size, size_t mult):
+    MyHashTable(size_t size, size_t mult):
         buckets_(mult*size, -1), mod_(mult*size){
         data_.reserve(size);
     }
@@ -35,7 +35,7 @@ public:
         buckets_[idx] = val;
     }
 
-    size_t count(const int val) const {
+    size_t count_hash(const int val) const {
         size_t idx = static_cast<size_t>(val) % mod_;
         size_t i=1;
         while(buckets_[idx]!=-1){
@@ -46,6 +46,18 @@ public:
         }
         return 0;
     }
+
+    size_t count(const int val) const{
+        if(data_.size()>120){
+            return count_hash(val);
+        }
+        return static_cast<size_t>(std::binary_search(data_.begin(), data_.end(), val));
+    }
+
+    void sort_data(){
+        std::sort(data_.begin(), data_.end());
+    }
+
     auto begin() const {return data_.begin();}
     auto end() const {return data_.end();}
 
@@ -129,9 +141,11 @@ bool compare_two_sets(const ElCollection& lhs, const ElCollection& rhs){
 void fill_minmax_stat(std::vector<int>& min_el, std::vector<int>& max_el,
                       const SetHolder& entire_set){
     for(size_t i=0; i<entire_set.size(); i++){
-        auto it = std::minmax_element(entire_set[i].begin(), entire_set[i].end());
-        min_el[i] = *(it.first);
-        max_el[i] = *(it.second);
+        //auto it = std::minmax_element(entire_set[i].begin(), entire_set[i].end());
+        //min_el[i] = *(it.first);
+        //max_el[i] = *(it.second);
+        min_el[i] = *(entire_set[i].begin());
+        max_el[i] = *(--entire_set[i].end());
     }
 }
 
@@ -153,6 +167,7 @@ std::string process_set(std::mt19937& rnd, std::istream& input){
             input >> tmp;
             current_set.insert(tmp);
         }
+        current_set.sort_data();
         entire_set.push_back(current_set);
     }
     std::vector<int> minimum_el_in_set(n);
