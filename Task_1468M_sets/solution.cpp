@@ -19,8 +19,8 @@ private:
     size_t get_next(size_t i) const {return i*i; }
 public:
     MyHashTable() = delete;
-    explicit MyHashTable(size_t g_mod, size_t size, size_t mult):
-        buckets_(mult*size, -1), mod_(g_mod){
+    explicit MyHashTable(size_t size, size_t mult):
+        buckets_(mult*size, -1), mod_(mult*size){
         data_.reserve(size);
     }
     void insert(int val){
@@ -28,7 +28,7 @@ public:
         size_t i=1;
         size_t idx = static_cast<size_t>(val) % mod_;
         while(buckets_[idx]!=-1){
-            idx = get_next(i);
+            idx += get_next(i);
             while(idx >= buckets_.size()) idx-=buckets_.size();
             i++;
         }
@@ -37,10 +37,10 @@ public:
 
     size_t count(const int val) const {
         size_t idx = static_cast<size_t>(val) % mod_;
-        size_t i=0;
+        size_t i=1;
         while(buckets_[idx]!=-1){
             if(buckets_[idx]==val) return 1;
-            idx = get_next(i);
+            idx += get_next(i);
             while(idx>=buckets_.size()) idx-=buckets_.size();
             i++;
         }
@@ -82,14 +82,16 @@ int main(){
           3 1 3 5
           3 4 3 2)";
     std::mt19937 rnd(static_cast<unsigned int>(time(NULL)));
-    //std::stringstream test = prepare_test(rnd, 1, 800, 250);
-    std::stringstream test = prepare_test(rnd, 1, 500, 400);
-    //std::cout << test.str();
+    /*
+    std::stringstream test = prepare_test(rnd, 1, 800, 250);
+    //std::stringstream test = prepare_test(rnd, 1, 500, 400);
     auto start = std::chrono::high_resolution_clock::now();
     solve(rnd, test);
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end-start);
     std::cout << "\n test duration = " << duration.count() << " ms ; NEED <1000ms!!\n";
+*/
+    solve(rnd, std::cin);
     return 0;
 }
 
@@ -146,7 +148,7 @@ std::string process_set(std::mt19937& rnd, std::istream& input){
         //entire_set[i].reserve(k);
         //std::copy_n(std::istream_iterator<int>(input), k,
         //            std::insert_iterator<ElCollection>(entire_set[i], entire_set[i].end()));
-        ElCollection current_set(k, k, 10);
+        ElCollection current_set(k, 10);
         for(size_t j=0; j<k; j++){
             input >> tmp;
             current_set.insert(tmp);
