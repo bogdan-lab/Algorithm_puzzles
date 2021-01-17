@@ -9,30 +9,39 @@
 #include <utility>
 #include <chrono>
 
+template <size_t N, size_t M>
 class MyHashTable{
 private:
     std::vector<int> data_;
     std::vector<int> buckets_;
     size_t mod_;
-
+    size_t size_;
+    bool sorted_;
 
     size_t get_next(size_t i) const {return i*i; }
 public:
     MyHashTable() = delete;
-    MyHashTable(size_t size, size_t mult):
-        buckets_(mult*size, -1), mod_(mult*size){
+    MyHashTable(size_t size): size_(size){
+        if(size > N){
+            buckets_ = std::vector<int>(M*size, -1);
+            mod_ = M*size;
+        }
+        sorted_ = false;
         data_.reserve(size);
     }
+
     void insert(int val){
         data_.push_back(val);
-        size_t i=1;
-        size_t idx = static_cast<size_t>(val) % mod_;
-        while(buckets_[idx]!=-1){
-            idx += get_next(i);
-            while(idx >= buckets_.size()) idx-=buckets_.size();
-            i++;
+        if (size_ > N){
+            size_t i=1;
+            size_t idx = static_cast<size_t>(val) % mod_;
+            while(buckets_[idx]!=-1){
+                idx += get_next(i);
+                while(idx >= buckets_.size()) idx-=buckets_.size();
+                i++;
+            }
+            buckets_[idx] = val;
         }
-        buckets_[idx] = val;
     }
 
     size_t count_hash(const int val) const {
@@ -48,14 +57,21 @@ public:
     }
 
     size_t count(const int val) const{
-        if(data_.size()>120){
+        if(size_>N){
             return count_hash(val);
         }
         return static_cast<size_t>(std::binary_search(data_.begin(), data_.end(), val));
     }
 
     void sort_data(){
-        std::sort(data_.begin(), data_.end());
+        if(size_<= N){
+            std::sort(data_.begin(), data_.end());
+            sorted_ = true;
+        }
+    }
+
+    bool is_sorted() const {
+        return sorted_;
     }
 
     auto begin() const {return data_.begin();}
@@ -63,7 +79,7 @@ public:
 
 };
 
-using ElCollection = MyHashTable;
+using ElCollection = MyHashTable<10, 7>;
 using SetHolder = std::vector<ElCollection>;
 
 bool compare_two_sets(const ElCollection& lhs, const ElCollection& rhs);
@@ -94,9 +110,8 @@ int main(){
           3 1 3 5
           3 4 3 2)";
     std::mt19937 rnd(static_cast<unsigned int>(time(NULL)));
-    /*
-    std::stringstream test = prepare_test(rnd, 1, 800, 250);
-    //std::stringstream test = prepare_test(rnd, 1, 500, 400);
+/*
+    std::stringstream test = prepare_test(rnd, 1, 2000, 100);
     auto start = std::chrono::high_resolution_clock::now();
     solve(rnd, test);
     auto end = std::chrono::high_resolution_clock::now();
@@ -141,11 +156,14 @@ bool compare_two_sets(const ElCollection& lhs, const ElCollection& rhs){
 void fill_minmax_stat(std::vector<int>& min_el, std::vector<int>& max_el,
                       const SetHolder& entire_set){
     for(size_t i=0; i<entire_set.size(); i++){
-        //auto it = std::minmax_element(entire_set[i].begin(), entire_set[i].end());
-        //min_el[i] = *(it.first);
-        //max_el[i] = *(it.second);
-        min_el[i] = *(entire_set[i].begin());
-        max_el[i] = *(--entire_set[i].end());
+        if(entire_set[i].is_sorted()){
+            min_el[i] = *(entire_set[i].begin());
+            max_el[i] = *(--entire_set[i].end());
+        }else {
+            auto it = std::minmax_element(entire_set[i].begin(), entire_set[i].end());
+            min_el[i] = *(it.first);
+            max_el[i] = *(it.second);
+        }
     }
 }
 
@@ -158,11 +176,7 @@ std::string process_set(std::mt19937& rnd, std::istream& input){
     int tmp;
     for(size_t i=0; i<n; i++){ 	 	//O(n)
         input >> k;
-        //entire_set[i].max_load_factor(1.0);
-        //entire_set[i].reserve(k);
-        //std::copy_n(std::istream_iterator<int>(input), k,
-        //            std::insert_iterator<ElCollection>(entire_set[i], entire_set[i].end()));
-        ElCollection current_set(k, 10);
+        ElCollection current_set(k);
         for(size_t j=0; j<k; j++){
             input >> tmp;
             current_set.insert(tmp);
