@@ -1,0 +1,7 @@
+﻿#ifndef STRING_TESTS_HPP
+#define STRING_TESTS_HPP
+
+
+
+
+#endif //STRING_TESTS_HPP
