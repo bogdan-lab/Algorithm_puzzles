@@ -12,11 +12,11 @@ void push_random_group(
   unsigned _seed
 )
 {
+  if(_num==0) return;
   std::mt19937 rnd(_seed);
   std::uniform_int_distribution<int> dist(_l_bnd, _r_bnd);
   while(_num--){
-      int tmp = dist(rnd);
-    _arr.push_back(tmp);
+    _arr.push_back(dist(rnd));
   }
 }
 
