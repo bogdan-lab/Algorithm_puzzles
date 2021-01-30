@@ -6,10 +6,6 @@
 
 
 
-
-
-
-
 int main()
 {
   //fill 20 random 0 - 100
@@ -18,7 +14,6 @@ int main()
   std::cout << test_arr;
   //sort CArray
   std::sort(test_arr.begin(), test_arr.end());
-  //quick_sort(test_arr, 0, test_arr.size());
   std::cout << test_arr;
   //erase every 2 element
   erase_every(test_arr, 2);
@@ -27,6 +22,7 @@ int main()
   CArray<int> input;
   push_random_group(input, 10u, 0, 100, 29u);
   insert_random_places(test_arr, input, 37u);
+  std::cout << test_arr;
   //clear
   test_arr.clear();
   std::cout << test_arr;
