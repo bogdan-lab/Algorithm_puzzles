@@ -104,6 +104,7 @@ TData& CArray<TData>::operator[](unsigned int _index)
 template <typename TData>
 void CArray<TData>::erase(unsigned int _index)
 {
+  if(_index>=size_) return;
   while(_index+1!=size_)
   {
     std::swap(data_[_index], data_[_index+1]);
@@ -114,7 +115,8 @@ void CArray<TData>::erase(unsigned int _index)
 
 template <typename TData>
 void CArray<TData>::insert(unsigned int _index, const TData &_value){
-  push_back(_value);
+  if(_index>=size_) return;
+  push_back(_value);  //increases size by 1!
   unsigned cur_pos = size_-1;
   while(cur_pos!=_index)
   {

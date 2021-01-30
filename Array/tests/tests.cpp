@@ -58,7 +58,11 @@ void erase_with_bad_symbols(
   }
 }
 
-void erase_every(CArray<int>& _arr, const unsigned _gap){
+void erase_every(
+  CArray<int>& _arr,
+  const unsigned _gap
+)
+{
   if(_gap>_arr.size()) return;
   if(_gap==0) return;
   if(_gap==1)
