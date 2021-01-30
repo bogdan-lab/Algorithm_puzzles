@@ -11,7 +11,6 @@ set_project_warnings(full_set_of_warnings)
 add_library(my_array INTERFACE)
 target_include_directories(my_array INTERFACE include)
 
-#add_subdirectory(src)
 add_subdirectory(tests)
 
 
