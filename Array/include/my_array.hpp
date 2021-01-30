@@ -7,11 +7,15 @@ template <typename TData>
 class CArray
 {
 public:
-  CArray();
+  CArray() = default;
 
   CArray(
     const CArray& _array
   );
+
+  CArray& operator =(const CArray& _arr) = delete;
+  CArray(CArray&& _arr) = delete;
+  CArray& operator =(CArray&& _arr) = delete;
 
   ~CArray();
 
@@ -36,8 +40,15 @@ public:
     unsigned int _index
   );
 
+  TData* begin();
+  TData* end();
+
 protected:
+  void realloc();
 //Attributes
+  TData* data_ = nullptr;
+  unsigned size_ = 0u;
+  unsigned capacity_ = 0u;
 };
 
 template <typename TData>

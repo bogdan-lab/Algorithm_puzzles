@@ -1,7 +1,7 @@
 ﻿#include "my_array.hpp"
 #include "int_tests.hpp"
 
-
+#include <algorithm>
 
 
 
@@ -17,7 +17,8 @@ int main()
   push_random_group(test_arr, 20u, 0, 100, 42u);
   std::cout << test_arr;
   //sort CArray
-  quick_sort(test_arr, 0, test_arr.size());
+  std::sort(test_arr.begin(), test_arr.end());
+  //quick_sort(test_arr, 0, test_arr.size());
   std::cout << test_arr;
   //erase every 2 element
   erase_every(test_arr, 2);
