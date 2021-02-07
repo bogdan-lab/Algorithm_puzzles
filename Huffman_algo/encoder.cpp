@@ -47,68 +47,74 @@ Translator get_translator_to_bin(const HNode* symbol_tree);
 void fill_tree_vector(const HNode* symbol_tree, std::vector<const HNode*>& tree_elements);
 
 std::string get_bin_repr_text(const std::string& content, const Translator& char_to_bin);
-std::vector<Byte> translate_content(const std::string& content, const Translator& char_to_bin);
+std::vector<Byte> split_to_bytes(const std::string& bin_text);
 
-//int main(int argc, char** argv){
-int main(){
+void write_encoded_text(std::ostream& out_file, const std::vector<Byte>& bin_content,
+                        const Translator& char_to_bin, const size_t symbol_num);
+
+std::ostream& operator<<(std::ostream& out, const std::vector<Byte>& w);
+
+
+int main(int  argc, char** argv){
+//int main(){
 
     //TODO Entire text is one symbol - does not work!
 
-    //std::cout <<argc << '\n';
+    std::cout <<argc << '\n';
     //std::cout << "THE FIRST ARGUMENT " << argv[1] << '\n';
     //std::cout << "THE SECOND ARGUMENT " << argv[2] << '\n' << '\n';
 
-    //std::ifstream in_file(argv[1], std::ios_base::in);
-    std::stringstream in_file;
-    in_file << R"(Hello World!)";
-    std::string content;
-    std::copy(std::istreambuf_iterator<char>(in_file),
-              std::istreambuf_iterator<char>(), std::back_inserter(content));
+    std::ifstream in_file(argv[1], std::ios_base::in);
+    //std::stringstream in_file;
+    //in_file << R"(Hello World!)";
+    std::string content{std::istreambuf_iterator<char>(in_file),
+                        std::istreambuf_iterator<char>()};
     FreqHolder frequencies = get_frequency(content);
     HNode* symbol_tree  = build_HTree(frequencies);
     add_binary_words(symbol_tree);
     Translator char_to_bin = get_translator_to_bin(symbol_tree);
-    std::vector<Byte> bin_content = translate_content(content, char_to_bin);
-    //size_t symbol_num = content.size();
+    std::string bin_text = get_bin_repr_text(content, char_to_bin);
+    std::vector<Byte> bin_content = split_to_bytes(bin_text);
+    size_t symbol_num = content.size();
 
+
+    std::ofstream out_file(argv[2], std::ios_base::binary);
+    write_encoded_text(out_file, bin_content, char_to_bin, symbol_num);
 
     /*
     Content of the encoded file:
+    0) number of translator lines
     1) translation information
-    2) number of symbols need this in order to stop deciphering last byte
+    2) number of symbols -- need this in order to stop deciphering last byte
     3) ciphered text
-    */
-
-
-    for(const auto el : char_to_bin){
-        std::cout << el.first << " = ";
-        for(const auto c : el.second){
-            std::cout << c << ' ';
-        }
-        std::cout << '\n';
-    }
-
-    for(const auto el : bin_content){
-        std::cout << el << ' ';
-    }
-    std::cout << '\n';
-
-    /*
-    while(!symbol_queue.empty()){
-        std::cout << symbol_queue.top()->symbol_ << ' ' << symbol_queue.top()->freq_ << '\n';
-        symbol_queue.pop();
-    }
-    */
-    /*
-    for(const auto& el : frequencies){
-        std::cout << el.first << " " << el.second << '\n';
-    }
     */
 
     return 0;
 }
-std::vector<Byte> translate_content(const std::string& content, const Translator& char_to_bin){
-    std::string bin_text = get_bin_repr_text(content, char_to_bin);
+
+std::ostream& operator<<(std::ostream& out, const std::vector<Byte>& vec){
+    for(const auto& el : vec){
+        out << el;
+    }
+    return out;
+}
+
+void write_encoded_text(std::ostream& out_file, const std::vector<Byte>& bin_content,
+                        const Translator& char_to_bin, const size_t symbol_num){
+    out_file << char_to_bin.size() << '\n';
+    std::vector<Byte> current_word;
+    for(const auto& el : char_to_bin){
+        size_t word_legth = el.second.size();
+        current_word = split_to_bytes(el.second);
+        out_file << el.first << ' ' << word_legth << ' ' << current_word << '\n';
+        current_word.clear();
+    }
+    out_file << symbol_num << '\n';
+    out_file << bin_content;
+}
+
+
+std::vector<Byte> split_to_bytes(const std::string& bin_text){
     std::vector<Byte> bin_content;
     size_t size = bin_text.size()/8;
     size_t leftover = bin_text.size() % 8;
