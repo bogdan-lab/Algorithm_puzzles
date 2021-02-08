@@ -26,6 +26,7 @@ struct HNode{
         freq_ = lhs->freq_ + rhs->freq_;
     }
 };
+
 struct HNodeCompare{
    bool operator()( const HNode* lhs,
                     const HNode* rhs ) const {
@@ -89,6 +90,8 @@ void write_encoded_text(std::ostream& out_file, const std::vector<Byte>& bin_con
                        static_cast<std::streamsize>(current_word.size()));
     }
     out_file.write(reinterpret_cast<const char*>(&symbol_num), sizeof(symbol_num));
+    uint64_t bin_word_num = bin_content.size();
+    out_file.write(reinterpret_cast<char*>(&bin_word_num), sizeof(uint64_t));
     out_file.write(reinterpret_cast<const char*>(bin_content.data()),
                    static_cast<std::streamsize>(bin_content.size()));
 }
