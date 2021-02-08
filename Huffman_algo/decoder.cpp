@@ -47,12 +47,7 @@ std::string decipher_content(std::ifstream& bin_file, const HNode* dec_tree){
     const HNode* root = dec_tree;
     uint64_t idx = 0;
     while(symbol_num){
-        if(bin_content[idx/8][idx%8]){
-            root = root->right_;
-        }
-        else{
-            root = root->left_;
-        }
+        root =bin_content[idx/8][idx%8] ? root->right_ : root->left_;
         idx++;
         if(!root->right_ && !root->left_){
             symbol_num--;
