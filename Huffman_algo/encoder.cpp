@@ -10,18 +10,18 @@
 #include<sstream>
 #include<bitset>
 
-using FreqHolder = std::unordered_map<char, size_t>;
+using FreqHolder = std::unordered_map<char, uint64_t>;
 using Translator = std::unordered_map<char, std::string>;
 using Byte = std::bitset<8>;
 
 struct HNode{
     HNode* left_ = nullptr;
     HNode* right_ = nullptr;
-    size_t freq_ = 0;
+    uint64_t freq_ = 0;
     char symbol_ = '\0';
     std::string code_ = {};
 
-    HNode(const size_t gf, const char gc) : freq_(gf), symbol_(gc) {}
+    HNode(const uint64_t gf, const char gc) : freq_(gf), symbol_(gc) {}
     HNode(HNode* lhs, HNode* rhs) : left_(lhs), right_(rhs) {
         freq_ = lhs->freq_ + rhs->freq_;
     }
@@ -50,19 +50,11 @@ std::string get_bin_repr_text(const std::string& content, const Translator& char
 std::vector<Byte> split_to_bytes(const std::string& bin_text);
 
 void write_encoded_text(std::ostream& out_file, const std::vector<Byte>& bin_content,
-                        const Translator& char_to_bin, const size_t symbol_num);
-
-std::ostream& operator<<(std::ostream& out, const std::vector<Byte>& w);
+                        const Translator& char_to_bin, const uint64_t symbol_num);
 
 
-int main(int  argc, char** argv){
-//int main(){
-
+int main(int argc, char** argv){
     //TODO Entire text is one symbol - does not work!
-
-    std::cout <<argc << '\n';
-    //std::cout << "THE FIRST ARGUMENT " << argv[1] << '\n';
-    //std::cout << "THE SECOND ARGUMENT " << argv[2] << '\n' << '\n';
 
     std::ifstream in_file(argv[1], std::ios_base::in);
     //std::stringstream in_file;
@@ -75,57 +67,46 @@ int main(int  argc, char** argv){
     Translator char_to_bin = get_translator_to_bin(symbol_tree);
     std::string bin_text = get_bin_repr_text(content, char_to_bin);
     std::vector<Byte> bin_content = split_to_bytes(bin_text);
-    size_t symbol_num = content.size();
-
+    uint64_t symbol_num = content.size();
 
     std::ofstream out_file(argv[2], std::ios_base::binary);
     write_encoded_text(out_file, bin_content, char_to_bin, symbol_num);
 
-    /*
-    Content of the encoded file:
-    0) number of translator lines
-    1) translation information
-    2) number of symbols -- need this in order to stop deciphering last byte
-    3) ciphered text
-    */
-
     return 0;
 }
 
-std::ostream& operator<<(std::ostream& out, const std::vector<Byte>& vec){
-    for(const auto& el : vec){
-        out << el;
-    }
-    return out;
-}
-
 void write_encoded_text(std::ostream& out_file, const std::vector<Byte>& bin_content,
-                        const Translator& char_to_bin, const size_t symbol_num){
-    out_file << char_to_bin.size() << '\n';
+                        const Translator& char_to_bin, const uint64_t symbol_num){
+    uint32_t char_num = static_cast<uint32_t>(char_to_bin.size());
+    out_file.write(reinterpret_cast<char*>(&char_num), sizeof(char_num));
     std::vector<Byte> current_word;
     for(const auto& el : char_to_bin){
-        size_t word_legth = el.second.size();
+        uint32_t word_legth = static_cast<uint32_t>(el.second.size());
         current_word = split_to_bytes(el.second);
-        out_file << el.first << ' ' << word_legth << ' ' << current_word << '\n';
-        current_word.clear();
+        out_file.write(&el.first, sizeof(el.first));
+        out_file.write(reinterpret_cast<char*>(&word_legth), sizeof(word_legth));
+        out_file.write(reinterpret_cast<char*>(current_word.data()),
+                       static_cast<std::streamsize>(current_word.size()));
     }
-    out_file << symbol_num << '\n';
-    out_file << bin_content;
+    out_file.write(reinterpret_cast<const char*>(&symbol_num), sizeof(symbol_num));
+    out_file.write(reinterpret_cast<const char*>(bin_content.data()),
+                   static_cast<std::streamsize>(bin_content.size()));
 }
 
 
 std::vector<Byte> split_to_bytes(const std::string& bin_text){
     std::vector<Byte> bin_content;
-    size_t size = bin_text.size()/8;
-    size_t leftover = bin_text.size() % 8;
+    uint64_t size = bin_text.size()/8;
+    uint64_t leftover = bin_text.size() % 8;
     bin_content.reserve(size+1);
-    for(size_t i=0; i<size; i++){
+    for(uint64_t i=0; i<size; i++){
         bin_content.push_back({bin_text, 8*i, 8});
     }
     bin_content.push_back({bin_text, 8*size, leftover});
     bin_content.back() <<= 8 - leftover;
     return bin_content;
 }
+
 
 std::string get_bin_repr_text(const std::string& content, const Translator& char_to_bin){
     std::string bin_text;
@@ -134,7 +115,6 @@ std::string get_bin_repr_text(const std::string& content, const Translator& char
     }
     return bin_text;
 }
-
 
 
 Translator get_translator_to_bin(const HNode* symbol_tree){
