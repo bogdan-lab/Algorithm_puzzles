@@ -6,8 +6,6 @@
 #include<fstream>
 #include<iterator>
 #include<queue>
-#include<utility>
-#include<sstream>
 #include<bitset>
 
 using FreqHolder = std::unordered_map<char, uint64_t>;
@@ -35,11 +33,9 @@ struct HNodeCompare{
    }
 };
 
-
 using PriorQueue = std::priority_queue<HNode*,
                                        std::vector<HNode*>,
                                        HNodeCompare>;
-
 
 FreqHolder get_frequency(const std::string& content);
 PriorQueue build_queue(const FreqHolder& freq);
@@ -54,12 +50,21 @@ std::vector<Byte> split_to_bytes(const std::string& bin_text);
 void write_encoded_text(std::ostream& out_file, const std::vector<Byte>& bin_content,
                         const Translator& char_to_bin, const uint64_t symbol_num);
 
+bool is_empty(std::ifstream& input);
+
+
+
 
 int main(int argc, char** argv){
-    //TODO Entire text is one symbol - does not work!
-
     std::ifstream in_file(argv[1], std::ios_base::in);
-    //std::ifstream in_file("test_file", std::ios_base::in);
+    if(!in_file){
+        std::cerr << "Cannot open file " << argv[1] << '\n';
+        exit(1);
+    }
+    if(is_empty(in_file)){
+        std::ofstream out_file(argv[2], std::ios_base::out);
+        return 0;
+    }
     std::string content{std::istreambuf_iterator<char>(in_file),
                         std::istreambuf_iterator<char>()};
     FreqHolder frequencies = get_frequency(content);
@@ -76,6 +81,14 @@ int main(int argc, char** argv){
     return 0;
 }
 
+
+
+
+
+bool is_empty(std::ifstream& input){
+    return input.peek() == std::ifstream::traits_type::eof();
+}
+
 void write_binary_word(std::ostream& out_file, const std::vector<Byte>& bin_content){
     for(const auto& el : bin_content){
         out_file.write(reinterpret_cast<const char*>(&el),1);
@@ -86,29 +99,18 @@ void write_encoded_text(std::ostream& out_file, const std::vector<Byte>& bin_con
                         const Translator& char_to_bin, const uint64_t symbol_num){
     uint32_t char_num = static_cast<uint32_t>(char_to_bin.size());
     out_file.write(reinterpret_cast<char*>(&char_num), sizeof(char_num));
-    //std::cout << "CHAR NUM = " << char_num << '\n';
     std::vector<Byte> current_word;
     for(const auto& el : char_to_bin){
         uint32_t word_legth = static_cast<uint32_t>(el.second.size());
         current_word = split_to_bytes(el.second);
         out_file.write(&el.first, sizeof(el.first));
-        //std::cout << el.first << ' ' << word_legth << ' ';
-        //for(const auto tst : current_word){
-        //    std::cout << tst;
-        //}
-        //std::cout << '\n';
         out_file.write(reinterpret_cast<char*>(&word_legth), sizeof(word_legth));
         write_binary_word(out_file, current_word);
     }
     out_file.write(reinterpret_cast<const char*>(&symbol_num), sizeof(symbol_num));
-    //std::cout << "Symbol num = " << symbol_num << '\n';
     uint64_t bin_word_num = bin_content.size();
     out_file.write(reinterpret_cast<char*>(&bin_word_num), sizeof(uint64_t));
-    //std::cout << "Bin word num = " << bin_word_num << '\n';
     write_binary_word(out_file, bin_content);
-    //for(const auto tst : bin_content){
-    //    std::cout << tst;
-    //}
 }
 
 

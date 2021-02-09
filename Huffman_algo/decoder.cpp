@@ -1,5 +1,4 @@
 ﻿#include<iostream>
-#include<unordered_map>
 #include<string>
 #include<vector>
 #include<bitset>
@@ -23,14 +22,19 @@ void add_char_to_tree(HNode* root, const char symbol, const uint32_t word_len,
 std::string decipher_content(std::ifstream& in_file, const HNode* dec_tree);
 std::vector<Byte> read_string_into_bytes(std::ifstream& bin_input, const size_t char_num);
 
-
-
-
+bool is_empty(std::ifstream& input);
 
 
 int main(int argc, char** argv){
-
     std::ifstream in_file(argv[1], std::ios_base::binary);
+    if(!in_file){
+        std::cerr << "Cannot open file " << argv[1] << '\n';
+        exit(1);
+    }
+    if(is_empty(in_file)){
+        std::ofstream out_file(argv[2], std::ios_base::out);
+        return 0;
+    }
     HNode* dec_tree = build_decipher_tree(in_file);
     std::string dec_content =  decipher_content(in_file, dec_tree);
 
@@ -42,8 +46,9 @@ int main(int argc, char** argv){
 
 
 
-
-
+bool is_empty(std::ifstream& input){
+    return input.peek() == std::ifstream::traits_type::eof();
+}
 
 std::string decipher_content(std::ifstream& bin_file, const HNode* dec_tree){
     uint64_t symbol_num = 0;
@@ -51,9 +56,6 @@ std::string decipher_content(std::ifstream& bin_file, const HNode* dec_tree){
     uint64_t bin_word_num = 0;
     bin_file.read(reinterpret_cast<char*>(&bin_word_num), sizeof(bin_word_num));
     std::vector<Byte> bin_content = read_string_into_bytes(bin_file, bin_word_num);
-    //for(const auto& el : bin_content){
-    //    std::cout << el;
-    //}
     std::string content;
     content.reserve(symbol_num);
     const HNode* root = dec_tree;
@@ -86,13 +88,10 @@ void add_char_to_tree(HNode* root, const char symbol, const uint32_t word_len,
     root->symbol_ = symbol;
 }
 
+
 std::vector<Byte> read_string_into_bytes(std::ifstream& bin_input, const size_t char_num){
     char buffer[char_num];
     bin_input.read(buffer, static_cast<std::streamsize>(char_num));
-    //std::cout << "BUFFER\n";
-    //for(size_t i=0; i<char_num; i++){
-    //    std::cout << buffer[i];
-    //}
     std::vector<Byte> code;
     code.reserve(char_num);
     for(size_t i=0; i<char_num; i++){
