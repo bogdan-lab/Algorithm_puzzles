@@ -58,8 +58,7 @@ int main(int argc, char** argv){
     //TODO Entire text is one symbol - does not work!
 
     std::ifstream in_file(argv[1], std::ios_base::in);
-    //std::stringstream in_file;
-    //in_file << R"(Hello World!)";
+    //std::ifstream in_file("test_file", std::ios_base::in);
     std::string content{std::istreambuf_iterator<char>(in_file),
                         std::istreambuf_iterator<char>()};
     FreqHolder frequencies = get_frequency(content);
@@ -76,24 +75,39 @@ int main(int argc, char** argv){
     return 0;
 }
 
+void write_binary_word(std::ostream& out_file, const std::vector<Byte>& bin_content){
+    for(const auto& el : bin_content){
+        out_file.write(reinterpret_cast<const char*>(&el),1);
+    }
+}
+
 void write_encoded_text(std::ostream& out_file, const std::vector<Byte>& bin_content,
                         const Translator& char_to_bin, const uint64_t symbol_num){
     uint32_t char_num = static_cast<uint32_t>(char_to_bin.size());
     out_file.write(reinterpret_cast<char*>(&char_num), sizeof(char_num));
+    //std::cout << "CHAR NUM = " << char_num << '\n';
     std::vector<Byte> current_word;
     for(const auto& el : char_to_bin){
         uint32_t word_legth = static_cast<uint32_t>(el.second.size());
         current_word = split_to_bytes(el.second);
         out_file.write(&el.first, sizeof(el.first));
+        //std::cout << el.first << ' ' << word_legth << ' ';
+        //for(const auto tst : current_word){
+        //    std::cout << tst;
+        //}
+        //std::cout << '\n';
         out_file.write(reinterpret_cast<char*>(&word_legth), sizeof(word_legth));
-        out_file.write(reinterpret_cast<char*>(current_word.data()),
-                       static_cast<std::streamsize>(current_word.size()));
+        write_binary_word(out_file, current_word);
     }
     out_file.write(reinterpret_cast<const char*>(&symbol_num), sizeof(symbol_num));
+    //std::cout << "Symbol num = " << symbol_num << '\n';
     uint64_t bin_word_num = bin_content.size();
     out_file.write(reinterpret_cast<char*>(&bin_word_num), sizeof(uint64_t));
-    out_file.write(reinterpret_cast<const char*>(bin_content.data()),
-                   static_cast<std::streamsize>(bin_content.size()));
+    //std::cout << "Bin word num = " << bin_word_num << '\n';
+    write_binary_word(out_file, bin_content);
+    //for(const auto tst : bin_content){
+    //    std::cout << tst;
+    //}
 }
 
 
