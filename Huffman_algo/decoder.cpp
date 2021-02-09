@@ -112,11 +112,6 @@ HNode* build_decipher_tree(std::ifstream& bin_input){
         bin_input.read(reinterpret_cast<char*>(&cur_word_len), sizeof(cur_word_len));
         size_t bin_repr_size = cur_word_len/8+1;
         std::vector<Byte> code = read_string_into_bytes(bin_input, bin_repr_size);
-        //std::string str = "";
-        //for(const auto& el : code){
-        //    str += el.to_string();
-        //}
-        //std::cerr << str << '\n';
         add_char_to_tree(root, cur_symbol, cur_word_len, code);
     }
     return root;
