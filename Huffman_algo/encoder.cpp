@@ -21,6 +21,7 @@ struct HNode{
     char symbol_ = '\0';
     std::string code_ = {};
 
+    HNode() = default;
     HNode(const uint64_t gf, const char gc) : freq_(gf), symbol_(gc) {}
     HNode(HNode* lhs, HNode* rhs) : left_(lhs), right_(rhs) {
         freq_ = lhs->freq_ + rhs->freq_;
@@ -146,27 +147,40 @@ Translator get_translator_to_bin(const HNode* symbol_tree){
 
 
 void fill_tree_vector(const HNode* symbol_tree, std::vector<const HNode*>& tree_elements){
-    if(!symbol_tree->left_ || !symbol_tree->right_) return;
-    tree_elements.push_back(symbol_tree->left_);
-    tree_elements.push_back(symbol_tree->right_);
-    fill_tree_vector(symbol_tree->left_, tree_elements);
-    fill_tree_vector(symbol_tree->right_, tree_elements);
+    if(!symbol_tree) return;
+    if(symbol_tree->left_){
+        tree_elements.push_back(symbol_tree->left_);
+        fill_tree_vector(symbol_tree->left_, tree_elements);
+    }
+    if(symbol_tree->right_){
+        tree_elements.push_back(symbol_tree->right_);
+        fill_tree_vector(symbol_tree->right_, tree_elements);
+    }
 }
 
 
 void add_binary_words(HNode* symbol_tree){
-    if(!symbol_tree->left_ || !symbol_tree->right_) return;
-    symbol_tree->left_->code_.reserve(symbol_tree->code_.size()+1);
-    symbol_tree->left_->code_ = symbol_tree->code_;
-    symbol_tree->left_->code_.push_back('0');
-    symbol_tree->right_->code_.reserve(symbol_tree->code_.size()+1);
-    symbol_tree->right_->code_ = symbol_tree->code_;
-    symbol_tree->right_->code_.push_back('1');
-    add_binary_words(symbol_tree->left_);
-    add_binary_words(symbol_tree->right_);
+    if(!symbol_tree) return;
+    if(symbol_tree->left_){
+        symbol_tree->left_->code_.reserve(symbol_tree->code_.size()+1);
+        symbol_tree->left_->code_ = symbol_tree->code_;
+        symbol_tree->left_->code_.push_back('0');
+        add_binary_words(symbol_tree->left_);
+    }
+    if(symbol_tree->right_){
+        symbol_tree->right_->code_.reserve(symbol_tree->code_.size()+1);
+        symbol_tree->right_->code_ = symbol_tree->code_;
+        symbol_tree->right_->code_.push_back('1');
+        add_binary_words(symbol_tree->right_);
+    }
 }
 
 HNode* build_HTree(const FreqHolder& freq){
+    if(freq.size()==1){
+        HNode* root = new HNode();
+        root->left_ = new HNode( freq.begin()->second, freq.begin()->first);
+        return root;
+    }
     PriorQueue HNode_queue = build_queue(freq);
     while (HNode_queue.size()>1) {
         HNode* lhs = HNode_queue.top();
