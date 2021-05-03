@@ -1,13 +1,24 @@
 #include <algorithm>
+#include <cstdint>
 #include <iostream>
 #include <iterator>
 #include <sstream>
 #include <vector>
 
-int get_max_multiply(std::vector<int>& vec) {
-  if (vec.size() == 5) return vec[0] * vec[1] * vec[2] * vec[3] * vec[4];
+int64_t last_5_mult(const std::vector<int>& vec) {
+  int i = vec.size();
+  return static_cast<int64_t>(vec[--i]) * static_cast<int64_t>(vec[--i]) *
+         static_cast<int64_t>(vec[--i]) * static_cast<int64_t>(vec[--i]) *
+         static_cast<int64_t>(vec[--i]);
+}
+
+int64_t get_max_multiply(std::vector<int>& vec) {
+  if (vec.size() == 5) return last_5_mult(vec);
   std::sort(vec.begin(), vec.end());
-  int res = vec.back();
+  if (vec.back() <= 0 || vec.front() >= 0) {
+    return last_5_mult(vec);
+  }
+  int64_t res = vec.back();
   int pos_idx = vec.size() - 1;
   int neg_idx = 0;
   int pos_hand = vec[--pos_idx] * vec[--pos_idx];
