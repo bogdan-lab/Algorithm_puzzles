@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -14,7 +15,6 @@ struct Point {
   int x;
   int y;
 };
-using CoorCollection = std::vector<Point>;
 
 struct StartEnd {
   std::optional<ID> start;
@@ -29,7 +29,6 @@ struct Map {
 
 struct Maze {
   Graph graph;
-  CoorCollection coors;
   ID start;
   ID end;
 };
@@ -68,9 +67,8 @@ Map get_map_from_file(const char* fname) {
   return m;
 }
 
-Maze read_from_file(const char* fname) {
+Maze construct_maze(const Map& m) {
   Maze maze;
-  Map m = get_map_from_file(fname);
   maze.start = m.start_end.start.value();
   maze.end = m.start_end.end.value();
   maze.graph = Graph(m.max_id + 1);
@@ -78,7 +76,6 @@ Maze read_from_file(const char* fname) {
     for (int col = 0; col < m.map[line].size(); ++col) {
       if (!m.map[line][col]) continue;
       ID id = m.map[line][col].value();
-      maze.coors.push_back({line, col});
       if (col > 0 && m.map[line][col - 1]) {
         maze.graph[id].push_back(m.map[line][col - 1].value());
       }
@@ -109,7 +106,7 @@ BFSTree BuildBFSTree(const Maze& m) {
   BFSTree bt;
   bt.start = m.start;
   bt.end = m.end;
-  bt.colors = std::vector<Color>(m.coors.size(), Color::WHITE);
+  bt.colors = std::vector<Color>(m.graph.size(), Color::WHITE);
   bt.traces = Graph(m.graph.size());
   ID curr = bt.start;
   std::queue<ID> buff;
@@ -132,15 +129,32 @@ BFSTree BuildBFSTree(const Maze& m) {
   return bt;
 }
 
-int main() {
-  Maze m = read_from_file("maze_test_1");
-  BFSTree bt = BuildBFSTree(m);
-  for (const auto& vec : bt.traces) {
-    for (auto id : vec) {
-      std::cout << id << " ; ";
+void print_solution(const std::vector<ID>& trace, const Map& m,
+                    std::ostream& out) {
+  auto s_trace = trace;
+  std::sort(s_trace.begin(), s_trace.end());
+  auto tr_it = s_trace.begin();
+  for (const auto& vec : m.map) {
+    for (auto el : vec) {
+      if (el) {
+        if (tr_it != s_trace.end() && *el == *tr_it) {
+          out << '.';
+          ++tr_it;
+        } else {
+          out << ' ';
+        }
+      } else {
+        out << 'X';
+      }
     }
-    std::cout << "\n";
+    out << '\n';
   }
+}
 
+int main() {
+  Map mp = get_map_from_file("maze_test_1");
+  Maze maze = construct_maze(mp);
+  BFSTree bt = BuildBFSTree(maze);
+  print_solution(bt.traces[bt.end], mp, std::cout);
   return 0;
 }
