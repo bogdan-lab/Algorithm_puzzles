@@ -1,11 +1,11 @@
 #include <fstream>
+#include <iostream>
 #include <iterator>
 #include <optional>
 #include <queue>
 #include <string>
 #include <utility>
 #include <vector>
-#include <iostream>
 
 using ID = int;
 using Graph = std::vector<std::vector<ID>>;
@@ -73,7 +73,7 @@ Maze read_from_file(const char* fname) {
   Map m = get_map_from_file(fname);
   maze.start = m.start_end.start.value();
   maze.end = m.start_end.end.value();
-  maze.graph = Graph(m.max_id);
+  maze.graph = Graph(m.max_id + 1);
   for (int line = 0; line < m.map.size(); ++line) {
     for (int col = 0; col < m.map[line].size(); ++col) {
       if (!m.map[line][col]) continue;
@@ -96,17 +96,51 @@ Maze read_from_file(const char* fname) {
   return maze;
 }
 
+enum class Color { WHITE, GRAY, BLACK };
+
+struct BFSTree {
+  std::vector<Color> colors;
+  Graph traces;
+  ID start;
+  ID end;
+};
+
+BFSTree BuildBFSTree(const Maze& m) {
+  BFSTree bt;
+  bt.start = m.start;
+  bt.end = m.end;
+  bt.colors = std::vector<Color>(m.coors.size(), Color::WHITE);
+  bt.traces = Graph(m.graph.size());
+  ID curr = bt.start;
+  std::queue<ID> buff;
+  buff.push(bt.start);
+  bt.colors[bt.start] = Color::GRAY;
+  bt.traces[bt.start].push_back(bt.start);
+  while (!buff.empty()) {
+    ID curr = buff.front();
+    bt.colors[curr] = Color::BLACK;
+    buff.pop();
+    for (auto id : m.graph[curr]) {
+      if (bt.colors[id] == Color::WHITE) {
+        buff.push(id);
+        bt.colors[id] = Color::GRAY;
+        bt.traces[id].assign(bt.traces[curr].begin(), bt.traces[curr].end());
+        bt.traces[id].push_back(id);
+      }
+    }
+  }
+  return bt;
+}
+
 int main() {
   Maze m = read_from_file("maze_test_1");
-
-  for(const auto& vec : m.graph){
-      for(auto id : vec){
-          std::cout << id << " ; ";
-      }
-      std::cout << "\n";
+  BFSTree bt = BuildBFSTree(m);
+  for (const auto& vec : bt.traces) {
+    for (auto id : vec) {
+      std::cout << id << " ; ";
+    }
+    std::cout << "\n";
   }
-
-
 
   return 0;
 }
