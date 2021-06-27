@@ -95,49 +95,68 @@ Maze construct_maze(const Map& m) {
 
 enum class Color { WHITE, GRAY, BLACK };
 
+struct BFSNode;
+
+using NodeColl = std::vector<BFSNode*>;
+
+struct BFSNode {
+  BFSNode* parent = nullptr;
+  NodeColl childs;
+  ID id;
+
+  BFSNode(ID id_, BFSNode* p) : id(id_), parent(p) {}
+};
+
 struct BFSTree {
-  std::vector<Color> colors;
-  Graph traces;
-  ID start;
-  ID end;
+  BFSNode* root;
+  NodeColl trace_ends;
 };
 
 BFSTree BuildBFSTree(const Maze& m) {
-  BFSTree bt;
-  bt.start = m.start;
-  bt.end = m.end;
-  bt.colors = std::vector<Color>(m.graph.size(), Color::WHITE);
-  bt.traces = Graph(m.graph.size());
-  ID curr = bt.start;
-  std::queue<ID> buff;
-  buff.push(bt.start);
-  bt.colors[bt.start] = Color::GRAY;
-  bt.traces[bt.start].push_back(bt.start);
+  NodeColl trace_ends(m.graph.size(), nullptr);
+  std::vector<Color> colors(m.graph.size(), Color::WHITE);
+  BFSNode* root = new BFSNode{m.start, nullptr};
+  trace_ends[m.start] = root;
+  colors[m.start] = Color::GRAY;
+  std::queue<BFSNode*> buff;
+  buff.push(root);
   while (!buff.empty()) {
-    ID curr = buff.front();
-    bt.colors[curr] = Color::BLACK;
+    BFSNode* curr = buff.front();
     buff.pop();
-    for (auto id : m.graph[curr]) {
-      if (bt.colors[id] == Color::WHITE) {
-        buff.push(id);
-        bt.colors[id] = Color::GRAY;
-        bt.traces[id].assign(bt.traces[curr].begin(), bt.traces[curr].end());
-        bt.traces[id].push_back(id);
+    colors[curr->id] = Color::BLACK;
+    for (auto id : m.graph[curr->id]) {
+      if (colors[id] == Color::WHITE) {
+        colors[id] = Color::GRAY;
+        BFSNode* this_node = new BFSNode{id, curr};
+        buff.push(this_node);
+        trace_ends[id] = this_node;
+        curr->childs.push_back(this_node);
       }
     }
   }
-  return bt;
+  return {root, trace_ends};
 }
 
-void print_solution(const std::vector<ID>& trace, const Map& m,
-                    std::ostream& out) {
-  auto s_trace = trace;
-  std::sort(s_trace.begin(), s_trace.end());
-  auto tr_it = s_trace.begin();
+std::vector<ID> get_trace_vector(const BFSTree& bt, ID start, ID end) {
+  if (start != bt.root->id) exit(1);
+  std::vector<ID> res;
+  BFSNode* curr = bt.trace_ends[end];
+  res.push_back(curr->id);
+  while (curr->parent) {
+    res.push_back(curr->parent->id);
+    curr = curr->parent;
+  }
+  std::reverse(res.begin(), res.end());
+  return res;
+}
+
+void print_solution(std::vector<ID> trace, const Map& m, std::ostream& out) {
+  std::sort(trace.begin(), trace.end());
+  auto tr_it = trace.begin();
   for (const auto& vec : m.map) {
     for (auto el : vec) {
       if (el) {
-        if (tr_it != s_trace.end() && *el == *tr_it) {
+        if (tr_it != trace.end() && *el == *tr_it) {
           out << '.';
           ++tr_it;
         } else {
@@ -155,6 +174,7 @@ int main() {
   Map mp = get_map_from_file("maze_test_1");
   Maze maze = construct_maze(mp);
   BFSTree bt = BuildBFSTree(maze);
-  print_solution(bt.traces[bt.end], mp, std::cout);
+  std::vector<ID> trace = get_trace_vector(bt, maze.start, maze.end);
+  print_solution(std::move(trace), mp, std::cout);
   return 0;
 }
