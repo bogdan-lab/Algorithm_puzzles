@@ -29,7 +29,9 @@ Map read_map(std::istream& input, int line_num) {
   maze_map.m = Map::ValType(line_num);
   ID curr_id = 0;
   int curr_line = 0;
-  for (std::string buff; std::getline(input, buff);) {
+  std::string buff;
+  for (int curr_line = 0; curr_line < line_num; ++curr_line) {
+    std::getline(input, buff);
     for (auto ch : buff) {
       if (ch == '#') {
         maze_map.m[curr_line].push_back(std::nullopt);
@@ -37,7 +39,6 @@ Map read_map(std::istream& input, int line_num) {
         maze_map.m[curr_line].push_back(curr_id++);
       }
     }
-    curr_line++;
   }
   maze_map.max_id = curr_id - 1;
   return maze_map;
@@ -106,30 +107,76 @@ std::vector<ID> get_new_walls_ids(std::vector<DFSnode> time_vec, int wall_num) {
       [](const DFSnode& lhs, const DFSnode& rhs) { return lhs.id < rhs.id; });
   std::vector<ID> res;
   res.reserve(wall_num);
-  for(auto it=op_vec.begin(); it!=srt_end; ++it){
-      res.push_back(it->id);
+  for (auto it = op_vec.begin(); it != srt_end; ++it) {
+    res.push_back(it->id);
   }
   return res;
+}
+
+void print_solution(const Map& maze, const std::vector<ID>& new_walls) {
+  auto wit = new_walls.begin();
+  for (const auto& line : maze.m) {
+    for (auto id : line) {
+      if (id) {
+        if (wit != new_walls.end() && *wit == *id) {
+          std::cout << 'X';
+          ++wit;
+        } else {
+          std::cout << '.';
+        }
+      } else {
+        std::cout << '#';
+      }
+    }
+    std::cout << '\n';
+  }
 }
 
 void solution(std::istream& input = std::cin) {
   int lines, cols, walls;
   input >> lines >> cols >> walls;
+  input >> std::ws;
   Map m = read_map(input, lines);
-  // here print if walls = 0!;
+  if (!walls) {
+    print_solution(m, {});
+    return;
+  }
   Graph g = build_graph(m);
   std::vector<DFSnode> time_vec = do_DFS(g);
   std::vector<ID> wall_vec = get_new_walls_ids(time_vec, walls);
-  //here print result with wall_vec
+  print_solution(m, wall_vec);
 }
 
 int main() {
-  std::stringstream ss;
-  ss << R"(3 4 2
+  /*{
+    std::stringstream ss;
+    ss << R"(3 4 2
 #..#
 ..#.
 #...)";
-  solution(ss);
-
+    solution(ss);
+    std::cout << "\n=============\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(5 4 5
+#...
+#.#.
+.#..
+...#
+.#.#)";
+    solution(ss);
+    std::cout << "\n=============\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(3 4 0
+#..#
+..#.
+#...)";
+    solution(ss);
+    std::cout << "\n=============\n";
+  }*/
+  solution(std::cin);
   return 0;
 }
