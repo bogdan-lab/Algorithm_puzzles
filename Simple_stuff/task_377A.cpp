@@ -59,7 +59,7 @@ Graph build_graph(const Map& maze) {
       if (j > 0 && maze.m[i][j - 1]) {
         g[curr_id].push_back(*maze.m[i][j - 1]);
       }
-      if (i < maze.m[i].size() && maze.m[i][j + 1]) {
+      if (j < maze.m[i].size()-1 && maze.m[i][j + 1]) {
         g[curr_id].push_back(*maze.m[i][j + 1]);
       }
     }
