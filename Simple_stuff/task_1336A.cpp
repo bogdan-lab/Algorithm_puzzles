@@ -6,6 +6,7 @@
 using Graph = std::vector<std::vector<int>>;
 
 enum class Colors { WHITE, GRAY, BLACK };
+enum class CityType { UNDEFINED, TOURIST, INDUSTRIAL };
 
 struct DFSnode {
   int t_in;
@@ -49,36 +50,34 @@ std::vector<DFSnode> do_DFS(const Graph& g) {
   return dfs;
 }
 
-std::vector<int> get_industrial_id(std::vector<DFSnode> dfs, int n, int k) {
-  std::sort(dfs.begin(), dfs.end(), [](const DFSnode& lhs, const DFSnode& rhs) {
-    return lhs.t_out - lhs.t_in > rhs.t_out - rhs.t_in;
-  });
-  std::vector<int> res;
-  res.reserve(k);
-  auto sort_it = dfs.begin() + n - k;
-  for (auto it = sort_it; it != dfs.end(); ++it) {
-    res.push_back(it->id);
+std::vector<CityType> get_industrial_id(std::vector<DFSnode> dfs, int n,
+                                        int k) {
+  int t_num = n-k;
+    std::partial_sort(dfs.begin(), dfs.begin() + t_num, dfs.end(),
+                    [](const DFSnode& lhs, const DFSnode& rhs) {
+                      return lhs.t_out - lhs.t_in > rhs.t_out - rhs.t_in;
+                    });
+  std::vector<CityType> ctypes(n, CityType::UNDEFINED);
+  for (int i = 0; i<n; ++i) {
+        ctypes[dfs[i].id] = i<t_num ? CityType::TOURIST : CityType::INDUSTRIAL;
   }
-  return res;
+  return ctypes;
 }
 
 int64_t calc_max_pleasure(const Graph& g, int n, int k) {
   std::vector<DFSnode> dfs = do_DFS(g);
-  std::vector<int> industrial_ids = get_industrial_id(dfs, n, k);
+  std::vector<CityType> ctypes = get_industrial_id(dfs, n, k);
   int64_t res = 0;
-  std::vector<int> checked(n, 0);
-  for (auto id : industrial_ids) {
-    if (!checked[id]) {
-      checked[id] = 1;
-      int64_t curr_joy = dfs[id].depth;
-      res += curr_joy;
-      for (auto child : g[id]) {
-        if (child != dfs[id].parent) {
-          checked[child] = 1;
-          res += curr_joy;
-        }
+  for(int id = 0; id<n; ++id){
+      if(ctypes[id]==CityType::INDUSTRIAL){
+          int curr_id = id;
+          int64_t joy=dfs[curr_id].depth;
+          while(ctypes[dfs[curr_id].parent]!=CityType::TOURIST){
+            curr_id = dfs[curr_id].parent;
+            joy = dfs[curr_id].depth;
+          }
+          res += joy;
       }
-    }
   }
   return res;
 }
@@ -98,59 +97,84 @@ void solution(std::istream& input) {
 }
 
 int main() {
-/*
+  
+      {
+      std::stringstream ss;
+      ss << R"(7 4
+  1 2
+  1 3
+  1 4
+  3 5
+  3 6
+  4 7)";
+      solution(ss);
+      std::cout << "expected = 7\n";
+    }
     {
-    std::stringstream ss;
-    ss << R"(7 4
-1 2
-1 3
-1 4
-3 5
-3 6
-4 7)";
-    solution(ss);
-    std::cout << "expected = 7\n";
-  }
-  {
-    std::stringstream ss;
-    ss << R"(4 1
-1 2
-1 3
-2 4)";
-    solution(ss);
-    std::cout << "expected = 2\n";
-  }
-  {
-    std::stringstream ss;
-    ss << R"(8 5
-7 5
-1 7
-6 1
+      std::stringstream ss;
+      ss << R"(4 1
+  1 2
+  1 3
+  2 4)";
+      solution(ss);
+      std::cout << "expected = 2\n";
+    }
+    {
+      std::stringstream ss;
+      ss << R"(8 5
+  7 5
+  1 7
+  6 1
+  3 7
+  8 3
+  2 1
+  4 5)";
+      solution(ss);
+      std::cout << "expected = 9\n";
+    }
+    {
+      std::stringstream ss;
+      ss << R"(2 1
+  1 2)";
+      solution(ss);
+      std::cout << "expected = 1\n";
+    }
+    {
+      std::stringstream ss;
+      ss << R"(4 3
+  1 2
+  1 3
+  1 4)";
+      solution(ss);
+      std::cout << "expected = 3\n";
+    }
+    {
+        std::stringstream ss;
+        ss << R"(20 7
+9 7
 3 7
-8 3
-2 1
-4 5)";
-    solution(ss);
-    std::cout << "expected = 9\n";
-  }
-  {
-    std::stringstream ss;
-    ss << R"(2 1
-1 2)";
-    solution(ss);
-    std::cout << "expected = 1\n";
-  }
-  {
-    std::stringstream ss;
-    ss << R"(4 3
-1 2
+15 9
 1 3
-1 4)";
-    solution(ss);
-    std::cout << "expected = 3\n";
-  }
-  */
-    solution(std::cin);
+11 9
+18 7
+17 18
+20 1
+4 11
+2 11
+12 18
+8 18
+13 2
+19 2
+10 9
+6 13
+5 8
+14 1
+16 13)";
+        solution(ss);
+        std::cout << "expected = 38\n";
+    }
+    
+  //solution(std::cin);
   return 0;
 }
 
