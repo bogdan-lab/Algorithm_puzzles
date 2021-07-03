@@ -14,13 +14,14 @@ struct DFSnode {
   int id;
   int parent;
   int depth;
+  int eff_depth;
 };
 
 std::vector<DFSnode> do_DFS(const Graph& g) {
   std::vector<DFSnode> dfs;
   dfs.reserve(g.size());
   for (int id = 0; id < g.size(); ++id) {
-    dfs.push_back({0, 0, id, 0, 0});
+    dfs.push_back({0, 0, id, 0, 0, 0});
   }
   std::vector<Colors> colors(g.size(), Colors::WHITE);
   std::stack<int> buff;
@@ -52,24 +53,25 @@ std::vector<DFSnode> do_DFS(const Graph& g) {
 
 std::vector<CityType> get_industrial_id(std::vector<DFSnode> dfs, int n,
                                         int k) {
-  int t_num = n - k;
-  std::partial_sort(
-      dfs.begin(), dfs.begin() + t_num, dfs.end(),
-      [](const DFSnode& lhs, const DFSnode& rhs) {
-        int lhs_include = lhs.t_out - lhs.t_in;
-        int rhs_include = rhs.t_out - rhs.t_in;
-        return lhs_include > rhs_include ||
-               (lhs_include == rhs_include && lhs.depth < rhs.depth);
-      });
+  std::sort(dfs.begin(), dfs.end(), [](const DFSnode& lhs, const DFSnode& rhs) {
+    return lhs.eff_depth > rhs.eff_depth;
+  });
   std::vector<CityType> ctypes(n, CityType::UNDEFINED);
   for (int i = 0; i < n; ++i) {
-    ctypes[dfs[i].id] = i < t_num ? CityType::TOURIST : CityType::INDUSTRIAL;
+    ctypes[dfs[i].id] = i < k ? CityType::INDUSTRIAL : CityType::TOURIST;
   }
   return ctypes;
 }
 
+void fill_effective_depth(const Graph& g, std::vector<DFSnode>& dfs) {
+  for (auto& el : dfs) {
+    el.eff_depth = el.depth - g[el.id].size() + 1;
+  }
+}
+
 int64_t calc_max_pleasure(const Graph& g, int n, int k) {
   std::vector<DFSnode> dfs = do_DFS(g);
+  fill_effective_depth(g, dfs);
   std::vector<CityType> ctypes = get_industrial_id(dfs, n, k);
   int64_t res = 0;
   for (int id = 0; id < n; ++id) {
@@ -100,9 +102,8 @@ void solution(std::istream& input) {
   std::cout << calc_max_pleasure(g, n, k) << '\n';
 }
 
-int main() {
-  /*
-    {
+void RunTests() {
+  {
     std::stringstream ss;
     ss << R"(7 4
   1 2
@@ -177,8 +178,11 @@ int main() {
     solution(ss);
     std::cout << "expected = 38\n";
   }
-*/
-  solution(std::cin);
+}
+
+int main() {
+  //RunTests();
+   solution(std::cin);
   return 0;
 }
 
