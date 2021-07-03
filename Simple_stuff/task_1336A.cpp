@@ -25,9 +25,10 @@ std::vector<DFSnode> do_DFS(const Graph& g) {
   std::stack<int> buff;
   buff.push(0);
   int t = 0;
+  int depth = 0;
   colors[0] = Colors::GRAY;
   dfs[0].t_in = t++;
-  int depth = 0;
+  dfs[0].depth = depth++;
   while (!buff.empty()) {
     int top_id = buff.top();
     auto it = std::find_if(g[top_id].begin(), g[top_id].end(),
@@ -48,14 +49,13 @@ std::vector<DFSnode> do_DFS(const Graph& g) {
   return dfs;
 }
 
-std::vector<int> get_industrial_id(std::vector<DFSnode> dfs, int ind_num) {
-  std::sort(dfs.begin(), dfs.end(),
-                    [](const DFSnode& lhs, const DFSnode& rhs) {
-                      return lhs.t_out - lhs.t_in > rhs.t_out - rhs.t_in;
-                    });
+std::vector<int> get_industrial_id(std::vector<DFSnode> dfs, int n, int k) {
+  std::sort(dfs.begin(), dfs.end(), [](const DFSnode& lhs, const DFSnode& rhs) {
+    return lhs.t_out - lhs.t_in > rhs.t_out - rhs.t_in;
+  });
   std::vector<int> res;
-  res.reserve(ind_num);
-  auto sort_it = dfs.begin() + ind_num;
+  res.reserve(k);
+  auto sort_it = dfs.begin() + n - k;
   for (auto it = sort_it; it != dfs.end(); ++it) {
     res.push_back(it->id);
   }
@@ -64,21 +64,21 @@ std::vector<int> get_industrial_id(std::vector<DFSnode> dfs, int ind_num) {
 
 int64_t calc_max_pleasure(const Graph& g, int n, int k) {
   std::vector<DFSnode> dfs = do_DFS(g);
-  std::vector<int> industrial_ids = get_industrial_id(dfs, k);
+  std::vector<int> industrial_ids = get_industrial_id(dfs, n, k);
   int64_t res = 0;
   std::vector<int> checked(n, 0);
-  for(auto id : industrial_ids){
-      if(!checked[id]){
-          checked[id] = 1;
-          int64_t curr_joy = dfs[dfs[id].parent].depth;
+  for (auto id : industrial_ids) {
+    if (!checked[id]) {
+      checked[id] = 1;
+      int64_t curr_joy = dfs[id].depth;
+      res += curr_joy;
+      for (auto child : g[id]) {
+        if (child != dfs[id].parent) {
+          checked[child] = 1;
           res += curr_joy;
-          for(auto child : g[id]){
-              if(child != dfs[id].parent){
-                  checked[child] = 1;
-                  res += curr_joy;
-              }
-          }
+        }
       }
+    }
   }
   return res;
 }
@@ -94,19 +94,63 @@ void solution(std::istream& input) {
     g[p1 - 1].push_back(p2 - 1);
     g[p2 - 1].push_back(p1 - 1);
   }
-  std::cout << calc_max_pleasure(g, n, k);
+  std::cout << calc_max_pleasure(g, n, k) << '\n';
 }
 
 int main() {
-  std::stringstream ss;
-  ss << R"(7 4
+/*
+    {
+    std::stringstream ss;
+    ss << R"(7 4
 1 2
 1 3
 1 4
 3 5
 3 6
 4 7)";
-  solution(ss);
+    solution(ss);
+    std::cout << "expected = 7\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4 1
+1 2
+1 3
+2 4)";
+    solution(ss);
+    std::cout << "expected = 2\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(8 5
+7 5
+1 7
+6 1
+3 7
+8 3
+2 1
+4 5)";
+    solution(ss);
+    std::cout << "expected = 9\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(2 1
+1 2)";
+    solution(ss);
+    std::cout << "expected = 1\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4 3
+1 2
+1 3
+1 4)";
+    solution(ss);
+    std::cout << "expected = 3\n";
+  }
+  */
+    solution(std::cin);
   return 0;
 }
 
