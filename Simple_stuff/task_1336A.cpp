@@ -65,7 +65,7 @@ std::vector<CityType> get_industrial_id(std::vector<DFSnode> dfs, int n,
 
 void fill_effective_depth(const Graph& g, std::vector<DFSnode>& dfs) {
   for (auto& el : dfs) {
-    el.eff_depth = el.depth - g[el.id].size() + 1;
+    el.eff_depth = el.depth - (el.t_out - el.t_in) / 2;
   }
 }
 
@@ -181,8 +181,8 @@ void RunTests() {
 }
 
 int main() {
-  //RunTests();
-   solution(std::cin);
+  // RunTests();
+  solution(std::cin);
   return 0;
 }
 
