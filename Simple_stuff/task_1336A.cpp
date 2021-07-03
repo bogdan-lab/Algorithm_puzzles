@@ -3,7 +3,7 @@
 #include <sstream>
 #include <stack>
 #include <vector>
-using Graph = std::vector<std::vector<int>>;
+using Graph = std::vector<std::stack<int>>;
 
 enum class Colors { WHITE, GRAY, BLACK };
 enum class CityType { UNDEFINED, TOURIST, INDUSTRIAL };
@@ -17,7 +17,7 @@ struct DFSnode {
   int eff_depth;
 };
 
-std::vector<DFSnode> do_DFS(const Graph& g) {
+std::vector<DFSnode> do_DFS(Graph g) {
   std::vector<DFSnode> dfs;
   dfs.reserve(g.size());
   for (int id = 0; id < g.size(); ++id) {
@@ -33,19 +33,21 @@ std::vector<DFSnode> do_DFS(const Graph& g) {
   dfs[0].depth = depth++;
   while (!buff.empty()) {
     int top_id = buff.top();
-    auto it = std::find_if(g[top_id].begin(), g[top_id].end(),
-                           [&](int id) { return colors[id] == Colors::WHITE; });
-    if (it == g[top_id].end()) {
+    while (!g[top_id].empty() && colors[g[top_id].top()] != Colors::WHITE) {
+      g[top_id].pop();
+    }
+    if (g[top_id].empty()) {
       dfs[top_id].t_out = t++;
       colors[top_id] = Colors::BLACK;
       buff.pop();
       depth--;
     } else {
-      colors[*it] = Colors::GRAY;
-      buff.push(*it);
-      dfs[*it].t_in = t++;
-      dfs[*it].parent = top_id;
-      dfs[*it].depth = depth++;
+      int next_id = g[top_id].top();
+      buff.push(next_id);
+      colors[next_id] = Colors::GRAY;
+      dfs[next_id].t_in = t++;
+      dfs[next_id].parent = top_id;
+      dfs[next_id].depth = depth++;
     }
   }
   return dfs;
@@ -76,13 +78,7 @@ int64_t calc_max_pleasure(const Graph& g, int n, int k) {
   int64_t res = 0;
   for (int id = 0; id < n; ++id) {
     if (ctypes[id] == CityType::INDUSTRIAL) {
-      int curr_id = id;
-      int64_t joy = dfs[curr_id].depth;
-      while (ctypes[dfs[curr_id].parent] != CityType::TOURIST) {
-        curr_id = dfs[curr_id].parent;
-        joy = dfs[curr_id].depth;
-      }
-      res += joy;
+      res += dfs[id].eff_depth;
     }
   }
   return res;
@@ -96,8 +92,8 @@ void solution(std::istream& input) {
   while (line_num--) {
     int p1, p2;
     input >> p1 >> p2;
-    g[p1 - 1].push_back(p2 - 1);
-    g[p2 - 1].push_back(p1 - 1);
+    g[p1 - 1].push(p2 - 1);
+    g[p2 - 1].push(p1 - 1);
   }
   std::cout << calc_max_pleasure(g, n, k) << '\n';
 }
@@ -181,7 +177,7 @@ void RunTests() {
 }
 
 int main() {
-  // RunTests();
+  //RunTests();
   solution(std::cin);
   return 0;
 }
