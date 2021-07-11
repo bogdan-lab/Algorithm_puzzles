@@ -1,6 +1,9 @@
 ﻿#include <algorithm>
+#include <cmath>
 #include <functional>
+#include <iostream>
 #include <limits>
+#include <numeric>
 #include <optional>
 #include <sstream>
 #include <unordered_set>
@@ -30,6 +33,14 @@ struct Graph {
   std::vector<std::vector<Edge>> link_repr;
 };
 
+ID ConvertCharToId(char ch) {
+  return static_cast<int>(ch) - static_cast<int>('a');
+}
+
+char ConvertIdToChar(ID id) {
+  return static_cast<char>(static_cast<int>('a') + id);
+}
+
 Graph ReadGraph(std::istream& input) {
   int n;
   input >> n;
@@ -37,7 +48,10 @@ Graph ReadGraph(std::istream& input) {
   g.edges.reserve(n);
   while (n--) {
     Edge curr_edge;
-    input >> curr_edge.lhs >> curr_edge.rhs >> curr_edge.weight;
+    char ch_lhs, ch_rhs;
+    input >> ch_lhs >> ch_rhs >> curr_edge.weight;
+    curr_edge.lhs = ConvertCharToId(ch_lhs);
+    curr_edge.rhs = ConvertCharToId(ch_rhs);
     g.edges.push_back(curr_edge);
     ID max_id = std::max(curr_edge.lhs, curr_edge.rhs);
     if (g.link_repr.size() <= max_id) {
@@ -62,7 +76,12 @@ using Tree = std::vector<Node>;
 
 inline std::ostream& operator<<(std::ostream& out, const Tree& tree) {
   for (const auto& el : tree) {
-    out << el.id << '-' << el.parent << " : " << el.parent_weight << '\n';
+    if (el.parent == kBadId) {
+      out << ConvertIdToChar(el.id) << " - ROOT\n";
+    } else {
+      out << ConvertIdToChar(el.id) << '-' << ConvertIdToChar(el.parent)
+          << " : " << el.parent_weight << '\n';
+    }
   }
   return out;
 }
@@ -75,7 +94,7 @@ class PrimaPriorityQueue {
     ID id = kBadId;
     double weight = kBadWeight;
 
-    HeapElement(ID gid, const double* dbl_ptr) : id(gid), weight_ptr(dbl_ptr) {}
+    HeapElement(ID gid, double dbl) : id(gid), weight(dbl) {}
   };
 
  private:
@@ -89,10 +108,10 @@ class PrimaPriorityQueue {
     std::optional<size_t> lidx = Left(idx);
     std::optional<size_t> ridx = Right(idx);
     size_t min_idx = idx;
-    if (lidx && *heap_[min_idx].weight_ptr < *heap_[*lidx].weight_ptr) {
+    if (lidx && heap_[min_idx].weight > heap_[*lidx].weight) {
       min_idx = *lidx;
     }
-    if (ridx && *heap_[min_idx].weight_ptr < *heap_[*ridx].weight_ptr) {
+    if (ridx && heap_[min_idx].weight > heap_[*ridx].weight) {
       min_idx = *ridx;
     }
     if (min_idx != idx) {
@@ -110,17 +129,17 @@ class PrimaPriorityQueue {
 
   std::optional<size_t> Left(size_t idx) {
     size_t lidx = 2 * idx + 1;
-    return lidx >= heap_.size() ? std::nullopt : lidx;
+    return lidx >= heap_.size() ? std::nullopt : std::optional<size_t>(lidx);
   }
 
   std::optional<size_t> Right(size_t idx) {
     size_t ridx = 2 * (idx + 1);
-    return ridx >= heap_.size() ? std::nullopt : ridx;
+    return ridx >= heap_.size() ? std::nullopt : std::optional<size_t>(ridx);
   }
 
   std::optional<size_t> Parent(size_t idx) {
     int pidx = (idx + 1) / 2 - 1;
-    return pidx < 0 ? std::nullopt : pidx;
+    return pidx < 0 ? std::nullopt : std::optional<size_t>(pidx);
   }
 
  public:
@@ -139,10 +158,10 @@ class PrimaPriorityQueue {
       size_t idx = pos_[key];
       heap_[idx].weight = new_value;
       std::optional<size_t> pidx = Parent(idx);
-      while (pidx && *heap_[idx].weight_ptr < *heap_[*pidx].weight_ptr) {
+      while (pidx && heap_[idx].weight < heap_[*pidx].weight) {
         std::swap(heap_[idx], heap_[*pidx]);
-        std::swap(pos_[heap_[idx].id], pos[heap_[*pidx].id]);
-        idx = pidx;
+        std::swap(pos_[heap_[idx].id], pos_[heap_[*pidx].id]);
+        idx = *pidx;
         pidx = Parent(idx);
       }
     }
@@ -150,6 +169,7 @@ class PrimaPriorityQueue {
 
   HeapElement ExtractMin() {
     std::swap(heap_.front(), heap_.back());
+    std::swap(pos_[heap_.front().id], pos_[heap_.back().id]);
     HeapElement res = heap_.back();
     heap_.pop_back();
     MinHeapify(0);
@@ -165,11 +185,11 @@ class PrimaPriorityQueue {
 };
 
 Tree GetSpanningTreePrima(const Graph& g, ID root_id) {
-  std::vector<double> weights{g.link_repr.size(),
-                              std::numeric_limits<double>::max()};
+  std::vector<double> weights(g.link_repr.size(),
+                              std::numeric_limits<double>::max());
   weights[root_id] = 0;
   PrimaPriorityQueue pq{weights};
-  Tree tree{g.link_repr.size(), {}};
+  Tree tree{g.link_repr.size(), Node{}};
   for (ID i = 0; i < tree.size(); ++i) {
     tree[i].id = i;
   }
@@ -196,16 +216,29 @@ b c 8
 b h 11
 c d 7
 c i 2
-c j 4
+c f 4
 d e 9
-d j 14
-e j 10
+d f 14
+e f 10
 i g 6
 i h 7
 g h 1
-g j 2)";
+g f 2)";
+  // min weight sum = 4+8+7+9+2+4+1+2 = 37
   Graph g = ReadGraph(ss);
-  Tree prim_tree = GetSpanningTreePrima(g, 0);
-  std::cout << prim_tree;
+  std::vector<double> tree_sum(g.link_repr.size(), 0.0);
+  for (ID i = 0; i < tree_sum.size(); ++i) {
+    Tree prim_tree = GetSpanningTreePrima(g, i);
+    for (const auto& el : prim_tree) {
+      if (!std::isnan(el.parent_weight)) {
+        tree_sum[i] += el.parent_weight;
+      }
+    }
+  }
+
+  for (const auto& el : tree_sum) {
+    std::cout << el << " ; ";
+  }
+  std::cout << '\n';
   return 0;
 }
