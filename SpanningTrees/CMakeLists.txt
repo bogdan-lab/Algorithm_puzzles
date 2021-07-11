@@ -5,7 +5,7 @@ project(SpanningTrees
 
 add_executable(solution
                 main.cpp
-                prima.cpp)
+                )
 
 set_target_properties(solution PROPERTIES
                       CXX_STANDARD 17
