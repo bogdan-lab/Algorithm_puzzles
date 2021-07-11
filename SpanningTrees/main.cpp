@@ -6,6 +6,7 @@
 #include <numeric>
 #include <optional>
 #include <sstream>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -205,7 +206,46 @@ Tree GetSpanningTreePrima(const Graph& g, ID root_id) {
   }
   return tree;
 }
-//===============================================================
+//===================================================================
+
+//===============================KRUSKAL SECTION=====================
+
+std::vector<Edge> GetSpanningTreeKruskal(const Graph& g) {
+  // TODO there are better algorithms for tree tracking than this.
+  std::unordered_map<ID, ID> v_to_tree;
+  std::unordered_map<ID, std::unordered_set<ID>> tree_to_v;
+  for (ID i = 0; i < g.link_repr.size(); ++i) {
+    v_to_tree.emplace(i, i);
+    tree_to_v.emplace(i, std::unordered_set<ID>{i});
+  }
+
+  std::vector<Edge> sp_edges;
+  sp_edges.reserve(g.link_repr.size() - 1);
+  for (const auto& edge : g.edges) {
+    ID rhs_tree = v_to_tree[edge.rhs];
+    ID lhs_tree = v_to_tree[edge.lhs];
+
+    if (lhs_tree != rhs_tree) {
+      sp_edges.push_back(edge);
+      for (auto id : tree_to_v[rhs_tree]) {
+        v_to_tree[id] = lhs_tree;
+        tree_to_v[lhs_tree].insert(id);
+      }
+      tree_to_v[rhs_tree].clear();
+    }
+  }
+  return sp_edges;
+}
+
+std::ostream& operator<<(std::ostream& out, const std::vector<Edge>& vec) {
+  for (const auto& el : vec) {
+    out << ConvertIdToChar(el.lhs) << '-' << ConvertIdToChar(el.rhs) << " : "
+        << el.weight << '\n';
+  }
+  return out;
+}
+
+//===================================================================
 
 int main() {
   std::stringstream ss;
@@ -226,19 +266,26 @@ g h 1
 g f 2)";
   // min weight sum = 4+8+7+9+2+4+1+2 = 37
   Graph g = ReadGraph(ss);
-  std::vector<double> tree_sum(g.link_repr.size(), 0.0);
-  for (ID i = 0; i < tree_sum.size(); ++i) {
-    Tree prim_tree = GetSpanningTreePrima(g, i);
-    for (const auto& el : prim_tree) {
-      if (!std::isnan(el.parent_weight)) {
-        tree_sum[i] += el.parent_weight;
-      }
-    }
-  }
+  // ---------------- PRIMA ------------------------------------------
+  //  std::vector<double> tree_sum(g.link_repr.size(), 0.0);
+  //  for (id i = 0; i < tree_sum.size(); ++i) {
+  //    tree prim_tree = getspanningtreeprima(g, i);
+  //    for (const auto& el : prim_tree) {
+  //      if (!std::isnan(el.parent_weight)) {
+  //        tree_sum[i] += el.parent_weight;
+  //      }
+  //    }
+  //  }
 
-  for (const auto& el : tree_sum) {
-    std::cout << el << " ; ";
-  }
-  std::cout << '\n';
+  //  for (const auto& el : tree_sum) {
+  //    std::cout << el << " ; ";
+  //  }
+  //  std::cout << '\n';
+  //-----------------------------------------------------------------
+
+  //---------------------Kruskal------------------------------------
+  std::vector<Edge> res = GetSpanningTreeKruskal(g);
+  std::cout << res;
+  //----------------------------------------------------------------
   return 0;
 }
