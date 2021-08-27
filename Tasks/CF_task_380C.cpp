@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iterator>
 #include <map>
+#include <set>
 #include <sstream>
 #include <stack>
 #include <string>
@@ -12,14 +13,24 @@
 void solve(std::istream& input = std::cin);
 void run_tests();
 
-using BracketIntervals = std::map<size_t, size_t>;  // open -> close
+struct Interval {
+  size_t open = 0;
+  size_t close = 0;
+  size_t len = 0;
+};
+
+bool operator<(const Interval& lhs, const Interval& rhs) {
+  return lhs.open < rhs.open || (lhs.open == rhs.open && lhs.close > rhs.close);
+}
+
+using BracketIntervals = std::set<Interval>;
 
 BracketIntervals get_intervals(const std::string& brackets);
-size_t get_length(const BracketIntervals& vec);
+size_t get_length(BracketIntervals& vec);
 
 int main() {
-  //run_tests();
-   solve(std::cin);
+   //run_tests();
+  solve(std::cin);
   return 0;
 }
 
@@ -34,7 +45,7 @@ BracketIntervals get_intervals(const std::string& brackets) {
       }
       case ')': {
         if (!open.empty()) {
-          res[open.top()] = i;
+          res.insert({open.top(), i, i - open.top() + 1});
           open.pop();
         }
         break;
@@ -44,12 +55,24 @@ BracketIntervals get_intervals(const std::string& brackets) {
   return res;
 }
 
-size_t get_length(const BracketIntervals& scheme, size_t start, size_t end) {
-  auto start_it = scheme.lower_bound(start);
-  auto end_it = scheme.upper_bound(end);
+size_t get_length(BracketIntervals& scheme, size_t start, size_t end) {
+  Interval fnd{start, end, 0};
   size_t res = 0;
-  for (auto it = start_it; it != end_it; ++it) {
-    if (it->second <= end) res += 2;
+  auto it = scheme.lower_bound(fnd);
+  bool is_safe_to_cache = true;
+  while (it != scheme.end() && it->open <= end) {
+    if (it->close <= end) {
+      res += it->len;
+      auto nxt = scheme.upper_bound({it->close, end, 0});
+      is_safe_to_cache = nxt!=scheme.end() &&  nxt->open - it->close == 1;
+      it = nxt;
+    } else {
+      ++it;
+      is_safe_to_cache = false;
+    }
+  }
+  if (res && is_safe_to_cache) {
+    scheme.insert({start, end, res});
   }
   return res;
 }
