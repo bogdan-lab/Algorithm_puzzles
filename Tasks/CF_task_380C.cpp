@@ -28,15 +28,29 @@ bool operator<(const Interval& lhs, const Interval& rhs) {
 
 using BracketIntervals = std::set<Interval>;
 
-size_t get_length(const BracketIntervals& vec);
+struct Request {
+  size_t num = 0;
+  size_t start = 0;
+  size_t end = 0;
+};
 
-BracketIntervals build_tree(const std::string& brackets, size_t start,
-                            size_t end);
+bool operator<(const Request& lhs, const Request& rhs) {
+  size_t lhs_len = lhs.end - lhs.start;
+  size_t rhs_len = rhs.end - rhs.start;
+  return lhs_len < rhs_len;
+}
+
+std::vector<size_t> calc_answers(const std::vector<Request>& requests,
+                                 const std::string& brackets);
 
 Interval connect_intervals(const Interval& lhs, const Interval& rhs);
 
+Interval get_interval(const BracketIntervals& scheme, size_t start, size_t end);
+
+BracketIntervals get_one_sized_intervals(const std::string& brackets);
+
 int main() {
-   //run_tests();
+  // run_tests();
   solve(std::cin);
   return 0;
 }
@@ -51,70 +65,61 @@ Interval connect_intervals(const Interval& lhs, const Interval& rhs) {
   return res;
 }
 
-BracketIntervals build_tree(const std::string& brackets, size_t start,
-                            size_t end) {
+BracketIntervals get_one_sized_intervals(const std::string& brackets) {
   BracketIntervals res;
-  if (end - start == 1) {
-    res.insert({.open = start,
-                .close = end,
+  for (size_t i = 0; i < brackets.size(); ++i) {
+    res.insert({.open = i,
+                .close = i + 1,
                 .len = 0,
-                .unused_open = (brackets[start] == '(' ? 1u : 0u),
-                .unused_close = (brackets[start] == ')' ? 1u : 0u)});
-    return res;
+                .unused_open = (brackets[i] == '(' ? 1u : 0u),
+                .unused_close = (brackets[i] == ')' ? 1u : 0u)});
   }
-
-  Interval curr;
-  curr.open = start;
-  curr.close = end;
-  for (size_t i = start; i < end; ++i) {
-    if (brackets[i] == '(') {
-      curr.unused_open++;
-    } else {
-      if (curr.unused_open) {
-        curr.unused_open--;
-        curr.len += 2;
-      } else {
-        curr.unused_close++;
-      }
-    }
-  }
-  res.insert(curr);
-  size_t mid = (start + end) / 2;
-  BracketIntervals lhs = build_tree(brackets, start, mid);
-  res.insert(lhs.begin(), lhs.end());
-  BracketIntervals rhs = build_tree(brackets, mid, end);
-  res.insert(rhs.begin(), rhs.end());
   return res;
 }
-
-size_t get_length(const std::vector<Interval>& scheme, size_t start,
-                  size_t end) {
-  if (end - start <= 1) return 0;
+Interval get_interval(const BracketIntervals& scheme, size_t start,
+                      size_t end) {
   Interval fnd;
   fnd.open = start;
   fnd.close = end;
   Interval res;
   res.open = start;
-  auto it = std::lower_bound(scheme.begin(), scheme.end(), fnd);
+  auto it = scheme.lower_bound(fnd);
   while (it != scheme.end() && it->open < end) {
     res = connect_intervals(res, *it);
     fnd.open = it->close;
-    it = std::lower_bound(scheme.begin(), scheme.end(), fnd);
+    it = scheme.lower_bound(fnd);
   }
-  return res.len;
+  return res;
+}
+
+std::vector<size_t> calc_answers(const std::vector<Request>& requests,
+                                 const std::string& brackets) {
+  std::vector<size_t> res(requests.size());
+  BracketIntervals scheme = get_one_sized_intervals(brackets);
+  for (const auto& rq : requests) {
+    Interval rq_int = get_interval(scheme, rq.start, rq.end);
+    res[rq.num] = rq_int.len;
+    scheme.insert(rq_int);
+  }
+  return res;
 }
 
 void solve(std::istream& input) {
   std::string brackets;
   input >> brackets;
-  BracketIntervals scheme = build_tree(brackets, 0, brackets.size());
-  std::vector<Interval> vec(scheme.begin(), scheme.end());
   size_t m;
   input >> m;
+  std::vector<Request> requests;
+  size_t idx = 0;
   while (m--) {
     size_t s, e;
     input >> s >> e;
-    std::cout << get_length(vec, s - 1, e) << '\n';
+    requests.push_back({.num = idx++, .start = s - 1, .end = e});
+  }
+  std::sort(requests.begin(), requests.end());
+  std::vector<size_t> answers = calc_answers(requests, brackets);
+  for (auto el : answers) {
+    std::cout << el << '\n';
   }
 }
 
