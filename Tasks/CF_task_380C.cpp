@@ -30,7 +30,8 @@ using BracketIntervals = std::set<Interval>;
 
 size_t get_length(const BracketIntervals& vec);
 
-BracketIntervals build_tree(const std::string& brackets);
+BracketIntervals build_tree(const std::string& brackets, size_t start,
+                            size_t end);
 
 Interval connect_intervals(const Interval& lhs, const Interval& rhs);
 
@@ -50,38 +51,39 @@ Interval connect_intervals(const Interval& lhs, const Interval& rhs) {
   return res;
 }
 
-BracketIntervals build_tree(const std::string& brackets) {
+BracketIntervals build_tree(const std::string& brackets, size_t start,
+                            size_t end) {
   BracketIntervals res;
-  std::queue<Interval> buff;
-  for (size_t i = 0; i < brackets.size(); ++i) {
-    Interval tmp;
-    tmp.open = i;
-    tmp.close = i + 1;
-    tmp.unused_open = brackets[i] == '(';
-    tmp.unused_close = brackets[i] == ')';
-    buff.push(tmp);
+  if (end - start == 1) {
+    res.insert({.open = start,
+                .close = end,
+                .len = 0,
+                .unused_open = (brackets[start] == '(' ? 1u : 0u),
+                .unused_close = (brackets[start] == ')' ? 1u : 0u)});
+    return res;
   }
-  std::queue<Interval> next_buff;
-  while (true) {
-      if(buff.empty()){
-          buff.swap(next_buff);
-      }
-      if(buff.size()==1){
-          buff.swap(next_buff);
-          buff.push(next_buff.front());
-          next_buff.pop();
-      }
-      if(buff.size()<=1) break;
 
-    Interval lhs = buff.front();
-    buff.pop();
-    Interval rhs = buff.front();
-    buff.pop();
-    res.insert(lhs);
-    res.insert(rhs);
-    next_buff.push(connect_intervals(lhs, rhs));
+  Interval curr;
+  curr.open = start;
+  curr.close = end;
+  for (size_t i = start; i < end; ++i) {
+    if (brackets[i] == '(') {
+      curr.unused_open++;
+    } else {
+      if (curr.unused_open) {
+        curr.unused_open--;
+        curr.len += 2;
+      } else {
+        curr.unused_close++;
+      }
+    }
   }
-  res.insert(buff.front());
+  res.insert(curr);
+  size_t mid = (start + end) / 2;
+  BracketIntervals lhs = build_tree(brackets, start, mid);
+  res.insert(lhs.begin(), lhs.end());
+  BracketIntervals rhs = build_tree(brackets, mid, end);
+  res.insert(rhs.begin(), rhs.end());
   return res;
 }
 
@@ -105,7 +107,7 @@ size_t get_length(const std::vector<Interval>& scheme, size_t start,
 void solve(std::istream& input) {
   std::string brackets;
   input >> brackets;
-  BracketIntervals scheme = build_tree(brackets);
+  BracketIntervals scheme = build_tree(brackets, 0, brackets.size());
   std::vector<Interval> vec(scheme.begin(), scheme.end());
   size_t m;
   input >> m;
