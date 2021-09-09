@@ -28,7 +28,7 @@ int main() {
   return 0;
 }
 
-size_t next_idx(size_t idx, size_t size) { return ++idx >= size ? 0 : idx; }
+size_t next_idx(size_t idx, size_t size) { return ++idx == size ? 0 : idx; }
 size_t prev_idx(size_t idx, size_t size) {
   return idx == 0 ? size - 1 : idx - 1;
 }
@@ -47,6 +47,10 @@ std::vector<Effectivity> calc_effectivenes(const std::vector<Monster>& data) {
   if (next != 0) {
     res[0].gain += data[idx].damage;
     res[0].last_idx = next;
+  } else {
+    size_t prev = prev_idx(0, data.size());
+    res[0].gain -= std::min(data[0].health, data[prev].damage);
+    res[0].last_idx = prev;
   }
   // going backward and getting all effectiveties!
   for (size_t i = data.size() - 1; i > 0; --i) {
@@ -69,15 +73,14 @@ std::vector<Effectivity> calc_effectivenes(const std::vector<Monster>& data) {
 }
 
 size_t count_shots(const std::vector<Monster>& data) {
-  std::vector<Effectivity> effectivity = calc_effectivenes(data);
-  auto it =
-      std::max_element(effectivity.begin(), effectivity.end(),
-                       [](const auto& lhs, const auto& rhs) {
-                         return lhs.gain < rhs.gain ||
-                                (lhs.gain == rhs.gain && lhs.cost > rhs.cost);
-                       });
-  size_t start_idx = it - effectivity.begin();
-  size_t count = data[start_idx].health;
+  auto it = std::min_element(
+      data.begin(), data.end(), [](const Monster& lhs, const Monster& rhs) {
+        return lhs.health < rhs.health ||
+               (lhs.health == rhs.health && lhs.damage > rhs.damage);
+      });
+
+  size_t start_idx = it->idx;
+  size_t count = it->health;
   size_t idx = next_idx(start_idx, data.size());
   size_t prev_idx = start_idx;
   while (idx != start_idx) {
@@ -118,5 +121,32 @@ void run_tests() {
 )";
     solution(ss);
     std::cout << "expected = 6\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(1
+8
+7 4
+9 10
+4 8
+3 1
+1 7
+9 5
+1 4
+2 5
+)";
+    solution(ss);
+    std::cout << "expected = 10\n";
+  }
+  {
+      std::stringstream ss;
+      ss <<R"(4
+6 8
+9 3
+8 1
+9 7
+)";
+    solution(ss);
+    std::cout << "expected = 15\n";
   }
 }
