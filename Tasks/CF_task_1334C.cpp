@@ -4,7 +4,6 @@
 #include <vector>
 
 struct Monster {
-  uint64_t idx = 0;
   uint64_t health = 0;
   uint64_t damage = 0;
 };
@@ -17,12 +16,16 @@ uint64_t prev_idx(uint64_t idx, uint64_t size);
 uint64_t calc_cost(uint64_t idx, const std::vector<Monster>& data);
 
 int main() {
-  // run_tests();
+  std::ios_base::sync_with_stdio(0);
+  std::cin.tie(0);
+  //run_tests();
   solution(std::cin);
   return 0;
 }
 
-uint64_t next_idx(uint64_t idx, uint64_t size) { return ++idx == size ? 0 : idx; }
+uint64_t next_idx(uint64_t idx, uint64_t size) {
+  return ++idx == size ? 0 : idx;
+}
 uint64_t prev_idx(uint64_t idx, uint64_t size) {
   return idx == 0 ? size - 1 : idx - 1;
 }
@@ -60,7 +63,7 @@ void solution(std::istream& input) {
     for (uint64_t i = 0; i < n; ++i) {
       uint64_t a, b;
       input >> a >> b;
-      data.push_back({.idx = i, .health = a, .damage = b});
+      data.push_back({.health = a, .damage = b});
     }
     std::cout << count_shots(data) << '\n';
   }
