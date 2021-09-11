@@ -8,8 +8,8 @@ std::vector<int> merge_sort(const std::vector<int>& data, size_t begin,
                             size_t end);
 std::vector<int> merge(const std::vector<int>& lhs,
                        const std::vector<int>& rhs);
-bool left_larger(size_t l_idx, const std::vector<int>& lhs, size_t r_idx,
-                 const std::vector<int>& rhs);
+bool left_smaller(size_t l_idx, const std::vector<int>& lhs, size_t r_idx,
+                  const std::vector<int>& rhs);
 
 int main() {
   // run_tests();
@@ -17,8 +17,8 @@ int main() {
   return 0;
 }
 
-bool left_larger(size_t l_idx, const std::vector<int>& lhs, size_t r_idx,
-                 const std::vector<int>& rhs) {
+bool left_smaller(size_t l_idx, const std::vector<int>& lhs, size_t r_idx,
+                  const std::vector<int>& rhs) {
   if (l_idx >= lhs.size()) return false;
   if (r_idx >= rhs.size()) return true;
   return lhs[l_idx] < rhs[r_idx];
@@ -30,7 +30,7 @@ std::vector<int> merge(const std::vector<int>& lhs,
   size_t l_idx = 0;
   size_t r_idx = 0;
   for (auto& el : res) {
-    if (left_larger(l_idx, lhs, r_idx, rhs)) {
+    if (left_smaller(l_idx, lhs, r_idx, rhs)) {
       el = lhs[l_idx++];
     } else {
       el = rhs[r_idx++];
