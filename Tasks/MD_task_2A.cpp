@@ -134,13 +134,14 @@ void run_tests() {
     std::stringstream ss;
     ss << R"(5
 1 3 2 4 5
-3
+4
 1 3 2
 1 5 1
 1 5 2
+1 3 3
 )";
     solution(ss);
-    std::cout << "expected = 2 1 2\n";
+    std::cout << "expected = 2 1 2 3\n";
   }
   {
     std::stringstream ss;
