@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -37,30 +38,27 @@ uint64_t count_substrings(const std::string& teacher,
   uint64_t count = 0;
   std::vector<size_t> cards_count = get_count_vector(cards);
   std::vector<size_t> teacher_count(shift_to_int('z') - shift_to_int('a') + 1);
-  size_t l_idx = 0;
-  size_t r_idx = 0;
-  size_t prev_end = 0;
+  auto sub_begin = teacher.begin();
+  auto sub_end = teacher.begin();
+  auto prev_end = teacher.begin();
   while (true) {
-    while (r_idx < teacher.size()) {
-      size_t ch_pos = shift_to_int(teacher[r_idx]);
-      if (teacher_count[ch_pos] + 1 <= cards_count[ch_pos]) {
-        r_idx++;
-        teacher_count[ch_pos]++;
-      } else {
-        break;
-      }
-    }
-    count += get_substr_num(r_idx - l_idx) - get_substr_num(prev_end - l_idx);
-    if (r_idx == teacher.size()) break;
-    prev_end = r_idx;
+    sub_end = std::find_if(sub_end, teacher.end(), [&](char ch) {
+      size_t ch_pos = shift_to_int(ch);
+      if (teacher_count[ch_pos] + 1 > cards_count[ch_pos]) return true;
+      teacher_count[ch_pos]++;
+      return false;
+    });
+    count += get_substr_num(sub_end - sub_begin) -
+             get_substr_num(prev_end - sub_begin);
+    if (sub_end == teacher.end()) break;
+    prev_end = sub_end;
 
-    size_t bad_char = shift_to_int(teacher[r_idx]);
-    while (l_idx < r_idx) {
-      size_t ch_pos = shift_to_int(teacher[l_idx]);
-      teacher_count[ch_pos]--;
-      l_idx++;
-      if (bad_char == ch_pos) break;
-    }
+    sub_begin = std::find_if(sub_begin, sub_end, [&](char ch) {
+      bool success = (ch == *sub_end);
+      teacher_count[shift_to_int(ch)]--;
+      return success;
+    });
+    if (sub_begin != sub_end) ++sub_begin;
   }
   return count;
 }
