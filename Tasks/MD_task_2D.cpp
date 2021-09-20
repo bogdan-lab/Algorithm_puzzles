@@ -48,10 +48,24 @@ uint64_t count_substrings(const std::string& teacher,
       teacher_count[ch_pos]++;
       return false;
     });
+
     count += get_substr_num(sub_end - sub_begin) -
              get_substr_num(prev_end - sub_begin);
     if (sub_end == teacher.end()) break;
     prev_end = sub_end;
+
+    // skip characters absent in cards
+    if (!cards_count[shift_to_int(*sub_end)]) {
+      while (sub_begin != sub_end) {
+        --teacher_count[shift_to_int(*sub_begin++)];
+      }
+      while (sub_end != teacher.end() && !cards_count[shift_to_int(*sub_end)]) {
+        ++sub_end;
+      }
+      sub_begin = sub_end;
+      prev_end = sub_end;
+      continue;
+    }
 
     sub_begin = std::find_if(sub_begin, sub_end, [&](char ch) {
       bool success = (ch == *sub_end);
@@ -90,5 +104,41 @@ abc
 )";
     solution(ss);
     std::cout << "expected = 15\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(7 2
+aaaaaaa
+aa
+)";
+    solution(ss);
+    std::cout << "expected = 13\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(6 3
+abczba
+abc
+)";
+    solution(ss);
+    std::cout << "expected = 9\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(6 3
+abcabz
+abc
+)";
+    solution(ss);
+    std::cout << "expected = 12\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(6 3
+zkfabc
+abc
+)";
+    solution(ss);
+    std::cout << "expected = 6\n";
   }
 }
