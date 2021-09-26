@@ -4,8 +4,9 @@
 
 void solution(std::istream& input = std::cin);
 void run_tests();
-bool can_copy_in(int full_time, int lhs_time, int rhs_time, int copy_num);
-int calc_min_copy_time(int copy_num, int lhs_time, int rhs_time);
+bool can_copy_in(size_t full_time, size_t lhs_time, size_t rhs_time,
+                 size_t copy_num);
+size_t calc_min_copy_time(size_t copy_num, size_t lhs_time, size_t rhs_time);
 
 int main() {
   // run_tests();
@@ -14,18 +15,18 @@ int main() {
 }
 
 void solution(std::istream& input) {
-  int lhs_time;
-  int rhs_time;
-  int copy_num;
+  size_t lhs_time;
+  size_t rhs_time;
+  size_t copy_num;
   input >> copy_num >> lhs_time >> rhs_time;
   std::cout << calc_min_copy_time(copy_num, lhs_time, rhs_time) << '\n';
 }
 
-int calc_min_copy_time(int copy_num, int lhs_time, int rhs_time) {
-  int begin = 0;
-  int end = copy_num * std::min(lhs_time, rhs_time);
+size_t calc_min_copy_time(size_t copy_num, size_t lhs_time, size_t rhs_time) {
+  size_t begin = 0;
+  size_t end = copy_num * std::min(lhs_time, rhs_time);
   while (end - begin > 1) {
-    int mid = (begin + end) / 2;
+    size_t mid = (begin + end) / 2;
     if (can_copy_in(mid, lhs_time, rhs_time, copy_num)) {
       end = mid;
     } else {
@@ -35,9 +36,12 @@ int calc_min_copy_time(int copy_num, int lhs_time, int rhs_time) {
   return end;
 }
 
-bool can_copy_in(int full_time, int lhs_time, int rhs_time, int copy_num) {
-  full_time -= std::min(lhs_time, rhs_time);
-  int count = 1 + full_time / lhs_time + full_time / rhs_time;
+bool can_copy_in(size_t full_time, size_t lhs_time, size_t rhs_time,
+                 size_t copy_num) {
+  size_t first_copy_time = std::min(lhs_time, rhs_time);
+  if (first_copy_time > full_time) return false;
+  full_time -= first_copy_time;
+  size_t count = 1 + full_time / lhs_time + full_time / rhs_time;
   return count >= copy_num;
 }
 
