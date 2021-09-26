@@ -5,7 +5,7 @@
 
 void solution(std::istream& input = std::cin);
 void run_tests();
-int calc_optimaL_length(const std::vector<int>& data, int required_num);
+int calc_optimal_length(const std::vector<int>& data, int required_num);
 bool check_if_can_make(int ropes_num, int length, const std::vector<int>& data);
 
 int main() {
@@ -22,10 +22,10 @@ void solution(std::istream& input) {
   for (auto& el : data) {
     input >> el;
   }
-  std::cout << calc_optimaL_length(data, required_num) << '\n';
+  std::cout << calc_optimal_length(data, required_num) << '\n';
 }
 
-int calc_optimaL_length(const std::vector<int>& data, int required_num) {
+int calc_optimal_length(const std::vector<int>& data, int required_num) {
   int len_left = 0;
   int len_right = *std::max_element(data.begin(), data.end()) + 1;
   while (len_right - len_left > 1) {
