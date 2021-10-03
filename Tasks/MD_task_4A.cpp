@@ -66,18 +66,18 @@ class Stack {
   size_t count_min_ = 0;
 };
 
-void solution(std::istream& input = std::cin);
-void run_tests();
+void Solution(std::istream& input = std::cin);
+void RunTests();
 
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  // run_tests();
-  solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
-void solution(std::istream& input) {
+void Solution(std::istream& input) {
   int n;
   input >> n;
   Stack my_stack;
@@ -102,7 +102,7 @@ void solution(std::istream& input) {
   }
 }
 
-void run_tests() {
+void RunTests() {
   {
     std::stringstream ss;
     ss << R"(8
@@ -115,7 +115,7 @@ void run_tests() {
 2
 3
 )";
-    solution(ss);
+    Solution(ss);
     std::cout << "expected = -3 2 2\n";
   }
 }

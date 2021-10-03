@@ -78,18 +78,18 @@ class PriorityQueue {
   std::vector<int> push_order_;
 };
 
-void solution(std::istream& input = std::cin);
-void run_tests();
+void Solution(std::istream& input = std::cin);
+void RunTests();
 
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  // run_tests();
-  solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
-void solution(std::istream& input) {
+void Solution(std::istream& input) {
   std::string command;
   PriorityQueue prior_queue;
   int order = 0;
@@ -115,7 +115,7 @@ void solution(std::istream& input) {
   }
 }
 
-void run_tests() {
+void RunTests() {
   {
     std::stringstream ss;
     ss << R"(push 3
@@ -127,7 +127,7 @@ extract-min
 extract-min
 extract-min
 )";
-    solution(ss);
+    Solution(ss);
     std::cout << "expected = 2 3; 1 2; 3 1; *\n";
   }
 }

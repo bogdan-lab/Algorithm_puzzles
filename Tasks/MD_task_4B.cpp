@@ -12,11 +12,11 @@ class Vector {
     data_ = new T[capacity_];
   }
 
-  void PushBack(T ch) {
+  void PushBack(T elem) {
     if (size_ == capacity_) {
       Realloc(CAPACITY_MULTIPLIER * capacity_);
     }
-    data_[size_] = ch;
+    data_[size_] = elem;
     ++size_;
   }
 
@@ -73,63 +73,63 @@ class Stack {
   Vector<T> data_;
 };
 
-void solution(std::istream& input = std::cin);
-int evaluate_expression(const Vector<std::string>& elements);
-bool is_number(const std::string& str);
-int compute(int lhs, int rhs, const std::string& operation);
-void run_tests();
+void Solution(std::istream& input = std::cin);
+int EvaluateExpressioin(const Vector<std::string>& elements);
+bool IsNumber(const std::string& str);
+int Compute(int lhs, int rhs, const std::string& operation);
+void RunTests();
 
 int main() {
-  // run_tests();
-  solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
-void solution(std::istream& input) {
+void Solution(std::istream& input) {
   std::string value;
   Vector<std::string> data;
   while (input >> value) {
     data.PushBack(value);
   }
 
-  std::cout << evaluate_expression(data) << '\n';
+  std::cout << EvaluateExpressioin(data) << '\n';
 }
 
-int evaluate_expression(const Vector<std::string>& elements) {
+int EvaluateExpressioin(const Vector<std::string>& elements) {
   Stack<int> operation_stack;
   for (size_t i = 0; i < elements.Size(); ++i) {
-    if (is_number(elements[i])) {
+    if (IsNumber(elements[i])) {
       operation_stack.Push(std::stoi(elements[i]));
     } else {
       int rhs = operation_stack.Top();
       operation_stack.Pop();
       int lhs = operation_stack.Top();
       operation_stack.Pop();
-      operation_stack.Push(compute(lhs, rhs, elements[i]));
+      operation_stack.Push(Compute(lhs, rhs, elements[i]));
     }
   }
   return operation_stack.Top();
 }
 
-int compute(int lhs, int rhs, const std::string& operation) {
+int Compute(int lhs, int rhs, const std::string& operation) {
   if (operation == "+") return lhs + rhs;
   if (operation == "-") return lhs - rhs;
   if (operation == "*") return lhs * rhs;
   throw;
 }
 
-bool is_number(const std::string& str) {
+bool IsNumber(const std::string& str) {
   if (str.size() > 1) return true;
   if (str.empty()) return false;
   return std::isdigit(str[0]);
 }
 
-void run_tests() {
+void RunTests() {
   {
     std::stringstream ss;
     ss << R"(8 9 + 1 7 - *
 )";
-    solution(ss);
+    Solution(ss);
     std::cout << "expected = -102\n";
   }
 }

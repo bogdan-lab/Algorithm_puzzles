@@ -51,18 +51,18 @@ class Queue {
   static constexpr size_t SHRINK_MULTIPLIER = 2 * CAPACITY_MULTIPLIER;
 };
 
-void solution(std::istream& input = std::cin);
-void run_tests();
+void Solution(std::istream& input = std::cin);
+void RunTests();
 
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  // run_tests();
-  solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
-void solution(std::istream& input) {
+void Solution(std::istream& input) {
   int n;
   input >> n;
   Queue<int> queue;
@@ -80,7 +80,7 @@ void solution(std::istream& input) {
   }
 }
 
-void run_tests() {
+void RunTests() {
   {
     std::stringstream ss;
     ss << R"(10
@@ -95,7 +95,7 @@ void run_tests() {
 -
 -
 )";
-    solution(ss);
+    Solution(ss);
     std::cout << "expected = 1 10 5 6 7\n";
   }
   {
@@ -112,7 +112,7 @@ void run_tests() {
 -
 -
 )";
-    solution(ss);
+    Solution(ss);
     std::cout << "expected = 1 10 5 6 7\n";
   }
 }
