@@ -12,16 +12,16 @@ class Queue {
   }
 
   void Push(T elem) {
-    if (NextSavingPos() == begin_idx_) {
+    if (Next(saving_pos_) == begin_idx_) {
       Realloc(CAPACITY_MULTIPLIER * capacity_);
     }
     data_[saving_pos_] = elem;
-    saving_pos_ = NextSavingPos();
+    saving_pos_ = Next(saving_pos_);
   }
 
   const T& Front() const { return data_[begin_idx_]; }
 
-  void Pop() { ++begin_idx_; }
+  void Pop() { begin_idx_ = Next(begin_idx_); }
 
   ~Queue() { delete[] data_; }
 
@@ -40,9 +40,7 @@ class Queue {
     delete[] old_data;
   }
 
-  size_t NextSavingPos() const {
-    return saving_pos_ + 1 == capacity_ ? 0 : saving_pos_ + 1;
-  }
+  size_t Next(size_t idx) const { return idx + 1 == capacity_ ? 0 : idx + 1; }
 
   T* data_ = nullptr;
   size_t capacity_ = 0;
@@ -94,6 +92,23 @@ void run_tests() {
 -
 -
 -
+-
+-
+)";
+    solution(ss);
+    std::cout << "expected = 1 10 5 6 7\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(10
++ 1
++ 10
+-
++ 5
++ 6
+-
+-
++ 7
 -
 -
 )";
