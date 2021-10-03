@@ -17,13 +17,13 @@ class Stack {
   void Pop() {
     Node* to_delete = head_;
     head_ = head_->next;
+    if (min_value_ && to_delete->value == *min_value_) min_value_.reset();
     delete to_delete;
-    min_value_.reset();
   }
 
   int GetMinimum() {
     if (!min_value_) {
-      CashMinValue();
+      UpdateMinValue();
     }
     return *min_value_;
   }
@@ -44,7 +44,7 @@ class Stack {
     Node(int g_value, Node* g_next) : value(g_value), next(g_next) {}
   };
 
-  void CashMinValue() {
+  void UpdateMinValue() {
     min_value_ = std::numeric_limits<int>::max();
     Node* curr_node = head_;
     while (curr_node != nullptr) {
