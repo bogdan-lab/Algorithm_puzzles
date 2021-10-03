@@ -5,30 +5,23 @@ template <typename T>
 class Queue {
  public:
   Queue() {
-    capacity_ = 1;
+    capacity_ = 2;
     data_ = new T[capacity_];
     begin_idx_ = 0;
-    end_idx_ = 0;
+    saving_pos_ = 0;
   }
 
   void Push(T elem) {
-    if (NextIndex() == begin_idx_) {
+    if (NextSavingPos() == begin_idx_) {
       Realloc(CAPACITY_MULTIPLIER * capacity_);
     }
-    if (end_idx_ == capacity_) {
-      data_[0] = elem;
-      end_idx_ = 1;
-    } else {
-      data_[end_idx_] = elem;
-      end_idx_ = NextIndex();
-    }
+    data_[saving_pos_] = elem;
+    saving_pos_ = NextSavingPos();
   }
 
   const T& Front() const { return data_[begin_idx_]; }
 
   void Pop() { ++begin_idx_; }
-
-  bool Empty() const { return end_idx_ == begin_idx_; }
 
   ~Queue() { delete[] data_; }
 
@@ -37,22 +30,24 @@ class Queue {
     T* old_data = data_;
     data_ = new T[new_capacity];
     size_t idx = 0;
-    while (begin_idx_ != end_idx_) {
+    while (begin_idx_ != saving_pos_) {
       data_[idx++] = old_data[begin_idx_];
       begin_idx_ = begin_idx_ < capacity_ ? begin_idx_ + 1 : 0;
     }
     capacity_ = new_capacity;
     begin_idx_ = 0;
-    end_idx_ = idx;
+    saving_pos_ = idx;
     delete[] old_data;
   }
 
-  size_t NextIndex() const { return end_idx_ == capacity_ ? 0 : end_idx_ + 1; }
+  size_t NextSavingPos() const {
+    return saving_pos_ + 1 == capacity_ ? 0 : saving_pos_ + 1;
+  }
 
   T* data_ = nullptr;
   size_t capacity_ = 0;
   size_t begin_idx_ = 0;
-  size_t end_idx_ = 0;
+  size_t saving_pos_ = 0;
 
   static constexpr size_t CAPACITY_MULTIPLIER = 2;
   static constexpr size_t SHRINK_MULTIPLIER = 2 * CAPACITY_MULTIPLIER;
