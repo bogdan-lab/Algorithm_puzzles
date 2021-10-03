@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <iostream>
 #include <limits>
-#include <optional>
 #include <sstream>
 
 class Stack {
@@ -9,23 +8,27 @@ class Stack {
   Stack() = default;
 
   void Push(int value) {
-    Node* new_node = new Node(value, head_);
-    head_ = new_node;
-    if (min_value_) min_value_ = std::min(*min_value_, value);
+    head_ = new Node(value, head_);
+    if (value < min_value_) {
+      min_value_ = value;
+      count_min_ = 1;
+    } else if (value == min_value_) {
+      ++count_min_;
+    }
   }
 
   void Pop() {
     Node* to_delete = head_;
     head_ = head_->next;
-    if (min_value_ && to_delete->value == *min_value_) min_value_.reset();
+    if (count_min_ && to_delete->value == min_value_) --count_min_;
     delete to_delete;
   }
 
   int GetMinimum() {
-    if (!min_value_) {
+    if (!count_min_) {
       UpdateMinValue();
     }
-    return *min_value_;
+    return min_value_;
   }
 
   ~Stack() {
@@ -48,13 +51,19 @@ class Stack {
     min_value_ = std::numeric_limits<int>::max();
     Node* curr_node = head_;
     while (curr_node != nullptr) {
-      min_value_ = std::min(*min_value_, curr_node->value);
+      if (curr_node->value < min_value_) {
+        min_value_ = curr_node->value;
+        count_min_ = 1;
+      } else if (curr_node->value == min_value_) {
+        ++count_min_;
+      }
       curr_node = curr_node->next;
     }
   }
 
   Node* head_ = nullptr;
-  std::optional<int> min_value_;
+  int min_value_ = std::numeric_limits<int>::max();
+  size_t count_min_ = 0;
 };
 
 void solution(std::istream& input = std::cin);
