@@ -14,7 +14,7 @@ class Vector {
 
   void PushBack(T ch) {
     if (size_ == capacity_) {
-      Realloc();
+      Realloc(CAPACITY_MULTIPLIER * capacity_);
     }
     data_[size_] = ch;
     ++size_;
@@ -22,7 +22,9 @@ class Vector {
 
   void PopBack() {
     --size_;
-    // Shrinking case!!!
+    if (size_ == capacity_ / SHRINK_MULTIPLIER) {
+      Realloc(capacity_ / CAPACITY_MULTIPLIER);
+    }
   }
 
   bool Empty() const { return size_ == 0; }
@@ -31,14 +33,14 @@ class Vector {
 
   const T& Back() const { return data_[size_ - 1]; }
 
-  const T& operator[](size_t idx) { return data_[idx]; }
+  const T& operator[](size_t idx) const { return data_[idx]; }
 
   ~Vector() { delete[] data_; }
 
  private:
-  void Realloc() {
+  void Realloc(size_t new_capacity) {
     T* old_data = data_;
-    capacity_ *= CAPACITY_MULTIPLIER;
+    capacity_ = new_capacity;
     data_ = new T[capacity_];
     for (size_t i = 0; i < size_; ++i) {
       data_[i] = old_data[i];
@@ -51,6 +53,7 @@ class Vector {
   size_t size_ = 0;
 
   static constexpr size_t CAPACITY_MULTIPLIER = 2;
+  static constexpr size_t SHRINK_MULTIPLIER = 2 * CAPACITY_MULTIPLIER;
 };
 
 template <typename T>
@@ -71,38 +74,28 @@ class Stack {
 };
 
 void solution(std::istream& input = std::cin);
-int evaluate_expression(const std::string& expression);
-Vector<std::string> split(const std::string& expression);
+int evaluate_expression(const Vector<std::string>& elements);
 bool is_number(const std::string& str);
 int compute(int lhs, int rhs, const std::string& operation);
 void run_tests();
 
 int main() {
-  run_tests();
-  // solution(std::cin);
+  // run_tests();
+  solution(std::cin);
   return 0;
 }
 
 void solution(std::istream& input) {
-  std::string expression;
-  input >> expression;
-  std::cout << evaluate_expression(expression) << '\n';
-}
-
-Vector<std::string> split(const std::string& expression) {
+  std::string value;
   Vector<std::string> data;
-  size_t curr_pos = 0;
-  while (true) {
-    size_t next_pos = expression.find(' ', curr_pos);
-    data.PushBack(expression.substr(curr_pos, next_pos));
-    if (next_pos == std::string::npos) break;
-    curr_pos = next_pos + 1;
+  while (input >> value) {
+    data.PushBack(value);
   }
-  return data;
+
+  std::cout << evaluate_expression(data) << '\n';
 }
 
-int evaluate_expression(const std::string& expression) {
-  Vector<std::string> elements = split(expression);
+int evaluate_expression(const Vector<std::string>& elements) {
   Stack<int> operation_stack;
   for (size_t i = 0; i < elements.Size(); ++i) {
     if (is_number(elements[i])) {
