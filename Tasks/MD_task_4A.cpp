@@ -61,6 +61,8 @@ void solution(std::istream& input = std::cin);
 void run_tests();
 
 int main() {
+  std::ios_base::sync_with_stdio(false);
+  std::cin.tie(nullptr);
   // run_tests();
   solution(std::cin);
   return 0;
