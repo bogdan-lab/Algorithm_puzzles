@@ -28,16 +28,16 @@ class Set {
   void Delete(int val) {
     auto idx = FindElement(val);
     if (!idx) return;
-      if (data_[Next(*idx, data_.size())] == EMPTY_BUCKET) {
-        data_[*idx] = EMPTY_BUCKET;
-        --num_elements_inside_;
-        if (num_elements_inside_ <= data_.size() / 8 &&
-            data_.size() > 2 * INITIAL_SIZE) {
-          Rehash(data_.size() / 2);
-        }
-      } else {
-        data_[*idx] = DELETED_ELEMENT;
+    if (data_[Next(*idx, data_.size())] == EMPTY_BUCKET) {
+      data_[*idx] = EMPTY_BUCKET;
+      --num_elements_inside_;
+      if (num_elements_inside_ <= data_.size() / 8 &&
+          data_.size() > 2 * INITIAL_SIZE) {
+        Rehash(data_.size() / 2);
       }
+    } else {
+      data_[*idx] = DELETED_ELEMENT;
+    }
   }
 
   bool Exists(int val) const { return FindElement(val).has_value(); }
@@ -63,14 +63,17 @@ class Set {
 
   static size_t Hash(int val, size_t buff_size) {
     uint64_t exp_val = NEGATIVE_COMPENSATOR + static_cast<int64_t>(val);
-    return ((A_HASH * exp_val) % P_HASH) % buff_size;
+    uint64_t res = (A_HASH * exp_val) % P_HASH;
+    return res % buff_size;
   }
 
   void Rehash(size_t new_size) {
     std::vector<int> new_data(new_size, EMPTY_BUCKET);
+    num_elements_inside_ = 0;
     for (const auto& el : data_) {
       if (el != EMPTY_BUCKET && el != DELETED_ELEMENT) {
         new_data[GetIdxToPut(el, new_data)] = el;
+        ++num_elements_inside_;
       }
     }
     data_.swap(new_data);
@@ -97,8 +100,8 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  // RunTests();
-  Solution(std::cin);
+  RunTests();
+  // Solution(std::cin);
   return 0;
 }
 
@@ -110,6 +113,7 @@ void Solution(std::istream& input) {
     if (command == "insert") {
       set.Insert(val);
     } else if (command == "exists") {
+      bool tmp = set.Exists(val);
       std::cout << (set.Exists(val) ? "true" : "false") << '\n';
     } else {
       set.Delete(val);
@@ -118,7 +122,7 @@ void Solution(std::istream& input) {
 }
 
 void RunTests() {
-  {
+  /*{
     std::stringstream ss;
     ss << R"(insert 2
 insert 5
@@ -131,5 +135,21 @@ exists 2
 )";
     Solution(ss);
     std::cout << "expected = true false false\n";
+  }*/
+  {
+    std::stringstream ss;
+    for (size_t i = 0; i < 20; ++i) {
+      ss << "insert " << i << '\n';
+    }
+    for (size_t i = 5; i < 26; ++i) {
+      ss << "delete " << i << '\n';
+    }
+    for (size_t i = 10; i < 20; ++i) {
+      ss << "insert " << i << '\n';
+    }
+    for (size_t i = 0; i < 20; ++i) {
+      ss << "exists " << i << '\n';
+    }
+    Solution(ss);
   }
 }
