@@ -5,6 +5,66 @@
 #include <string>
 #include <vector>
 
+size_t Hash(const std::string& str, size_t buff_size);
+
+class Set {
+ public:
+  using ValueType = std::vector<std::list<std::string>>;
+
+  Set() : data_(INITIAL_SIZE) {}
+
+  void Put(const std::string& val) {
+    size_t idx = Hash(val, data_.size());
+    auto it = std::find(data_[idx].begin(), data_[idx].end(), val);
+    if (it != data_[idx].end()) return;
+
+    data_[idx].push_back(val);
+    ++num_elements_;
+    if (num_elements_ == data_.size()) {
+      Rehash(2 * data_.size());
+    }
+  }
+
+  void Delete(const std::string& val) {
+    size_t idx = Hash(val, data_.size());
+    auto it = std::find(data_[idx].begin(), data_[idx].end(), val);
+    if (it == data_[idx].end()) return;
+    data_[idx].erase(it);
+    --num_elements_;
+    if (num_elements_ <= data_.size() / 4 && data_.size() > 2 * INITIAL_SIZE) {
+      Rehash(data_.size() / 2);
+    }
+  }
+
+  std::vector<std::string> GetAll() const {
+    std::vector<std::string> res;
+    res.reserve(num_elements_);
+    for (const auto& bucket : data_) {
+      for (const auto& el : bucket) {
+        res.push_back(el);
+      }
+    }
+    return res;
+  }
+
+  bool Empty() const { return num_elements_ == 0; }
+
+ private:
+  void Rehash(size_t new_size) {
+    ValueType new_data(new_size);
+    for (const auto& bucket : data_) {
+      for (const auto& el : bucket) {
+        new_data[Hash(el, new_size)].push_back(el);
+      }
+    }
+    data_.swap(new_data);
+  }
+
+  static constexpr int INITIAL_SIZE = 2;
+  ValueType data_;
+  size_t num_elements_ = 0;
+};
+
 class Map {
   struct Item;
 
@@ -19,11 +79,7 @@ class Map {
         std::find_if(data_[idx].begin(), data_[idx].end(),
                      [&key](const Item& item) { return item.key == key; });
     if (key_it != data_[idx].end()) {
-      auto val_it =
-          std::find(key_it->values.begin(), key_it->values.end(), val);
-      if (val_it == key_it->values.end()) {
-        key_it->values.push_back(val);
-      }
+      key_it->values.Put(val);
       return;
     }
     data_[idx].emplace_back(key, val);
@@ -40,11 +96,8 @@ class Map {
                      [&key](const Item& item) { return item.key == key; });
     if (key_it == data_[idx].end()) return;
 
-    auto val_it = std::find(key_it->values.begin(), key_it->values.end(), val);
-    if (val_it == key_it->values.end()) return;
-
-    key_it->values.erase(val_it);
-    if (key_it->values.empty()) {
+    key_it->values.Delete(val);
+    if (key_it->values.Empty()) {
       --num_elements_;
       data_[idx].erase(key_it);
       if (num_elements_ <= data_.size() / 4 &&
@@ -67,31 +120,23 @@ class Map {
     }
   }
 
-  std::list<std::string> Get(const std::string& key) const {
+  std::vector<std::string> Get(const std::string& key) const {
     size_t idx = Hash(key, data_.size());
     auto key_it =
         std::find_if(data_[idx].begin(), data_[idx].end(),
                      [&key](const Item& item) { return item.key == key; });
     if (key_it == data_[idx].end()) return {};
-    return key_it->values;
+    return key_it->values.GetAll();
   }
 
  private:
   struct Item {
     std::string key;
-    std::list<std::string> values;
+    Set values;
     Item(const std::string& gk, const std::string& val) : key(gk) {
-      values.push_back(val);
+      values.Put(val);
     }
   };
-
-  static size_t Hash(const std::string& str, size_t buff_size) {
-    uint64_t res = 0;
-    for (const auto& el : str) {
-      res = (res * A_HASH + el - 'a') % P_HASH;
-    }
-    return res % buff_size;
-  }
 
   void Rehash(size_t new_size) {
     ValueType new_data(new_size);
@@ -104,8 +149,6 @@ class Map {
   }
 
   static constexpr int INITIAL_SIZE = 2;
-  static constexpr size_t P_HASH = 1'000'000'007;
-  static constexpr size_t A_HASH = 9973;
 
   ValueType data_;
   size_t num_elements_ = 0;
@@ -151,6 +194,16 @@ void Solution(std::istream& input) {
       map.Delete(key, val);
     }
   }
+}
+
+size_t Hash(const std::string& str, size_t buff_size) {
+  static constexpr size_t P_HASH = 1'000'000'007;
+  static constexpr size_t A_HASH = 9973;
+  uint64_t res = 0;
+  for (const auto& el : str) {
+    res = (res * A_HASH + el - 'a') % P_HASH;
+  }
+  return res % buff_size;
 }
 
 void RunTests() {
