@@ -14,8 +14,8 @@ class Map {
   Map() : data_(INITIAL_SIZE) {}
 
   void Put(const std::string& key, const std::string& val) {
-    filled_num_ += PutElement({key, val}, data_);
-    if (filled_num_ == data_.size()) {
+    num_elements_ += PutElement({key, val}, data_);
+    if (num_elements_ == data_.size()) {
       Rehash(2 * data_.size());
     }
   }
@@ -27,8 +27,8 @@ class Map {
                      [&key](const Item& item) { return item.key == key; });
     if (it == data_[idx].end()) return;
     data_[idx].erase(it);
-    filled_num_ -= data_[idx].empty();
-    if (filled_num_ <= data_.size() / 4 && data_.size() > 2 * INITIAL_SIZE) {
+    --num_elements_;
+    if (num_elements_ <= data_.size() / 4 && data_.size() > 2 * INITIAL_SIZE) {
       Rehash(data_.size() / 2);
     }
   }
@@ -49,16 +49,15 @@ class Map {
 
   static bool PutElement(const Item& new_item, ValueType& buff) {
     size_t idx = Hash(new_item.key, buff.size());
-    bool status = buff[idx].empty();
     auto it = std::find_if(
         buff[idx].begin(), buff[idx].end(),
         [&new_item](const Item& item) { return item.key == new_item.key; });
     if (it == buff[idx].end()) {
       buff[idx].push_back(new_item);
-    } else {
-      it->value = new_item.value;
+      return true;
     }
-    return status;
+    it->value = new_item.value;
+    return false;
   }
 
   static size_t Hash(const std::string& str, size_t buff_size) {
@@ -84,7 +83,7 @@ class Map {
   static constexpr size_t A_HASH = 9973;
 
   std::vector<std::list<Item>> data_;
-  size_t filled_num_ = 0;
+  size_t num_elements_ = 0;
 };
 
 void Solution(std::istream& input = std::cin);
@@ -93,7 +92,7 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  //RunTests();
+  // RunTests();
   Solution(std::cin);
   return 0;
 }
