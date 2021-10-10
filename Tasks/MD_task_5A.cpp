@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <iostream>
 #include <limits>
-#include <optional>
 #include <random>
 #include <sstream>
 #include <vector>
@@ -11,53 +10,49 @@ class Set {
   Set() : data_(INITIAL_SIZE, EMPTY_BUCKET) {}
 
   void Insert(int val) {
-    size_t idx = GetIdxToPut(val, data_);
-    if (data_[idx] == val) {
+    size_t start_idx = Hash(val, data_.size());
+    size_t end_idx = FindElement(val, data_);
+    if (data_[end_idx] == val) return;
+    size_t idx = start_idx;
+    while (idx != end_idx && data_[idx] != DELETED_ELEMENT) {
+      idx = Next(idx, data_.size());
+    }
+    if (data_[idx] == DELETED_ELEMENT) {
+      data_[idx] = val;
       return;
-    } else if (data_[idx] == DELETED_ELEMENT) {
-      data_[idx] = val;
-    } else {
-      data_[idx] = val;
-      ++num_elements_inside_;
-      if (num_elements_inside_ >= data_.size() / 2) {
-        Rehash(2 * data_.size());
-      }
+    }
+    data_[idx] = val;
+    ++num_elements_inside_;
+    if (num_elements_inside_ >= data_.size() / 2) {
+      Rehash(2 * data_.size());
     }
   }
 
   void Delete(int val) {
-    auto idx = FindElement(val);
-    if (!idx) return;
-    if (data_[Next(*idx, data_.size())] == EMPTY_BUCKET) {
-      data_[*idx] = EMPTY_BUCKET;
+    auto idx = FindElement(val, data_);
+    if (data_[idx] == EMPTY_BUCKET) return;
+    if (data_[Next(idx, data_.size())] == EMPTY_BUCKET) {
+      data_[idx] = EMPTY_BUCKET;
       --num_elements_inside_;
       if (num_elements_inside_ <= data_.size() / 8 &&
           data_.size() > 2 * INITIAL_SIZE) {
         Rehash(data_.size() / 2);
       }
     } else {
-      data_[*idx] = DELETED_ELEMENT;
+      data_[idx] = DELETED_ELEMENT;
     }
   }
 
-  bool Exists(int val) const { return FindElement(val).has_value(); }
+  bool Exists(int val) const {
+    return data_[FindElement(val, data_)] != EMPTY_BUCKET;
+  }
 
  private:
-  static size_t GetIdxToPut(int val, const std::vector<int>& buff) {
+  static size_t FindElement(int val, const std::vector<int>& buff) {
     size_t idx = Hash(val, buff.size());
-    while (buff[idx] != EMPTY_BUCKET && buff[idx] != DELETED_ELEMENT &&
-           buff[idx] != val) {
+    while (buff[idx] != val && buff[idx] != EMPTY_BUCKET) {
       idx = Next(idx, buff.size());
     }
-    return idx;
-  }
-
-  std::optional<size_t> FindElement(int val) const {
-    size_t idx = Hash(val, data_.size());
-    while (data_[idx] != val && data_[idx] != EMPTY_BUCKET) {
-      idx = Next(idx, data_.size());
-    }
-    if (data_[idx] == EMPTY_BUCKET) return std::nullopt;
     return idx;
   }
 
@@ -72,7 +67,7 @@ class Set {
     num_elements_inside_ = 0;
     for (const auto& el : data_) {
       if (el != EMPTY_BUCKET && el != DELETED_ELEMENT) {
-        new_data[GetIdxToPut(el, new_data)] = el;
+        new_data[FindElement(el, new_data)] = el;
         ++num_elements_inside_;
       }
     }
@@ -100,8 +95,8 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -113,7 +108,6 @@ void Solution(std::istream& input) {
     if (command == "insert") {
       set.Insert(val);
     } else if (command == "exists") {
-      bool tmp = set.Exists(val);
       std::cout << (set.Exists(val) ? "true" : "false") << '\n';
     } else {
       set.Delete(val);
@@ -122,7 +116,7 @@ void Solution(std::istream& input) {
 }
 
 void RunTests() {
-  /*{
+  {
     std::stringstream ss;
     ss << R"(insert 2
 insert 5
@@ -135,7 +129,7 @@ exists 2
 )";
     Solution(ss);
     std::cout << "expected = true false false\n";
-  }*/
+  }
   {
     std::stringstream ss;
     for (size_t i = 0; i < 20; ++i) {
