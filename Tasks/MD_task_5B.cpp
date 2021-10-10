@@ -14,7 +14,16 @@ class Map {
   Map() : data_(INITIAL_SIZE) {}
 
   void Put(const std::string& key, const std::string& val) {
-    num_elements_ += PutElement({key, val}, data_);
+    size_t idx = Hash(key, data_.size());
+    auto it =
+        std::find_if(data_[idx].begin(), data_[idx].end(),
+                     [&key](const Item& item) { return item.key == key; });
+    if (it != data_[idx].end()) {
+      it->value = val;
+      return;
+    }
+    data_[idx].push_back({key, val});
+    ++num_elements_;
     if (num_elements_ == data_.size()) {
       Rehash(2 * data_.size());
     }
@@ -47,19 +56,6 @@ class Map {
     std::string value;
   };
 
-  static bool PutElement(const Item& new_item, ValueType& buff) {
-    size_t idx = Hash(new_item.key, buff.size());
-    auto it = std::find_if(
-        buff[idx].begin(), buff[idx].end(),
-        [&new_item](const Item& item) { return item.key == new_item.key; });
-    if (it == buff[idx].end()) {
-      buff[idx].push_back(new_item);
-      return true;
-    }
-    it->value = new_item.value;
-    return false;
-  }
-
   static size_t Hash(const std::string& str, size_t buff_size) {
     uint64_t res = 0;
     for (const auto& el : str) {
@@ -69,10 +65,10 @@ class Map {
   }
 
   void Rehash(size_t new_size) {
-    std::vector<std::list<Item>> new_data(new_size);
+    ValueType new_data(new_size);
     for (const auto& bucket : data_) {
       for (const auto& el : bucket) {
-        PutElement(el, new_data);
+        new_data[Hash(el.key, new_size)].push_back(el);
       }
     }
     data_.swap(new_data);
@@ -82,7 +78,7 @@ class Map {
   static constexpr size_t P_HASH = 1'000'000'007;
   static constexpr size_t A_HASH = 9973;
 
-  std::vector<std::list<Item>> data_;
+  ValueType data_;
   size_t num_elements_ = 0;
 };
 
