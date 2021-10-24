@@ -9,8 +9,6 @@ constexpr int64_t TASK_CONSTANT_B = (1ll << 30);
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
-void BuildPrefixSum(std::vector<int64_t>& data);
-
 int main() {
   // RunTests();
   Solution(std::cin);
@@ -25,13 +23,14 @@ void Solution(std::istream& input) {
     return (x * curr_value + y) % TASK_CONSTANT_A;
   };
 
-  std::vector<int64_t> data(n);
-  for (auto& el : data) {
-    el = curr_a;
+  std::vector<int64_t> data;
+  data.reserve(n);
+  data.push_back(curr_a);
+  for (int64_t i = 1; i < n; ++i) {
     curr_a = get_next_a(curr_a);
+    data.push_back(data[i - 1] + curr_a);
   }
 
-  BuildPrefixSum(data);
   int64_t m, z, t, b1;
   input >> m >> z >> t >> b1;
 
@@ -53,12 +52,6 @@ void Solution(std::istream& input) {
     b2 = get_next_b(b1);
   }
   std::cout << total << '\n';
-}
-
-void BuildPrefixSum(std::vector<int64_t>& data) {
-  for (size_t i = 1; i < data.size(); ++i) {
-    data[i] += data[i - 1];
-  }
 }
 
 void RunTests() {
