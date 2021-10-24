@@ -16,9 +16,13 @@ int64_t GetNextU(int64_t curr_val, int64_t curr_answer, int64_t idx);
 
 int64_t GetNextV(int64_t curr_val, int64_t curr_answer, int64_t idx,
                  int64_t limit);
-size_t GetLeftClosestPower2(size_t num);
-SparseTable BuildMinSparseTable(const std::vector<int64_t>& data);
-int64_t GetMinOnRange(const SparseTable& table, int64_t lhs, int64_t rhs);
+SparseTable BuildMinSparseTable(const std::vector<int64_t>& data,
+                                int64_t max_pow2_num);
+int64_t GetMinOnRange(const SparseTable& table,
+                      const std::vector<int64_t>& dist_to_pow2, int64_t lhs,
+                      int64_t rhs);
+
+std::vector<int64_t> GetDistToPow2(int64_t max_dist);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -31,7 +35,7 @@ int main() {
 std::vector<int64_t> BuildDataVector(int64_t size, int64_t init_value) {
   std::vector<int64_t> res(size);
   res[0] = init_value;
-  for (size_t i = 1; i < res.size(); ++i) {
+  for (int64_t i = 1; i < res.size(); ++i) {
     res[i] = (23 * res[i - 1] + 21563) % 16714589;
   }
   return res;
@@ -51,7 +55,8 @@ void Solution(std::istream& input) {
   int64_t n, m, a0;
   input >> n >> m >> a0;
   std::vector<int64_t> data = BuildDataVector(n, a0);
-  SparseTable table = BuildMinSparseTable(data);
+  std::vector<int64_t> dist_to_pow2 = GetDistToPow2(data.size() + 1);
+  SparseTable table = BuildMinSparseTable(data, dist_to_pow2.back());
   int64_t u, v;
   input >> u >> v;
   int64_t answer = 0;
@@ -60,31 +65,36 @@ void Solution(std::istream& input) {
   for (int64_t i = 1; i <= m; ++i) {
     prev_u = u;
     prev_v = v;
-    answer = GetMinOnRange(table, std::min(u, v) - 1, std::max(u, v) - 1);
+    answer = GetMinOnRange(table, dist_to_pow2, std::min(u, v) - 1,
+                           std::max(u, v) - 1);
     u = GetNextU(u, answer, i, data.size());
     v = GetNextV(v, answer, i, data.size());
   }
   std::cout << prev_u << ' ' << prev_v << ' ' << answer << '\n';
 }
 
-size_t GetLeftClosestPower2(size_t num) {
-  size_t res = 0;
-  while ((1 << res) <= num) {
-    ++res;
+std::vector<int64_t> GetDistToPow2(int64_t max_dist) {
+  std::vector<int64_t> res(max_dist);
+  res[0] = 0;
+  for (int64_t i = 1; i < res.size(); ++i) {
+    res[i] = res[i - 1];
+    if (i >= (1 << (res[i] + 1))) {
+      ++res[i];
+    }
   }
-  return res - 1;
+  return res;
 }
 
-SparseTable BuildMinSparseTable(const std::vector<int64_t>& data) {
+SparseTable BuildMinSparseTable(const std::vector<int64_t>& data,
+                                int64_t max_pow2_num) {
   SparseTable res(data.size());
-  size_t max_pow2_num = GetLeftClosestPower2(data.size());
-  for (size_t i = 0; i < data.size(); ++i) {
+  for (int64_t i = 0; i < data.size(); ++i) {
     res[i].resize(max_pow2_num + 1, INFINITY);
     res[i][0] = data[i];
   }
 
-  for (size_t pow = 1; pow < res.front().size(); ++pow) {
-    for (size_t start = 0; start < res.size(); ++start) {
+  for (int64_t pow = 1; pow < res.front().size(); ++pow) {
+    for (int64_t start = 0; start < res.size(); ++start) {
       if (start + (1 << pow) - 1 >= res.size()) {
         break;
       }
@@ -95,8 +105,10 @@ SparseTable BuildMinSparseTable(const std::vector<int64_t>& data) {
   return res;
 }
 
-int64_t GetMinOnRange(const SparseTable& table, int64_t lhs, int64_t rhs) {
-  size_t pow = GetLeftClosestPower2(rhs - lhs + 1);
+int64_t GetMinOnRange(const SparseTable& table,
+                      const std::vector<int64_t>& dist_to_pow2, int64_t lhs,
+                      int64_t rhs) {
+  int64_t pow = dist_to_pow2[rhs - lhs + 1];
   return std::min(table[lhs][pow], table[rhs - (1 << pow) + 1][pow]);
 }
 
