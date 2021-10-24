@@ -6,6 +6,12 @@
 constexpr int64_t TASK_CONSTANT_A = (1ll << 16);
 constexpr int64_t TASK_CONSTANT_B = (1ll << 30);
 
+struct Request {
+  int64_t left = 0;
+  int64_t right = 0;
+  Request(int64_t l, int64_t r) : left(l), right(r) {}
+};
+
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
@@ -39,18 +45,23 @@ void Solution(std::istream& input) {
     return val < 0 ? TASK_CONSTANT_B + val : val;
   };
 
-  int64_t total = 0;
-  int64_t b2 = get_next_b(b1);
-  while (m--) {
-    int64_t req_1 = b1 % data.size();
-    int64_t req_2 = b2 % data.size();
-    int64_t lhs = std::min(req_1, req_2);
-    int64_t rhs = std::max(req_1, req_2);
-
-    total += data[rhs] - (lhs == 0 ? 0 : data[lhs - 1]);
-    b1 = get_next_b(b2);
+  std::vector<Request> req_vec;
+  req_vec.reserve(m);
+  int64_t b2 = 0;
+  for (int64_t i = 0; i < m; ++i) {
     b2 = get_next_b(b1);
+    req_vec.emplace_back(b1 % data.size(), b2 % data.size());
+    b1 = get_next_b(b2);
   }
+
+  int64_t total = 0;
+  for (auto& el : req_vec) {
+    if (el.right < el.left) {
+      std::swap(el.right, el.left);
+    }
+    total += data[el.right] - (el.left == 0 ? 0 : data[el.left - 1]);
+  }
+
   std::cout << total << '\n';
 }
 
