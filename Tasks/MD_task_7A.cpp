@@ -6,6 +6,11 @@
 constexpr int64_t TASK_CONSTANT_A = (1ll << 16);
 constexpr int64_t TASK_CONSTANT_B = (1ll << 30);
 
+struct Request {
+  int64_t left = 0;
+  int64_t right = 0;
+};
+
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
@@ -36,20 +41,24 @@ void Solution(std::istream& input) {
   int64_t n, x, y, a0;
   input >> n >> x >> y >> a0;
   std::vector<int64_t> data = BuildInputVector(n, x, y, a0, TASK_CONSTANT_A);
-  int64_t m, z, t, b0;
-  input >> m >> z >> t >> b0;
-  std::vector<int64_t> req_vec =
-      BuildInputVector(2 * m, z, t, b0, TASK_CONSTANT_B);
-  std::transform(req_vec.begin(), req_vec.end(), req_vec.begin(),
-                 [&data](int64_t val) { return val % data.size(); });
   std::vector<int64_t> prefix_sum = BuildPrefixSum(data);
+  int64_t m, z, t, b1;
+  input >> m >> z >> t >> b1;
+
+  auto get_next_b = [z, t](int64_t curr_value) {
+    return (z * curr_value + t) % TASK_CONSTANT_B;
+  };
+
   int64_t total = 0;
-  size_t idx = 0;
-  while (2 * idx + 1 < req_vec.size()) {
-    int64_t lhs = std::min(req_vec[2 * idx], req_vec[2 * idx + 1]);
-    int64_t rhs = std::max(req_vec[2 * idx], req_vec[2 * idx + 1]);
+  int64_t b2 = get_next_b(b1);
+  while (m--) {
+    int64_t req_1 = b1 % data.size();
+    int64_t req_2 = b2 % data.size();
+    int64_t lhs = std::min(req_1, req_2);
+    int64_t rhs = std::max(req_1, req_2);
     total += prefix_sum[rhs] - (lhs == 0 ? 0 : prefix_sum[lhs - 1]);
-    ++idx;
+    b1 = get_next_b(b2);
+    b2 = get_next_b(b1);
   }
   std::cout << total << '\n';
 }
