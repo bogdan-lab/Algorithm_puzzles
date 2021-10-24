@@ -6,16 +6,8 @@
 constexpr int64_t TASK_CONSTANT_A = (1ll << 16);
 constexpr int64_t TASK_CONSTANT_B = (1ll << 30);
 
-struct Request {
-  int64_t left = 0;
-  int64_t right = 0;
-};
-
 void Solution(std::istream& input = std::cin);
 void RunTests();
-
-std::vector<int64_t> BuildInputVector(int64_t size, int64_t mult, int64_t add,
-                                      int64_t init_value);
 
 void BuildPrefixSum(std::vector<int64_t>& data);
 
@@ -25,20 +17,20 @@ int main() {
   return 0;
 }
 
-std::vector<int64_t> BuildInputVector(int64_t size, int64_t mult, int64_t add,
-                                      int64_t init_value) {
-  std::vector<int64_t> res(size);
-  res[0] = init_value;
-  for (size_t i = 1; i < res.size(); ++i) {
-    res[i] = (mult * res[i - 1] + add) % TASK_CONSTANT_A;
-  }
-  return res;
-}
-
 void Solution(std::istream& input) {
-  int64_t n, x, y, a0;
-  input >> n >> x >> y >> a0;
-  std::vector<int64_t> data = BuildInputVector(n, x, y, a0);
+  int64_t n, x, y, curr_a;
+  input >> n >> x >> y >> curr_a;
+
+  auto get_next_a = [x, y](int64_t curr_value) {
+    return (x * curr_value + y) % TASK_CONSTANT_A;
+  };
+
+  std::vector<int64_t> data(n);
+  for (auto& el : data) {
+    el = curr_a;
+    curr_a = get_next_a(curr_a);
+  }
+
   BuildPrefixSum(data);
   int64_t m, z, t, b1;
   input >> m >> z >> t >> b1;
