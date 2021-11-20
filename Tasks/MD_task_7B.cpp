@@ -94,10 +94,7 @@ SparseTable BuildMinSparseTable(const std::vector<int64_t>& data,
   }
 
   for (int64_t pow = 1; pow < res.front().size(); ++pow) {
-    for (int64_t start = 0; start < res.size(); ++start) {
-      if (start + (1 << pow) - 1 >= res.size()) {
-        break;
-      }
+    for (int64_t start = 0; start + (1 << pow) - 1 < res.size(); ++start) {
       res[start][pow] =
           std::min(res[start][pow - 1], res[start + (1 << (pow - 1))][pow - 1]);
     }
