@@ -1,12 +1,10 @@
 #include <algorithm>
+#include <limits>
 #include <vector>
 
-int EMPTY_VALUE = 1000'001;
-
 struct StepResult {
-  int lhs_value = EMPTY_VALUE;
-  int rhs_value = EMPTY_VALUE;
-  size_t nums_before;
+  size_t lhs_idx = 0;
+  size_t rhs_idx = 0;
 };
 
 class Solution {
@@ -14,18 +12,25 @@ class Solution {
   StepResult GetNumBefore(const std::vector<int>& lhs, size_t l_s, size_t l_e,
                           const std::vector<int>& rhs, size_t r_s, size_t r_e) {
     int lhs_mid = lhs[(l_e + l_s) / 2];
-    auto rhs_it =
-        std::upper_bound(rhs.begin() + r_s, rhs.begin() + r_e, lhs_mid);
+    auto lhs_end = lhs.begin() + l_e;
+    auto lhs_begin = lhs.begin() + l_s;
+    auto lhs_it = std::upper_bound(lhs_begin, lhs_end, lhs_mid);
+    if (lhs_it == lhs_end) {
+      lhs_it = std::lower_bound(lhs_begin, lhs_end, lhs_mid);
+    }
+    // linear in case of range with the same value
+    auto rhs_begin = rhs.begin() + r_s;
+    auto rhs_end = rhs.begin() + r_e;
+    auto rhs_it = std::upper_bound(rhs_begin, rhs_end, *lhs_it);
     StepResult res;
-    res.nums_before = (l_e + l_s) / 2 + 1 + (rhs_it - rhs.begin() + r_s);
-    res.lhs_value = lhs_mid;
-    res.rhs_value = rhs_it == rhs.end() ? EMPTY_VALUE : *rhs_it;
+    res.lhs_idx = lhs_it - lhs.begin();
+    res.rhs_idx = rhs_it - rhs.begin();
     return res;
   }
 
   double GetMedianForOne(const std::vector<int>& vec, size_t pos,
                          bool double_val) {
-    return double_val ? 0.5 * (vec[pos] + vec[pos + 1]) : vec[pos];
+    return double_val ? 0.5 * (vec[pos] + vec[pos - 1]) : vec[pos];
   }
 
   double findMedianSortedArrays(std::vector<int>& nums1,
@@ -46,35 +51,43 @@ class Solution {
     size_t r_e = nums2.size();
     while (true) {
       StepResult res = GetNumBefore(nums1, l_s, l_e, nums2, r_s, r_e);
-
-      if (m_idx == res.nums_before) {
-        return full_size % 2 ? 1.0 * (res.lhs_value + res.rhs_value) / 2
-                             : 1.0 * res.lhs_value;
-      } else if (res.nums_before < m_idx) {
-        l_s = (l_s + l_e) / 2 + 1;
-        if (l_s >= l_e) {
-          return GetMedianForOne(nums2, m_idx - res.nums_before,
-                                 !(full_size % 2));
+      size_t num_before = res.lhs_idx + res.rhs_idx + 1;
+      if (num_before == m_idx) {
+        if (res.lhs_idx == nums1.size()) {
+          return GetMedianForOne(nums2, res.rhs_idx, !(full_size % 2));
+        } else if (res.rhs_idx == nums2.size()) {
+          // num_before points to the lhs_idx + 1
+          return GetMedianForOne(nums1, res.lhs_idx + 1, !(full_size % 2));
+        } else {
+          return full_size % 2
+                     ? nums2[res.rhs_idx]
+                     : 0.5 * (nums1[res.lhs_idx] + nums2[res.rhs_idx]);
         }
-        r_s = res.nums_before - l_s;
-        if (r_s >= r_e) {
-          return GetMedianForOne(nums1, m_idx - res.nums_before,
-                                 !(full_size % 2));
-        }
+      } else if (num_before < m_idx) {
+        l_s = res.lhs_idx + 1;
+        r_s = res.rhs_idx + 1;
       } else {
-        l_e = (l_s + l_e) / 2 + 1;
-        if (l_s >= l_e) {
-          return GetMedianForOne(nums2, m_idx - res.nums_before,
-                                 !(full_size % 2));
-        }
-        r_e = res.nums_before - l_e;
-        if (r_s >= r_e) {
-          return GetMedianForOne(nums1, m_idx - res.nums_before,
-                                 !(full_size % 2));
-        }
+        l_e = res.lhs_idx;
+        r_e = res.rhs_idx;
+      }
+
+      if (l_s >= l_e) {
+        // if we collapse in the middle we still can have median between
+        // nums1_element and nums2_element!
+        return GetMedianForOne(nums2, m_idx - l_e - 1, !(full_size % 2));
       }
     }
 
-    return 3.0;
+    return std::numeric_limits<double>::quiet_NaN();
   }
 };
+
+int main() {
+  std::vector<int> nums1{1, 2, 3, 4, 5};
+  std::vector<int> nums2{1, 2, 3, 4, 5};
+  Solution s;
+
+  double res = s.findMedianSortedArrays(nums1, nums2);
+
+  return 0;
+}
