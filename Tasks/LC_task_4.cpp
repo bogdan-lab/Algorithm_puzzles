@@ -7,8 +7,60 @@ struct StepResult {
   size_t rhs_idx = 0;
 };
 
+
+struct StepResult2{
+    size_t lhs_idx = 0;
+    int lhs_value = 0;
+    size_t rhs_idx = 0;
+    int rhs_value = 0;
+
+    size_t nums1_shift= 0;
+    size_t nums2_shift= 0;
+};
+
 class Solution {
  public:
+
+  StepResult2 GetNumBefore2(const std::vector<int>& lhs, size_t l_s, size_t l_e,
+          const std::vector<int>& rhs, size_t r_s, size_t r_e) {
+      StepResult2 res;
+      if(l_s >= l_e){
+        res.lhs_idx = (r_s + r_e)/2 + l_e;
+        res.lhs_value = rhs[(r_s + r_e)/2];
+        res.rhs_idx = res.lhs_idx == r_e - 1 ? res.lhs_idx - 1 : res.lhs_idx + 1;
+        res.rhs_value = rhs[res.rhs_idx];
+        if(res.rhs_idx < res.lhs_idx){
+            std::swap(res.lhs_idx, res.rhs_idx);
+            std::swap(res.lhs_value, res.rhs_value);
+        }
+        res.nums2_shift = res.rhs_idx;
+        return res;
+      }
+      if(r_s >= r_e){
+        res.lhs_idx = (l_s + l_e)/2 + r_e;
+        res.lhs_value = lhs[(l_s + l_e)/2];
+        res.rhs_idx = res.lhs_idx == l_e - 1 ? res.lhs_idx - 1 : res.lhs_idx + 1;
+        res.rhs_value = lhs[res.rhs_idx];
+        if(res.rhs_idx < res.lhs_idx){
+            std::swap(res.lhs_idx, res.rhs_idx);
+            std::swap(res.lhs_value, res.rhs_value);
+        }
+        res.nums1_shift = res.rhs_idx;
+        return res;
+      }
+      // both vectors contain values
+      res.lhs_value = lhs[(l_e + l_s)/2];
+      auto rhs_begin = rhs.begin() + r_s;
+      auto rhs_end = rhs.begin() + r_e;
+      auto rhs_it = std::upper_bound(rhs_begin, rhs_end, res.lhs_value);
+      // case when rhs_it is end
+ 
+
+
+      return res;
+  }
+
+
   StepResult GetNumBefore(const std::vector<int>& lhs, size_t l_s, size_t l_e,
                           const std::vector<int>& rhs, size_t r_s, size_t r_e) {
     int lhs_mid = lhs[(l_e + l_s) / 2];
