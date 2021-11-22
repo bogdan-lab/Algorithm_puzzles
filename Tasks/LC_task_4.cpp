@@ -2,84 +2,8 @@
 #include <limits>
 #include <vector>
 
-struct StepResult {
-  size_t lhs_idx = 0;
-  size_t rhs_idx = 0;
-};
-
-
-struct StepResult2{
-    size_t lhs_idx = 0;
-    int lhs_value = 0;
-    size_t rhs_idx = 0;
-    int rhs_value = 0;
-
-    size_t nums1_shift= 0;
-    size_t nums2_shift= 0;
-};
-
 class Solution {
  public:
-
-  StepResult2 GetNumBefore2(const std::vector<int>& lhs, size_t l_s, size_t l_e,
-          const std::vector<int>& rhs, size_t r_s, size_t r_e) {
-      StepResult2 res;
-      if(l_s >= l_e){
-        res.lhs_idx = (r_s + r_e)/2 + l_e;
-        res.lhs_value = rhs[(r_s + r_e)/2];
-        res.rhs_idx = res.lhs_idx == r_e - 1 ? res.lhs_idx - 1 : res.lhs_idx + 1;
-        res.rhs_value = rhs[res.rhs_idx];
-        if(res.rhs_idx < res.lhs_idx){
-            std::swap(res.lhs_idx, res.rhs_idx);
-            std::swap(res.lhs_value, res.rhs_value);
-        }
-        res.nums2_shift = res.rhs_idx;
-        return res;
-      }
-      if(r_s >= r_e){
-        res.lhs_idx = (l_s + l_e)/2 + r_e;
-        res.lhs_value = lhs[(l_s + l_e)/2];
-        res.rhs_idx = res.lhs_idx == l_e - 1 ? res.lhs_idx - 1 : res.lhs_idx + 1;
-        res.rhs_value = lhs[res.rhs_idx];
-        if(res.rhs_idx < res.lhs_idx){
-            std::swap(res.lhs_idx, res.rhs_idx);
-            std::swap(res.lhs_value, res.rhs_value);
-        }
-        res.nums1_shift = res.rhs_idx;
-        return res;
-      }
-      // both vectors contain values
-      res.lhs_value = lhs[(l_e + l_s)/2];
-      auto rhs_begin = rhs.begin() + r_s;
-      auto rhs_end = rhs.begin() + r_e;
-      auto rhs_it = std::upper_bound(rhs_begin, rhs_end, res.lhs_value);
-      // case when rhs_it is end
- 
-
-
-      return res;
-  }
-
-
-  StepResult GetNumBefore(const std::vector<int>& lhs, size_t l_s, size_t l_e,
-                          const std::vector<int>& rhs, size_t r_s, size_t r_e) {
-    int lhs_mid = lhs[(l_e + l_s) / 2];
-    auto lhs_end = lhs.begin() + l_e;
-    auto lhs_begin = lhs.begin() + l_s;
-    auto lhs_it = std::upper_bound(lhs_begin, lhs_end, lhs_mid);
-    if (lhs_it == lhs_end) {
-      lhs_it = std::lower_bound(lhs_begin, lhs_end, lhs_mid);
-    }
-    // linear in case of range with the same value
-    auto rhs_begin = rhs.begin() + r_s;
-    auto rhs_end = rhs.begin() + r_e;
-    auto rhs_it = std::upper_bound(rhs_begin, rhs_end, *lhs_it);
-    StepResult res;
-    res.lhs_idx = lhs_it - lhs.begin();
-    res.rhs_idx = rhs_it - rhs.begin();
-    return res;
-  }
-
   double GetMedianForOne(const std::vector<int>& vec, size_t pos,
                          bool double_val) {
     return double_val ? 0.5 * (vec[pos] + vec[pos - 1]) : vec[pos];
@@ -94,39 +18,65 @@ class Solution {
     if (nums2.empty()) {
       return GetMedianForOne(nums1, nums1.size() / 2, !(nums1.size() % 2));
     }
+    size_t mid_idx = (nums1.size() + nums2.size()) / 2;
 
-    size_t full_size = nums1.size() + nums2.size();
-    size_t m_idx = full_size / 2;
-    size_t l_s = 0;
-    size_t l_e = nums1.size();
-    size_t r_s = 0;
-    size_t r_e = nums2.size();
+    auto lhs_begin = nums1.begin();
+    auto lhs_end = nums1.end();
+    auto rhs_begin = nums2.begin();
+    auto rhs_end = nums2.end();
+
     while (true) {
-      StepResult res = GetNumBefore(nums1, l_s, l_e, nums2, r_s, r_e);
-      size_t num_before = res.lhs_idx + res.rhs_idx + 1;
-      if (num_before == m_idx) {
-        if (res.lhs_idx == nums1.size()) {
-          return GetMedianForOne(nums2, res.rhs_idx, !(full_size % 2));
-        } else if (res.rhs_idx == nums2.size()) {
-          // num_before points to the lhs_idx + 1
-          return GetMedianForOne(nums1, res.lhs_idx + 1, !(full_size % 2));
-        } else {
-          return full_size % 2
-                     ? nums2[res.rhs_idx]
-                     : 0.5 * (nums1[res.lhs_idx] + nums2[res.rhs_idx]);
-        }
-      } else if (num_before < m_idx) {
-        l_s = res.lhs_idx + 1;
-        r_s = res.rhs_idx + 1;
-      } else {
-        l_e = res.lhs_idx;
-        r_e = res.rhs_idx;
+      if (lhs_begin == lhs_end) {
+        // do something ...
       }
+      int lhs_mid_val = *(lhs_begin + (lhs_end - lhs_begin) / 2);
+      auto [lhs_range_begin, lhs_range_end] =
+          std::equal_range(lhs_begin, lhs_end, lhs_mid_val);
+      auto [rhs_range_begin, rhs_range_end] =
+          std::equal_range(rhs_begin, rhs_end, lhs_mid_val);
+      size_t lhs_mid_glob_idx_b = lhs_range_begin - lhs_begin;
+      size_t lhs_mid_glob_idx_e =
+          (lhs_range_end - lhs_begin) + rhs_range_end - rhs_begin;
 
-      if (l_s >= l_e) {
-        // if we collapse in the middle we still can have median between
-        // nums1_element and nums2_element!
-        return GetMedianForOne(nums2, m_idx - l_e - 1, !(full_size % 2));
+      // 0 1 2 3 4
+      // 1 1 1 3 4  -> lhs_begin_idx = 0
+      // 2 2 2 2 5  -> lhs_end_idx = 3 + 4 - 1 = 6
+
+      if (mid_idx >= lhs_mid_glob_idx_b && mid_idx < lhs_mid_glob_idx_e) {
+        // what if mid_idx is first val and we have odd length ???
+      }
+      // Looking for the second value
+      // range check above guarantee that if we are here we will not have
+      // situation where both equal_range ends are range ends
+      int rhs_mid_val = [&]() {
+        if (lhs_range_end == lhs_end) {
+          return *rhs_range_end;
+        } else if (rhs_range_end == rhs_end) {
+          return *lhs_range_end;
+        } else {
+          return std::min(*lhs_range_end, *rhs_range_end);
+        }
+      }();
+
+      auto [lhs_range_begin_2, lhs_range_end_2] =
+          std::equal_range(lhs_begin, lhs_end, rhs_mid_val);
+      auto [rhs_range_begin_2, rhs_range_end_2] =
+          std::equal_range(rhs_begin, rhs_end, rhs_mid_val);
+
+      size_t rhs_mid_glob_idx_b = lhs_range_begin_2 - lhs_begin;
+      size_t rhs_mid_glob_idx_e =
+          (lhs_range_end_2 - lhs_begin) + rhs_range_end_2 - rhs_begin;
+
+      if (mid_idx >= rhs_mid_glob_idx_b && mid_idx < rhs_mid_glob_idx_e) {
+        // what if mid_idx is first val and we have odd length ???
+        // what if in second ???
+      }
+      // Here we have two ranges and we checked if our mid point is in one of
+      // them updating search range
+      if (mid_idx >= rhs_mid_glob_idx_e) {
+        // shift left edge
+      } else {
+        // shift right edge
       }
     }
 
