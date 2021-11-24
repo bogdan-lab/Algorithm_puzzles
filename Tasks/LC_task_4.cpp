@@ -24,20 +24,35 @@ class Solution {
       // Checck it in the end
       if (lhs_begin == lhs_end) {
         size_t pos = mid_idx - (lhs_begin - nums1.begin());
-        if (pos > 0) {
-          return GetMedianForOne(nums2, pos, need_calc_avg);
+        if (need_calc_avg) {
+          // find value before
+          auto it_1 = std::upper_bound(nums1.begin(), nums1.end(), nums2[pos]);
+          if (pos == 0) {
+            return 0.5 * (*std::prev(it_1) + nums2[pos]);
+          } else {
+            auto it_2 = nums2.begin() + pos - 1;
+            int val = it_1 == nums1.begin() ? *it_2
+                                            : std::max(*it_2, *std::prev(it_1));
+            return 0.5 * (val + nums2[pos]);
+          }
         } else {
-          return need_calc_avg ? 0.5 * (nums2[0] + *std::prev(lhs_begin))
-                               : nums2[0];
+          return nums2[pos];
         }
       }
       if (rhs_begin == rhs_end) {
         size_t pos = mid_idx - (rhs_begin - nums2.begin());
-        if (pos > 0) {
-          return GetMedianForOne(nums1, pos, need_calc_avg);
+        if (need_calc_avg) {
+          auto it_2 = std::upper_bound(nums2.begin(), nums2.end(), nums1[pos]);
+          if (pos == 0) {
+            return 0.5 * (*std::prev(it_2) + nums1[pos]);
+          } else {
+            auto it_1 = nums1.begin() + pos - 1;
+            int val = it_2 == nums2.begin() ? *it_1
+                                            : std::max(*it_1, *std::prev(it_2));
+            return 0.5 * (val + nums1[pos]);
+          }
         } else {
-          return need_calc_avg ? 0.5 * (nums1[0] + *std::prev(rhs_begin))
-                               : nums1[0];
+          return nums1[pos];
         }
       }
       int lhs_mid_val = *(lhs_begin + (lhs_end - lhs_begin) / 2);
@@ -47,10 +62,10 @@ class Solution {
       auto rhs_range_begin_1 =
           std::lower_bound(rhs_begin, rhs_end, lhs_mid_val);
       auto rhs_range_end_1 = std::upper_bound(rhs_begin, rhs_end, lhs_mid_val);
-      size_t lhs_mid_glob_idx_b =
-          (lhs_range_begin_1 - lhs_begin) + (rhs_range_begin_1 - rhs_begin);
+      size_t lhs_mid_glob_idx_b = (lhs_range_begin_1 - nums1.begin()) +
+                                  (rhs_range_begin_1 - nums2.begin());
       size_t lhs_mid_glob_idx_e =
-          (lhs_range_end_1 - lhs_begin) + (rhs_range_end_1 - rhs_begin);
+          (lhs_range_end_1 - nums1.begin()) + (rhs_range_end_1 - nums2.begin());
 
       if (mid_idx >= lhs_mid_glob_idx_b && mid_idx < lhs_mid_glob_idx_e) {
         if (need_calc_avg && mid_idx == lhs_mid_glob_idx_b) {
@@ -91,10 +106,10 @@ class Solution {
       auto rhs_range_begin_2 =
           std::lower_bound(rhs_begin, rhs_end, rhs_mid_val);
       auto rhs_range_end_2 = std::upper_bound(rhs_begin, rhs_end, rhs_mid_val);
-      size_t rhs_mid_glob_idx_b =
-          (lhs_range_begin_2 - lhs_begin) + (rhs_range_begin_2 - rhs_begin);
+      size_t rhs_mid_glob_idx_b = (lhs_range_begin_2 - nums1.begin()) +
+                                  (rhs_range_begin_2 - nums2.begin());
       size_t rhs_mid_glob_idx_e =
-          (lhs_range_end_2 - lhs_begin) + rhs_range_end_2 - rhs_begin;
+          (lhs_range_end_2 - nums1.begin()) + rhs_range_end_2 - nums2.begin();
 
       if (mid_idx >= rhs_mid_glob_idx_b && mid_idx < rhs_mid_glob_idx_e) {
         return need_calc_avg && mid_idx == rhs_mid_glob_idx_b
@@ -171,6 +186,13 @@ int main() {
     Solution s;
     double res = s.findMedianSortedArrays(nums1, nums2);
     std::cout << res << " expected 3.5\n";
+  }
+  {
+    std::vector<int> nums1{2, 3, 5, 6, 7, 8};
+    std::vector<int> nums2{1, 4};
+    Solution s;
+    double res = s.findMedianSortedArrays(nums1, nums2);
+    std::cout << res << " expected 4.5\n";
   }
   return 0;
 }
