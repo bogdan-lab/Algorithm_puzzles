@@ -1,19 +1,14 @@
 #include <iostream>
+#include <limits>
 #include <sstream>
-#include <unordered_set>
 #include <vector>
+
+constexpr size_t kEmptyValue = std::numeric_limits<size_t>::max();
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
 std::vector<size_t> SolveOne(const std::vector<size_t>& parents,
                              const std::vector<size_t>& permut);
-
-std::vector<std::unordered_set<size_t>> ParentsToChild(
-    const std::vector<size_t>& parents);
-
-bool CheckIfPossible(
-    const std::vector<size_t>& permut,
-    const std::vector<std::unordered_set<size_t>>& par_to_child);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -53,62 +48,28 @@ void Solution(std::istream& input) {
 
 std::vector<size_t> SolveOne(const std::vector<size_t>& parents,
                              const std::vector<size_t>& permut) {
-  std::vector<size_t> dist_from_root(parents.size());
-  std::vector<size_t> dist_from_parent(parents.size());
-  std::vector<std::unordered_set<size_t>> parent_to_child =
-      ParentsToChild(parents);
-  if (!CheckIfPossible(permut, parent_to_child)) {
+  std::vector<size_t> dist_from_root(parents.size(), kEmptyValue);
+  std::vector<size_t> dist_from_parent(parents.size(), kEmptyValue);
+
+  if (parents[permut[0]] != permut[0]) {
+    // starting not from root -> impossible
     dist_from_parent.clear();
     return dist_from_parent;
   }
+  dist_from_parent[permut[0]] = 0;
+  dist_from_root[permut[0]] = 0;
 
-  size_t curr_val = 1;
   for (size_t i = 1; i < permut.size(); ++i) {
-    dist_from_root[permut[i]] += curr_val;
-    dist_from_parent[permut[i]] = curr_val;
-    size_t tmp_val = std::max(dist_from_root[permut[i]], curr_val);
-    for (size_t child = 0; child < parents.size(); ++child) {
-      if (parent_to_child[permut[i]].count(child)) {
-        dist_from_root[child] += curr_val;
-      }
+    size_t parent_dist = dist_from_root[parents[permut[i]]];
+    if (parent_dist == kEmptyValue) {
+      dist_from_parent.clear();
+      break;
     }
-    curr_val = tmp_val + 1;
+    dist_from_root[permut[i]] = dist_from_root[permut[i - 1]] + 1;
+    dist_from_parent[permut[i]] = dist_from_root[permut[i]] - parent_dist;
   }
 
   return dist_from_parent;
-}
-
-std::vector<std::unordered_set<size_t>> ParentsToChild(
-    const std::vector<size_t>& parents) {
-  std::vector<std::unordered_set<size_t>> result(parents.size());
-
-  for (size_t i = 0; i < parents.size(); ++i) {
-    if (parents[i] == i) continue;
-    result[parents[i]].insert(i);
-    size_t j = parents[i];
-    while (parents[j] != j) {
-      result[parents[j]].insert(i);
-      j = parents[j];
-    }
-  }
-
-  return result;
-}
-
-bool CheckIfPossible(
-    const std::vector<size_t>& permut,
-    const std::vector<std::unordered_set<size_t>>& par_to_child) {
-  auto is_child = [&](size_t test_child, size_t test_parent) {
-    return par_to_child[test_parent].count(test_child);
-  };
-  for (size_t i = 0; i < permut.size(); ++i) {
-    for (size_t j = 0; j < i; ++j) {
-      if (is_child(permut[j], permut[i])) {
-        return false;
-      }
-    }
-  }
-  return true;
 }
 
 void RunTests() {
