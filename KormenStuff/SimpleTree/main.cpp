@@ -1,4 +1,5 @@
-﻿#include <iostream>
+﻿#include <algorithm>
+#include <iostream>
 #include <random>
 #include <utility>
 #include <vector>
@@ -89,7 +90,7 @@ class SimpleSearchTree {
           return PrevForExisting(parent);
         }
         parent = parent->left;
-      } else if (key < parent->key) {
+      } else if (parent->key < key) {
         if (!parent->right) {
           return parent;
         }
@@ -282,6 +283,65 @@ TEST(SimpleTreeTests, FillingAndClearing) {
   EXPECT_FALSE(tree.Exists(-3));
   EXPECT_TRUE(tree.Delete(1));
   EXPECT_FALSE(tree.Delete(1));
+}
+
+TEST(SimpleTreeTests, SearchingNextAndPrevExisting) {
+  std::vector<int> vec(15);
+  std::iota(vec.begin(), vec.end(), 0);
+  std::mt19937 rnd(42);
+  size_t count = 1000;
+  while (count--) {
+    std::vector<int> rand_vec = vec;
+    std::shuffle(rand_vec.begin(), rand_vec.end(), rnd);
+    SimpleSearchTree<int, int> tree;
+    for (const auto& el : rand_vec) {
+      EXPECT_TRUE(tree.Insert(el, el));
+    }
+    for (const auto& el : vec) {
+      if (el != vec.back()) {
+        EXPECT_EQ(tree.Next(el)->key, el + 1);
+      } else {
+        EXPECT_FALSE(tree.Next(el));
+      }
+    }
+    for (const auto& el : vec) {
+      if (el != vec.front()) {
+        EXPECT_EQ(tree.Prev(el)->key, el - 1);
+      } else {
+        EXPECT_FALSE(tree.Prev(el));
+      }
+    }
+  }
+}
+
+TEST(SimpleTreeTests, SearchingNextAndPrevAbsent) {
+  std::vector<int> vec{1,  3,  5,  7,  9,  11, 13, 15, 17,
+                       19, 21, 23, 25, 27, 29, 31, 33};
+  std::vector<int> req{0,  2,  4,  6,  8,  10, 12, 14, 16,
+                       18, 20, 22, 24, 26, 28, 30, 32, 34};
+  std::mt19937 rnd(42);
+  size_t count = 1000;
+  while (count--) {
+    std::shuffle(vec.begin(), vec.end(), rnd);
+    SimpleSearchTree<int, int> tree;
+    for (const auto& el : vec) {
+      EXPECT_TRUE(tree.Insert(el, el));
+    }
+    for (const auto& el : req) {
+      if (el != req.back()) {
+        EXPECT_EQ(tree.Next(el)->key, el + 1);
+      } else {
+        EXPECT_FALSE(tree.Next(el));
+      }
+    }
+    for (const auto& el : req) {
+      if (el != req.front()) {
+        EXPECT_EQ(tree.Prev(el)->key, el - 1);
+      } else {
+        EXPECT_FALSE(tree.Prev(el));
+      }
+    }
+  }
 }
 
 int main(int argc, char** argv) {
