@@ -7,6 +7,17 @@
 template <typename Key, typename Value>
 class SimpleSearchTree {
  public:
+  template <typename K, typename V>
+  struct Node {
+    Node<K, V>* left = nullptr;
+    Node<K, V>* right = nullptr;
+    Node<K, V>* parent = nullptr;
+    K key{};
+    V value{};
+
+    Node(K k, V v) : key(std::move(k)), value(std::move(v)) {}
+  };
+
   SimpleSearchTree() = default;
   SimpleSearchTree(const SimpleSearchTree&) = delete;
   SimpleSearchTree& operator=(const SimpleSearchTree&) = delete;
@@ -50,26 +61,63 @@ class SimpleSearchTree {
 
   Node<Key, Value>* Next(const Key& key) {
     if (!head_) return nullptr;
-    // TODO
+    auto* parent = head_;
+    while (true) {
+      if (key < parent->key) {
+        if (!parent->left) {
+          return parent;
+        }
+        parent = parent->left;
+      } else if (parent->key < key) {
+        if (!parent->right) {
+          return NextForExisting(parent);
+        }
+        parent = parent->right;
+      } else {
+        return NextForExisting(parent);
+      }
+    }
   }
 
   Node<Key, Value>* Prev(const Key& key) {
     if (!head_) return nullptr;
-    // TODO
+    auto* parent = head_;
+    while (true) {
+      if (key < parent->key) {
+        if (!parent->left) {
+          return PrevForExisting(parent);
+        }
+        parent = parent->left;
+      } else if (key < parent->key) {
+        if (!parent->right) {
+          return parent;
+        }
+        parent = parent->right;
+      } else {
+        return PrevForExisting(parent);
+      }
+    }
   }
 
  private:
-  template <typename Key, typename Value>
-  struct Node {
-    Node<Key, Value>* left = nullptr;
-    Node<Key, Value>* right = nullptr;
-    Node<Key, Value>* parent = nullptr;
-    Key key{};
-    Value value{};
-  };
+  static Node<Key, Value>* NextForExisting(const Node<Key, Value>* node) {
+    auto* initial = node;
+    while (node->parent && node->parent->key < initial->key) {
+      node = node->parent;
+    }
+    return node->parent;
+  }
 
-  static bool DeleteNode(Node<Key, Value>* node_ptr) {
-    if (!node_ptr) return false;
+  static Node<Key, Value>* PrevForExisting(const Node<Key, Value>* node) {
+    auto* initial = node;
+    while (node->parent && node->parent->key > initial->key) {
+      node = node->parent;
+    }
+    return node->parent;
+  }
+
+  static bool DeleteNode(Node<Key, Value>* node) {
+    if (!node) return false;
     if (!node->left) {
       if (node->key < node->parent->key) {
         node->parent->left = node->right;
@@ -93,7 +141,7 @@ class SimpleSearchTree {
     return true;
   }
 
-  static Node<Key, Value>* FindMinimum(const Node<Key, Value>* head) const {
+  static Node<Key, Value>* FindMinimum(Node<Key, Value>* head) {
     assert(head);
     while (head->left) {
       head = head->left;
@@ -120,10 +168,10 @@ class SimpleSearchTree {
     while (true) {
       if (parent->key < key) {
         if (!parent->left) return nullptr;
-        parent = parentparent->left;
+        parent = parent->left;
       } else if (key < parent->key) {
         if (!parent->right) return nullptr;
-        parent = prent->right;
+        parent = parent->right;
       } else {
         return parent;
       }
