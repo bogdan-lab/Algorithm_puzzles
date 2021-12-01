@@ -162,7 +162,7 @@ class SimpleSearchTree {
         node->left->parent = node->parent;
       } else {
         node->parent->right = node->left;
-        node->right->parent = node->parent;
+        node->left->parent = node->parent;
       }
       delete node;
       return;
