@@ -5,19 +5,79 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-
 template <typename Key, typename Value>
 class SimpleSearchTree {
  public:
-  template <typename K, typename V>
   struct Node {
-    Node<K, V>* left = nullptr;
-    Node<K, V>* right = nullptr;
-    Node<K, V>* parent = nullptr;
-    K key{};
-    V value{};
+    Node* left = nullptr;
+    Node* right = nullptr;
+    Node* parent = nullptr;
+    Key key{};
+    Value value{};
 
-    Node(K k, V v) : key(std::move(k)), value(std::move(v)) {}
+    Node(Key k, Value v) : key(std::move(k)), value(std::move(v)) {}
+  };
+
+  class Iterator {
+   public:
+    Iterator() = default;
+    Iterator(Node* iter_ptr, Node* head) : curr_node_(iter_ptr), head_(head) {}
+
+    Node& operator*() { return *curr_node_; }
+    Node* operator->() { return curr_node_; }
+
+    Iterator& operator++() {
+      assert(curr_node_);
+      if (curr_node_->right) {
+        curr_node_ = FindMinimum(curr_node_->right);
+      } else {
+        auto* prev = curr_node_;
+        do {
+          prev = curr_node_;
+          curr_node_ = curr_node_->parent;
+        } while (curr_node_ && curr_node_->key < prev->key);
+      }
+      return *this;
+    }
+
+    Iterator operator++(int) {
+      auto* initial = curr_node_;
+      ++(*this);
+      return {initial, head_};
+    }
+
+    Iterator& operator--() {
+      assert(head_);
+      if (!curr_node_) {
+        // end case
+        curr_node_ = FindMaximum(head_);
+      } else if (curr_node_->left) {
+        curr_node_ = FindMaximum(curr_node_->left);
+      } else {
+        auto* prev = curr_node_;
+        do {
+          prev = curr_node_;
+          curr_node_ = curr_node_->parent;
+        } while (curr_node_ && prev->key < curr_node_->key);
+      }
+      return *this;
+    }
+
+    Iterator operator--(int) {
+      auto* initial = curr_node_;
+      --(*this);
+      return {initial, head_};
+    }
+
+    bool operator==(const Iterator& other) const {
+      return curr_node_ == other.curr_node_;
+    }
+
+    bool operator!=(const Iterator& other) const { return !(*this == other); }
+
+   private:
+    Node* curr_node_ = nullptr;
+    Node* head_ = nullptr;
   };
 
   SimpleSearchTree() = default;
@@ -32,22 +92,21 @@ class SimpleSearchTree {
 
   bool Insert(Key key, Value value) {
     if (!head_) {
-      head_ = new Node<Key, Value>(std::move(key), std::move(value));
+      head_ = new Node(std::move(key), std::move(value));
       return true;
     }
-    Node<Key, Value>* parent = head_;
+    Node* parent = head_;
     while (true) {
       if (key < parent->key) {
         if (!parent->left) {
-          parent->left = new Node<Key, Value>(std::move(key), std::move(value));
+          parent->left = new Node(std::move(key), std::move(value));
           parent->left->parent = parent;
           return true;
         }
         parent = parent->left;
       } else if (parent->key < key) {
         if (!parent->right) {
-          parent->right =
-              new Node<Key, Value>(std::move(key), std::move(value));
+          parent->right = new Node(std::move(key), std::move(value));
           parent->right->parent = parent;
           return true;
         }
@@ -59,14 +118,14 @@ class SimpleSearchTree {
   }
 
   bool Delete(const Key& key) {
-    Node<Key, Value>* node = FindNode(key);
+    Node* node = FindNode(key);
     return node ? DeleteNode(node) : false;
   }
   bool Exists(const Key& key) const { return FindNode(key); }
 
-  Node<Key, Value>* Next(const Key& key) {
+  Node* Next(const Key& key) {
     auto* curr_node = head_;
-    Node<Key, Value>* max_node = nullptr;
+    Node* max_node = nullptr;
     while (curr_node) {
       if (key < curr_node->key) {
         max_node = curr_node;
@@ -80,9 +139,9 @@ class SimpleSearchTree {
     return max_node;
   }
 
-  Node<Key, Value>* Prev(const Key& key) {
+  Node* Prev(const Key& key) {
     auto* curr_node = head_;
-    Node<Key, Value>* min_node = nullptr;
+    Node* min_node = nullptr;
     while (curr_node) {
       if (key < curr_node->key) {
         curr_node = curr_node->left;
@@ -96,8 +155,15 @@ class SimpleSearchTree {
     return min_node;
   }
 
+  Iterator begin() {
+    if (!head_) return {};
+    return {FindMinimum(head_), head_};
+  }
+
+  Iterator end() { return {nullptr, head_}; }
+
  private:
-  void DeleteLeafNode(Node<Key, Value>* leaf_node) {
+  void DeleteLeafNode(Node* leaf_node) {
     assert(leaf_node);
     assert(!leaf_node->left && !leaf_node->right);
     if (leaf_node->parent) {
@@ -112,7 +178,7 @@ class SimpleSearchTree {
     delete leaf_node;
   }
 
-  void DeleteHalfTreeHead(Node<Key, Value>* node) {
+  void DeleteHalfTreeHead(Node* node) {
     assert(node);
     assert((node->right && !node->left) || (node->left && !node->right));
     if (!node->parent) {
@@ -130,20 +196,19 @@ class SimpleSearchTree {
     return;
   }
 
-  static void StickLeftNode(Node<Key, Value>* parent, Node<Key, Value>* child) {
+  static void StickLeftNode(Node* parent, Node* child) {
     assert(parent && child);
     parent->left = child;
     child->parent = parent;
   }
 
-  static void StickRightNode(Node<Key, Value>* parent,
-                             Node<Key, Value>* child) {
+  static void StickRightNode(Node* parent, Node* child) {
     assert(parent && child);
     parent->right = child;
     child->parent = parent;
   }
 
-  void DeleteTreeHead(Node<Key, Value>* node) {
+  void DeleteTreeHead(Node* node) {
     assert(node);
     assert(node->left && node->right);
     auto* min_node = FindMinimum(node->right);
@@ -164,7 +229,7 @@ class SimpleSearchTree {
     delete node;
   }
 
-  bool DeleteNode(Node<Key, Value>* node) {
+  bool DeleteNode(Node* node) {
     assert(node);
     if (!node->left && !node->right) {
       DeleteLeafNode(node);
@@ -176,7 +241,7 @@ class SimpleSearchTree {
     return true;
   }
 
-  static Node<Key, Value>* FindMinimum(Node<Key, Value>* head) {
+  static Node* FindMinimum(Node* head) {
     assert(head);
     while (head->left) {
       head = head->left;
@@ -184,7 +249,7 @@ class SimpleSearchTree {
     return head;
   }
 
-  static Node<Key, Value>* FindMaximum(Node<Key, Value>* head) {
+  static Node* FindMaximum(Node* head) {
     assert(head);
     while (head->right) {
       head = head->right;
@@ -192,8 +257,8 @@ class SimpleSearchTree {
     return head;
   }
 
-  Node<Key, Value>* FindNode(const Key& key) const {
-    Node<Key, Value>* parent = head_;
+  Node* FindNode(const Key& key) const {
+    Node* parent = head_;
     while (parent) {
       if (key < parent->key) {
         parent = parent->left;
@@ -206,7 +271,7 @@ class SimpleSearchTree {
     return nullptr;
   }
 
-  static void DeleteTree(Node<Key, Value>* head) {
+  static void DeleteTree(Node* head) {
     assert(head);
     if (head->left) {
       DeleteTree(head->left);
@@ -219,7 +284,7 @@ class SimpleSearchTree {
     delete head;
   }
 
-  Node<Key, Value>* head_ = nullptr;
+  Node* head_ = nullptr;
 };
 
 TEST(SimpleTreeTests, EmptyTree) {
@@ -313,6 +378,45 @@ TEST(SimpleTreeTests, SearchingNextAndPrevAbsent) {
       }
     }
   }
+}
+
+TEST(SimpleTreeTests, RangeBasedForTest) {
+  std::vector<int> vec{6, 4, 5, 3, 1, 10, 15, 2, 25};
+  std::vector<int> expected = vec;
+  std::sort(expected.begin(), expected.end());
+  SimpleSearchTree<int, int> tree;
+  for (const auto& el : vec) {
+    tree.Insert(el, el);
+  }
+
+  std::vector<int> result;
+  result.reserve(vec.size());
+  for (const auto& el : tree) {
+    result.push_back(el.key);
+  }
+  EXPECT_EQ(result, expected);
+}
+
+TEST(SimpleTreeTests, IteratorStepping) {
+  std::vector<int> vec{6, 4, 5, 3, 1, 10, 15, 2, 25};
+  SimpleSearchTree<int, int> tree;
+  EXPECT_EQ(tree.begin(), tree.end());
+
+  for (const auto& el : vec) {
+    tree.Insert(el, el);
+  }
+
+  auto it = tree.begin();
+  EXPECT_EQ(it->key, 1);
+  EXPECT_EQ((++it)->key, 2);
+  EXPECT_EQ((it++)->key, 2);
+  EXPECT_EQ(it->key, 3);
+
+  it = --tree.end();
+  EXPECT_EQ(it->key, 25);
+  EXPECT_EQ((--it)->key, 15);
+  EXPECT_EQ((it--)->key, 15);
+  EXPECT_EQ(it->key, 10);
 }
 
 int main(int argc, char** argv) {
