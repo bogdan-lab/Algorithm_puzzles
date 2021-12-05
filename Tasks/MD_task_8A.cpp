@@ -1,23 +1,22 @@
-#include <cassert>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
-template <typename Key, typename Value>
 class SimpleSearchTree {
  public:
-  template <typename K, typename V>
   struct Node {
-    Node<K, V>* left = nullptr;
-    Node<K, V>* right = nullptr;
-    Node<K, V>* parent = nullptr;
-    K key{};
-    V value{};
+    Node* left = nullptr;
+    Node* right = nullptr;
+    Node* parent = nullptr;
+    Node* next = nullptr;
+    Node* prev = nullptr;
+    int key{};
 
-    Node(K k, V v) : key(std::move(k)), value(std::move(v)) {}
+    Node(int k) : key(k) {}
   };
 
   SimpleSearchTree() = default;
@@ -30,24 +29,23 @@ class SimpleSearchTree {
     DeleteTree(head_);
   }
 
-  bool Insert(Key key, Value value) {
+  bool Insert(int key) {
     if (!head_) {
-      head_ = new Node<Key, Value>(std::move(key), std::move(value));
+      head_ = new Node(key);
       return true;
     }
-    Node<Key, Value>* parent = head_;
+    Node* parent = head_;
     while (true) {
       if (key < parent->key) {
         if (!parent->left) {
-          parent->left = new Node<Key, Value>(std::move(key), std::move(value));
+          parent->left = new Node(key);
           parent->left->parent = parent;
           return true;
         }
         parent = parent->left;
       } else if (parent->key < key) {
         if (!parent->right) {
-          parent->right =
-              new Node<Key, Value>(std::move(key), std::move(value));
+          parent->right = new Node(key);
           parent->right->parent = parent;
           return true;
         }
@@ -58,15 +56,15 @@ class SimpleSearchTree {
     }
   }
 
-  bool Delete(const Key& key) {
-    Node<Key, Value>* node = FindNode(key);
+  bool Delete(const int& key) {
+    Node* node = FindNode(key);
     return node ? DeleteNode(node) : false;
   }
-  bool Exists(const Key& key) const { return FindNode(key); }
+  bool Exists(const int& key) const { return FindNode(key); }
 
-  Node<Key, Value>* Next(const Key& key) {
+  Node* Next(const int& key) {
     auto* curr_node = head_;
-    Node<Key, Value>* max_node = nullptr;
+    Node* max_node = nullptr;
     while (curr_node) {
       if (key < curr_node->key) {
         max_node = curr_node;
@@ -74,15 +72,19 @@ class SimpleSearchTree {
       } else if (curr_node->key < key) {
         curr_node = curr_node->right;
       } else {
-        return curr_node->right ? FindMinimum(curr_node->right) : max_node;
+        if (!curr_node->next) {
+          curr_node->next =
+              curr_node->right ? FindMinimum(curr_node->right) : max_node;
+        }
+        return curr_node->next;
       }
     }
     return max_node;
   }
 
-  Node<Key, Value>* Prev(const Key& key) {
+  Node* Prev(const int& key) {
     auto* curr_node = head_;
-    Node<Key, Value>* min_node = nullptr;
+    Node* min_node = nullptr;
     while (curr_node) {
       if (key < curr_node->key) {
         curr_node = curr_node->left;
@@ -90,16 +92,28 @@ class SimpleSearchTree {
         min_node = curr_node;
         curr_node = curr_node->right;
       } else {
-        return curr_node->left ? FindMaximum(curr_node->left) : min_node;
+        if (!curr_node->prev) {
+          curr_node->prev =
+              curr_node->left ? FindMaximum(curr_node->left) : min_node;
+        }
+        return curr_node->prev;
       }
     }
     return min_node;
   }
 
  private:
-  void DeleteLeafNode(Node<Key, Value>* leaf_node) {
-    assert(leaf_node);
-    assert(!leaf_node->left && !leaf_node->right);
+  static void ClearPrevNext(Node* ptr) {
+    if (ptr->prev) {
+      ptr->prev->next = nullptr;
+    }
+    if (ptr->next) {
+      ptr->next->prev = nullptr;
+    }
+  }
+
+  void DeleteLeafNode(Node* leaf_node) {
+    ClearPrevNext(leaf_node);
     if (leaf_node->parent) {
       if (leaf_node->key < leaf_node->parent->key) {
         leaf_node->parent->left = nullptr;
@@ -112,9 +126,8 @@ class SimpleSearchTree {
     delete leaf_node;
   }
 
-  void DeleteHalfTreeHead(Node<Key, Value>* node) {
-    assert(node);
-    assert((node->right && !node->left) || (node->left && !node->right));
+  void DeleteHalfTreeHead(Node* node) {
+    ClearPrevNext(node);
     if (!node->parent) {
       head_ = node->left ? node->left : node->right;
       head_->parent = nullptr;
@@ -130,22 +143,18 @@ class SimpleSearchTree {
     return;
   }
 
-  static void StickLeftNode(Node<Key, Value>* parent, Node<Key, Value>* child) {
-    assert(parent && child);
+  static void StickLeftNode(Node* parent, Node* child) {
     parent->left = child;
     child->parent = parent;
   }
 
-  static void StickRightNode(Node<Key, Value>* parent,
-                             Node<Key, Value>* child) {
-    assert(parent && child);
+  static void StickRightNode(Node* parent, Node* child) {
     parent->right = child;
     child->parent = parent;
   }
 
-  void DeleteTreeHead(Node<Key, Value>* node) {
-    assert(node);
-    assert(node->left && node->right);
+  void DeleteTreeHead(Node* node) {
+    ClearPrevNext(node);
     auto* min_node = FindMinimum(node->right);
     StickLeftNode(min_node, node->left);
     if (node->right != min_node) {
@@ -164,8 +173,7 @@ class SimpleSearchTree {
     delete node;
   }
 
-  bool DeleteNode(Node<Key, Value>* node) {
-    assert(node);
+  bool DeleteNode(Node* node) {
     if (!node->left && !node->right) {
       DeleteLeafNode(node);
     } else if (!node->left || !node->right) {
@@ -176,24 +184,22 @@ class SimpleSearchTree {
     return true;
   }
 
-  static Node<Key, Value>* FindMinimum(Node<Key, Value>* head) {
-    assert(head);
+  static Node* FindMinimum(Node* head) {
     while (head->left) {
       head = head->left;
     }
     return head;
   }
 
-  static Node<Key, Value>* FindMaximum(Node<Key, Value>* head) {
-    assert(head);
+  static Node* FindMaximum(Node* head) {
     while (head->right) {
       head = head->right;
     }
     return head;
   }
 
-  Node<Key, Value>* FindNode(const Key& key) const {
-    Node<Key, Value>* parent = head_;
+  Node* FindNode(const int& key) const {
+    Node* parent = head_;
     while (parent) {
       if (key < parent->key) {
         parent = parent->left;
@@ -206,8 +212,7 @@ class SimpleSearchTree {
     return nullptr;
   }
 
-  static void DeleteTree(Node<Key, Value>* head) {
-    assert(head);
+  static void DeleteTree(Node* head) {
     if (head->left) {
       DeleteTree(head->left);
       head->left = nullptr;
@@ -219,7 +224,7 @@ class SimpleSearchTree {
     delete head;
   }
 
-  Node<Key, Value>* head_ = nullptr;
+  Node* head_ = nullptr;
 };
 
 int main() {
@@ -231,13 +236,13 @@ int main() {
 }
 
 void Solution(std::istream& input) {
-  SimpleSearchTree<int, int> tree;
+  SimpleSearchTree tree;
   std::string command;
   while (input >> command) {
     int value;
     input >> value;
     if (command == "insert") {
-      tree.Insert(value, value);
+      tree.Insert(value);
     } else if (command == "delete") {
       tree.Delete(value);
     } else if (command == "exists") {
