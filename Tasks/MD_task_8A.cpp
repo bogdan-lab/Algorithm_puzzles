@@ -1,5 +1,6 @@
 #include <iostream>
 #include <limits>
+#include <set>
 #include <sstream>
 #include <string>
 
@@ -159,9 +160,7 @@ class SimpleSearchTree {
   void DeleteTreeHead(Node* parent, Node* node) {
     auto* min_node = node->next;
     min_node->left = node->left;
-    if (node->right != min_node) {
-      min_node->right = node->right;
-    }
+    min_node->right = min_node == node->right ? nullptr : node->right;
     if (parent) {
       if (node->key < parent->key) {
         parent->left = min_node;
@@ -191,29 +190,15 @@ class SimpleSearchTree {
     return true;
   }
 
-  static Node* FindMinimum(Node* head) {
-    while (head->left) {
-      head = head->left;
-    }
-    return head;
-  }
-
-  static Node* FindMaximum(Node* head) {
-    while (head->right) {
-      head = head->right;
-    }
-    return head;
-  }
-
   Node* FindNode(const int& key) const {
-    Node* parent = head_;
-    while (parent) {
-      if (key < parent->key) {
-        parent = parent->left;
-      } else if (parent->key < key) {
-        parent = parent->right;
+    Node* curr_node = head_;
+    while (curr_node) {
+      if (key < curr_node->key) {
+        curr_node = curr_node->left;
+      } else if (curr_node->key < key) {
+        curr_node = curr_node->right;
       } else {
-        return parent;
+        return curr_node;
       }
     }
     return nullptr;
