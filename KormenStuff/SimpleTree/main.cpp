@@ -213,9 +213,18 @@ class SimpleSearchTree {
     assert(node->left && node->right);
     auto* min_node = FindMinimum(node->right);
     StickLeftNode(min_node, node->left);
-    if (node->right != min_node) {
-      StickRightNode(min_node, node->right);
+    if (min_node->right) {
+      if (min_node->parent != node) {
+        StickLeftNode(min_node->parent, min_node->right);
+        StickRightNode(min_node, node->right);
+      }
+    } else {
+      if (node->right != min_node) {
+        StickRightNode(min_node, node->right);
+        min_node->parent->left = nullptr;
+      }
     }
+
     if (node->parent) {
       if (node->key < node->parent->key) {
         StickLeftNode(node->parent, min_node);
