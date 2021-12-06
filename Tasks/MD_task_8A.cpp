@@ -11,10 +11,7 @@ class SimpleSearchTree {
   struct Node {
     Node* left = nullptr;
     Node* right = nullptr;
-    Node* parent = nullptr;
-    Node* next = nullptr;
-    Node* prev = nullptr;
-    int key{};
+    int key;
 
     Node(int k) : key(k) {}
   };
@@ -34,32 +31,43 @@ class SimpleSearchTree {
       head_ = new Node(key);
       return true;
     }
-    Node* parent = head_;
+    Node* curr_node = head_;
     while (true) {
-      if (key < parent->key) {
-        if (!parent->left) {
-          parent->left = new Node(key);
-          parent->left->parent = parent;
+      if (key < curr_node->key) {
+        if (!curr_node->left) {
+          curr_node->left = new Node(key);
           return true;
         }
-        parent = parent->left;
-      } else if (parent->key < key) {
-        if (!parent->right) {
-          parent->right = new Node(key);
-          parent->right->parent = parent;
+        curr_node = curr_node->left;
+      } else if (curr_node->key < key) {
+        if (!curr_node->right) {
+          curr_node->right = new Node(key);
           return true;
         }
-        parent = parent->right;
+        curr_node = curr_node->right;
       } else {
         return false;
       }
     }
   }
 
-  bool Delete(const int& key) {
-    Node* node = FindNode(key);
-    return node ? DeleteNode(node) : false;
+  bool Delete(int key) {
+    Node* parent = nullptr;
+    auto* curr_node = head_;
+    while (curr_node) {
+      auto* tmp = curr_node;
+      if (key < curr_node->key) {
+        curr_node = curr_node->left;
+      } else if (curr_node->key < key) {
+        curr_node = curr_node->right;
+      } else {
+        return DeleteNode(parent, curr_node);
+      }
+      parent = tmp;
+    }
+    return false;
   }
+
   bool Exists(const int& key) const { return FindNode(key); }
 
   Node* Next(const int& key) {
@@ -72,11 +80,7 @@ class SimpleSearchTree {
       } else if (curr_node->key < key) {
         curr_node = curr_node->right;
       } else {
-        if (!curr_node->next) {
-          curr_node->next =
-              curr_node->right ? FindMinimum(curr_node->right) : max_node;
-        }
-        return curr_node->next;
+        return curr_node->right ? FindMinimum(curr_node->right) : max_node;
       }
     }
     return max_node;
@@ -92,33 +96,19 @@ class SimpleSearchTree {
         min_node = curr_node;
         curr_node = curr_node->right;
       } else {
-        if (!curr_node->prev) {
-          curr_node->prev =
-              curr_node->left ? FindMaximum(curr_node->left) : min_node;
-        }
-        return curr_node->prev;
+        return curr_node->left ? FindMaximum(curr_node->left) : min_node;
       }
     }
     return min_node;
   }
 
  private:
-  static void ClearPrevNext(Node* ptr) {
-    if (ptr->prev) {
-      ptr->prev->next = nullptr;
-    }
-    if (ptr->next) {
-      ptr->next->prev = nullptr;
-    }
-  }
-
-  void DeleteLeafNode(Node* leaf_node) {
-    ClearPrevNext(leaf_node);
-    if (leaf_node->parent) {
-      if (leaf_node->key < leaf_node->parent->key) {
-        leaf_node->parent->left = nullptr;
+  void DeleteLeafNode(Node* parent, Node* leaf_node) {
+    if (leaf_node != head_) {
+      if (leaf_node->key < parent->key) {
+        parent->left = nullptr;
       } else {
-        leaf_node->parent->right = nullptr;
+        parent->right = nullptr;
       }
     } else {
       head_ = nullptr;
@@ -126,60 +116,47 @@ class SimpleSearchTree {
     delete leaf_node;
   }
 
-  void DeleteHalfTreeHead(Node* node) {
-    ClearPrevNext(node);
-    if (!node->parent) {
-      head_ = node->left ? node->left : node->right;
-      head_->parent = nullptr;
+  void DeleteHalfTreeHead(Node* parent, Node* node) {
+    auto* rest = node->left ? node->left : node->right;
+    if (!parent) {
+      head_ = rest;
       delete node;
       return;
     }
-    if (node->key < node->parent->key) {
-      StickLeftNode(node->parent, node->left ? node->left : node->right);
+    if (node->key < parent->key) {
+      parent->left = rest;
     } else {
-      StickRightNode(node->parent, node->left ? node->left : node->right);
+      parent->right = rest;
     }
     delete node;
     return;
   }
 
-  static void StickLeftNode(Node* parent, Node* child) {
-    parent->left = child;
-    child->parent = parent;
-  }
-
-  static void StickRightNode(Node* parent, Node* child) {
-    parent->right = child;
-    child->parent = parent;
-  }
-
-  void DeleteTreeHead(Node* node) {
-    ClearPrevNext(node);
+  void DeleteTreeHead(Node* parent, Node* node) {
     auto* min_node = FindMinimum(node->right);
-    StickLeftNode(min_node, node->left);
+    min_node->left = node->left;
     if (node->right != min_node) {
-      StickRightNode(min_node, node->right);
+      min_node->right = node->right;
     }
-    if (node->parent) {
-      if (node->key < node->parent->key) {
-        StickLeftNode(node->parent, min_node);
+    if (parent) {
+      if (node->key < parent->key) {
+        parent->left = min_node;
       } else {
-        StickRightNode(node->parent, min_node);
+        parent->right = min_node;
       }
     } else {
       head_ = min_node;
-      min_node->parent = nullptr;
     }
     delete node;
   }
 
-  bool DeleteNode(Node* node) {
+  bool DeleteNode(Node* parent, Node* node) {
     if (!node->left && !node->right) {
-      DeleteLeafNode(node);
+      DeleteLeafNode(parent, node);
     } else if (!node->left || !node->right) {
-      DeleteHalfTreeHead(node);
+      DeleteHalfTreeHead(parent, node);
     } else {
-      DeleteTreeHead(node);
+      DeleteTreeHead(parent, node);
     }
     return true;
   }
