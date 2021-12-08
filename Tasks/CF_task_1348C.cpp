@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <iostream>
-#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -12,11 +11,6 @@ size_t CharToIdx(char ch);
 char IdxToChar(size_t idx);
 std::string ConstructSortedString(const std::vector<size_t>& count);
 std::string GetNthLetter(const std::vector<size_t>& count, size_t k);
-
-std::optional<std::string> ConstructFromOneLetter(
-    const std::vector<size_t>& count, size_t k, size_t str_len);
-std::optional<std::string> TryCreateSameStrings(
-    const std::vector<size_t>& count, size_t k, size_t str_len);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -47,45 +41,30 @@ char IdxToChar(size_t idx) {
   return static_cast<char>(idx + static_cast<size_t>('a'));
 }
 
-std::optional<std::string> TryCreateSameStrings(
-    const std::vector<size_t>& count, size_t k, size_t str_len) {
-  if (str_len % k) return std::nullopt;
-  std::string result;
-  for (size_t i = 0; i < count.size(); ++i) {
-    if (count[i] % k) {
-      return std::nullopt;
-    } else {
-      result += std::string(count[i] / k, IdxToChar(i));
-    }
-  }
-  return result;
-}
-
-std::optional<std::string> ConstructFromOneLetter(
-    const std::vector<size_t>& count, size_t k, size_t str_len) {
-  auto it = std::find_if(count.begin(), count.end(),
-                         [](const size_t val) { return val != 0; });
-  if (*it != str_len) return std::nullopt;
-  char ch = IdxToChar(it - count.begin());
-  return std::string(str_len / k, ch) + (str_len % k ? std::string(1, ch) : "");
-}
-
 std::string GetMinMax(const std::string& initial, int k) {
   std::vector<size_t> count(CharToIdx('z') + 1);
+  size_t type_num = 0;
   for (const auto& el : initial) {
-    count[CharToIdx(el)]++;
+    size_t idx = CharToIdx(el);
+    if (count[idx] == 0) {
+      type_num++;
+    }
+    count[idx]++;
   }
-
-  auto copied_str = TryCreateSameStrings(count, k, initial.size());
-  if (copied_str) {
-    return *copied_str;
-  }
-  auto one_letter_string = ConstructFromOneLetter(count, k, initial.size());
-  if (one_letter_string) {
-    return *one_letter_string;
+  if (type_num == 1) {
+    return std::string(initial.size() / k, initial.front()) +
+           (initial.size() % k ? std::string(1, initial.front()) : "");
   }
   auto it = std::find_if(count.begin(), count.end(),
                          [](const size_t val) { return val != 0; });
+  if (type_num == 2 && *it == k) {
+    std::string result(1, IdxToChar(it - count.begin()));
+    ++it;
+    it = std::find_if(it, count.end(), [](size_t val) { return val != 0; });
+    char ch = IdxToChar(it - count.begin());
+    return result + std::string(*it / k, ch) +
+           (*it % k ? std::string(1, ch) : "");
+  }
   if (*it >= k) {
     *it -= k - 1;
     return ConstructSortedString(count);
