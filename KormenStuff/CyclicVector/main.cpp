@@ -22,14 +22,20 @@ class CyclicVector {
 
   size_t GetMaxSize() const { return max_size_; }
 
-  const std::vector<T>& GetData() const { return data_; }
+  const std::vector<T>& GetData() {
+    Flatten();
+    return data_;
+  }
 
   void PushBack(const T& val) {
     if (max_size_ == 0) return;
     if (Size() < max_size_) {
+      if (!(begin_idx_ == 0)) {
+        Flatten();
+      }
       data_.push_back(val);
     } else {
-      data_[0] = val;
+      data_[begin_idx_] = val;
       Shift(-1);
     }
   }
@@ -37,12 +43,8 @@ class CyclicVector {
   void Shift(int num) {
     if (Empty()) return;
     num %= static_cast<int>(Size());
-    if (num > 0) {
-      std::rotate(data_.begin(), data_.begin() + data_.size() - num,
-                  data_.end());
-    } else if (num < 0) {
-      std::rotate(data_.begin(), data_.begin() - num, data_.end());
-    }
+    begin_idx_ += num >= 0 ? Size() - num : -num;
+    begin_idx_ %= Size();
   }
 
   void SetMaxSize(size_t val) {
@@ -52,6 +54,7 @@ class CyclicVector {
     } else if (Size() > val) {
       int redundant_num = Size() - val;
       Shift(-redundant_num);
+      Flatten();
       while (redundant_num--) {
         data_.pop_back();
       }
@@ -60,8 +63,14 @@ class CyclicVector {
   }
 
  private:
+  void Flatten() {
+    std::rotate(data_.begin(), data_.begin() + begin_idx_, data_.end());
+    begin_idx_ = 0;
+  }
+
   std::vector<T> data_;
   size_t max_size_ = std::numeric_limits<size_t>::max();
+  size_t begin_idx_ = 0;
 };
 
 TEST(CyclicVectorTest, CreatingFromEmptyNoSizeLimits) {
@@ -274,6 +283,16 @@ TEST(CyclicVectorTest, MixCommandCalls) {
   test.Shift(-3);
   test.PushBack(7);
   EXPECT_THAT(test.GetData(), ElementsAre(5, 6, 3, 2, 4, 7));
+}
+
+TEST(CyclicVectorTest, OverfillingBeginIndex) {
+  CyclicVector<int> test(2);
+  test.PushBack(1);
+  test.PushBack(2);
+  test.Shift(-1);
+  test.Shift(-1);
+  test.Shift(-1);
+  EXPECT_THAT(test.GetData(), ElementsAre(2, 1));
 }
 
 int main(int argc, char** argv) {
