@@ -295,6 +295,24 @@ TEST(CyclicVectorTest, OverfillingBeginIndex) {
   EXPECT_THAT(test.GetData(), ElementsAre(2, 1));
 }
 
+TEST(CyclicVectorTest, OverwhelmingFilling) {
+  CyclicVector<int> test(2);
+  test.PushBack(1);
+  test.PushBack(2);
+  test.PushBack(3);
+  test.PushBack(4);
+  test.PushBack(5);
+  test.PushBack(6);
+  test.PushBack(7);
+  test.PushBack(8);
+  test.PushBack(9);
+  test.PushBack(10);
+  test.PushBack(11);
+  test.PushBack(12);
+  test.PushBack(13);
+  EXPECT_THAT(test.GetData(), ElementsAre(12, 13));
+}
+
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
