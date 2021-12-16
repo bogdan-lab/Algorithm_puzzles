@@ -4,12 +4,13 @@
 #include <vector>
 
 constexpr size_t kMaxSize = 100'000;
+constexpr size_t kMaxVal = 200'001;
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
-int GCD(int lhs, int rhs);
-int GCD(const std::array<int, kMaxSize>& data, size_t size);
+uint64_t GCD(uint64_t lhs, uint64_t rhs);
+uint32_t GCD(const std::array<uint32_t, kMaxSize>& data, size_t size);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -22,28 +23,34 @@ int main() {
 void Solution(std::istream& input) {
   int n;
   input >> n;
-  std::array<int, kMaxSize> data;
+  std::array<uint32_t, kMaxSize> data;
   size_t idx = 0;
   while (n--) {
     input >> data[idx++];
   }
   size_t size = idx;
 
-  auto lcm = [](int lhs, int rhs) { return lhs / GCD(lhs, rhs) * rhs; };
-  std::array<int, kMaxSize> curr_data;
+  auto lcm = [](uint32_t lhs, uint32_t rhs) {
+    return lhs / GCD(lhs, rhs) * rhs;
+  };
+  std::array<uint32_t, kMaxSize> curr_data;
+  std::array<uint8_t, kMaxVal> present;
 
-  int result = lcm(data[0], data[1]);
+  uint64_t result = lcm(data[0], data[1]);
   for (size_t i = 0; i < size; ++i) {
-    size_t curr_idx = 0;
-    for (size_t j = i + 1; j < size; ++j) {
-      curr_data[curr_idx++] = data[j] / GCD(data[i], data[j]);
+    if (!present[data[i]]) {
+      present[data[i]] = 1;
+      size_t curr_idx = 0;
+      for (size_t j = i + 1; j < size; ++j) {
+        curr_data[curr_idx++] = data[j] / GCD(data[i], data[j]);
+      }
+      result = GCD(result, data[i] * GCD(curr_data, curr_idx));
     }
-    result = GCD(result, data[i] * GCD(curr_data, curr_idx));
   }
   std::cout << result << '\n';
 }
 
-int GCD(const std::array<int, kMaxSize>& data, size_t size) {
+uint32_t GCD(const std::array<uint32_t, kMaxSize>& data, size_t size) {
   int result = data[0];
   for (size_t i = 1; i < size; ++i) {
     result = GCD(result, data[i]);
@@ -51,7 +58,7 @@ int GCD(const std::array<int, kMaxSize>& data, size_t size) {
   return result;
 }
 
-int GCD(int lhs, int rhs) {
+uint64_t GCD(uint64_t lhs, uint64_t rhs) {
   while (lhs && rhs) {
     if (lhs > rhs) {
       lhs %= rhs;
