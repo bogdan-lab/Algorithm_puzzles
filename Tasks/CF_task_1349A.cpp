@@ -10,7 +10,7 @@ void Solution(std::istream& input = std::cin);
 void RunTests();
 
 uint64_t GCD(uint64_t lhs, uint64_t rhs);
-uint32_t GCD(const std::array<uint32_t, kMaxSize>& data, size_t size);
+uint64_t GCD(const std::array<uint64_t, kMaxSize>& data, size_t size);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -23,17 +23,17 @@ int main() {
 void Solution(std::istream& input) {
   int n;
   input >> n;
-  std::array<uint32_t, kMaxSize> data;
+  std::array<uint64_t, kMaxSize> data;
   size_t idx = 0;
   while (n--) {
     input >> data[idx++];
   }
   size_t size = idx;
 
-  auto lcm = [](uint32_t lhs, uint32_t rhs) {
+  auto lcm = [](uint64_t lhs, uint64_t rhs) {
     return lhs / GCD(lhs, rhs) * rhs;
   };
-  std::array<uint32_t, kMaxSize> curr_data;
+  std::array<uint64_t, kMaxSize> curr_data;
   std::array<uint8_t, kMaxVal> present;
 
   uint64_t result = lcm(data[0], data[1]);
@@ -50,7 +50,7 @@ void Solution(std::istream& input) {
   std::cout << result << '\n';
 }
 
-uint32_t GCD(const std::array<uint32_t, kMaxSize>& data, size_t size) {
+uint64_t GCD(const std::array<uint64_t, kMaxSize>& data, size_t size) {
   int result = data[0];
   for (size_t i = 1; i < size; ++i) {
     result = GCD(result, data[i]);
