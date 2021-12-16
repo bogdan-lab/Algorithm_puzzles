@@ -30,12 +30,16 @@ void Solution(std::istream& input) {
   }
   size_t size = idx;
 
+  uint64_t shift = GCD(data, size);
+  for (size_t i = 0; i < size; ++i) {
+    data[i] /= shift;
+  }
+
   auto lcm = [](uint64_t lhs, uint64_t rhs) {
     return lhs / GCD(lhs, rhs) * rhs;
   };
   std::array<uint64_t, kMaxSize> curr_data;
   std::array<uint8_t, kMaxVal> present;
-
   uint64_t result = lcm(data[0], data[1]);
   for (size_t i = 0; i < size; ++i) {
     if (!present[data[i]]) {
@@ -47,7 +51,7 @@ void Solution(std::istream& input) {
       result = GCD(result, data[i] * GCD(curr_data, curr_idx));
     }
   }
-  std::cout << result << '\n';
+  std::cout << result * shift << '\n';
 }
 
 uint64_t GCD(const std::array<uint64_t, kMaxSize>& data, size_t size) {
