@@ -4,7 +4,6 @@
 #include <vector>
 
 constexpr size_t kMaxSize = 100'000;
-constexpr size_t kMaxVal = 200'001;
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
@@ -35,21 +34,34 @@ void Solution(std::istream& input) {
     data[i] /= shift;
   }
 
+  std::array<uint64_t, kMaxSize> prefix = data;
+  std::array<uint64_t, kMaxSize> sufix = data;
+
+  for (size_t i = 1; i < size; ++i) {
+    prefix[i] = GCD(prefix[i - 1], prefix[i]);
+  }
+
+  for (size_t i = size - 1; i > 0; --i) {
+    sufix[i - 1] = GCD(sufix[i - 1], sufix[i]);
+  }
+
+  std::array<uint64_t, kMaxSize> darray;
+  for (size_t i = 0; i < size; ++i) {
+    if (i == 0) {
+      darray[i] = sufix[i + 1];
+    } else if (i == size - 1) {
+      darray[i] = prefix[i - 1];
+    } else {
+      darray[i] = GCD(prefix[i - 1], sufix[i + 1]);
+    }
+  }
+
   auto lcm = [](uint64_t lhs, uint64_t rhs) {
     return lhs / GCD(lhs, rhs) * rhs;
   };
-  std::array<uint64_t, kMaxSize> curr_data;
-  std::array<uint8_t, kMaxVal> present;
-  uint64_t result = lcm(data[0], data[1]);
-  for (size_t i = 0; i < size; ++i) {
-    if (!present[data[i]]) {
-      present[data[i]] = 1;
-      size_t curr_idx = 0;
-      for (size_t j = i + 1; j < size; ++j) {
-        curr_data[curr_idx++] = data[j] / GCD(data[i], data[j]);
-      }
-      result = GCD(result, data[i] * GCD(curr_data, curr_idx));
-    }
+  uint64_t result = darray[0];
+  for (size_t i = 1; i < size; ++i) {
+    result = lcm(result, darray[i]);
   }
   std::cout << result * shift << '\n';
 }
