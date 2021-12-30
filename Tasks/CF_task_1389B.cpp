@@ -57,7 +57,7 @@ int CalcMaxScore(int curr_pos, int max_steps, int max_left, bool can_step_left,
   if (max_left == 0) {
     auto it = array.begin() + curr_pos;
     data[curr_pos][max_steps][max_left] = std::accumulate(
-        it, it + std::min<int>(max_steps, array.size() - curr_pos), 0);
+        it, it + std::min<int>(max_steps + 1, array.size() - curr_pos), 0);
     return data[curr_pos][max_steps][max_left];
   }
   int left_step = kEmptyValue;
