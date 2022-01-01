@@ -1,6 +1,8 @@
 ﻿#ifndef AVL_TREE_H
 #define AVL_TREE_H
 
+#include <cassert>
+
 template <typename Key, typename Value>
 class AVLTree {
   struct Node {
@@ -15,6 +17,10 @@ class AVLTree {
 
  public:
   AVLTree() = default;
+  AVLTree(const AVLTree&) = delete;
+  AVLTree(AVLTree&&) = delete;
+  AVLTree& operator=(const AVLTree&) = delete;
+  AVLTree& operator=(AVLTree&&) = delete;
 
   ~AVLTree() {
     DeleteTree(head_);
@@ -29,7 +35,7 @@ class AVLTree {
     Node* current = head_;
     Node* parent = nullptr;
     while (current) {
-      parent = current->parent;
+      parent = current;
       if (current->key < key) {
         current = current->right;
       } else if (key < current->key) {
@@ -38,12 +44,14 @@ class AVLTree {
         return false;
       }
     }
+    Node* node = new Node{key, value};
     if (parent->key < key) {
-      parent->right = new Node{key, value};
+      parent->right = node;
     } else {
-      parent->left = new Node{key, value};
+      parent->left = node;
     }
-    return false;
+    node->parent = node;
+    return true;
   }
 
   bool Delete(const Key& key) { return false; }
@@ -64,9 +72,9 @@ class AVLTree {
 
   bool Empty() const { return !head_; }
 
-  const Node* Next() const { return nullptr; }
+  const Node* Next(const Key& key) { return NextImpl(key); }
 
-  const Node* Prev() const { return nullptr; }
+  const Node* Prev(const Key& key) { return PrevImpl(key); }
 
  private:
   static void DeleteTree(Node* tree_head) {
@@ -74,6 +82,64 @@ class AVLTree {
     DeleteTree(tree_head->left);
     DeleteTree(tree_head->right);
     delete tree_head;
+  }
+
+  static Node* FindTreeMin(Node* tree_head) {
+    assert(tree_head);
+    while (tree_head->left) {
+      tree_head = tree_head->left;
+    }
+    return tree_head;
+  }
+
+  static Node* FindTreeMax(Node* tree_head) {
+    assert(tree_head);
+    while (tree_head->right) {
+      tree_head = tree_head->right;
+    }
+    return tree_head;
+  }
+
+  Node* NextImpl(const Key& key) {
+    if (Empty()) return nullptr;
+    Node* last_left_turn = nullptr;
+    Node* current = head_;
+    while (current) {
+      if (key < current->key) {
+        last_left_turn = current;
+        current = current->left;
+      } else if (current->key < key) {
+        current = current->right;
+      } else {
+        if (!current->right) {
+          return last_left_turn;
+        } else {
+          return FindTreeMin(current->right);
+        }
+      }
+    }
+    return last_left_turn;
+  }
+
+  Node* PrevImpl(const Key& key) {
+    if (Empty()) return nullptr;
+    Node* last_right_turn = nullptr;
+    Node* current = head_;
+    while (current) {
+      if (key < current->key) {
+        current = current->left;
+      } else if (current->key < key) {
+        last_right_turn = current;
+        current = current->right;
+      } else {
+        if (!current->left) {
+          return last_right_turn;
+        } else {
+          return FindTreeMax(current->left);
+        }
+      }
+    }
+    return last_right_turn;
   }
 
   Node* head_ = nullptr;
