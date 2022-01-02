@@ -5,19 +5,15 @@
 #include <sstream>
 #include <vector>
 
-constexpr int kEmptyValue = std::numeric_limits<int>::min();
-using Data = std::vector<std::vector<std::vector<int>>>;
-
 void Solution(std::istream& input = std::cin);
 void RunTests();
-int CalcMaxScore(int curr_pos, int max_steps, int max_left, bool can_step_left,
-                 Data& data, const std::vector<int>& array);
+int CalcMaxScore(const std::vector<int>& vec, int max_steps, int max_left);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -33,46 +29,24 @@ void Solution(std::istream& input) {
     for (auto& el : array) {
       input >> el;
     }
-    Data data(array.size());
-    for (auto& el : data) {
-      el.resize(max_steps + 1);
-      for (auto& inner_el : el) {
-        inner_el.resize(max_left + 1, kEmptyValue);
-      }
-    }
-    std::cout << CalcMaxScore(0, max_steps, max_left, true, data, array)
-              << '\n';
+    std::cout << CalcMaxScore(array, max_steps, max_left) << '\n';
   }
 }
 
-int CalcMaxScore(int curr_pos, int max_steps, int max_left, bool can_step_left,
-                 Data& data, const std::vector<int>& array) {
-  if (data[curr_pos][max_steps][max_left] != kEmptyValue) {
-    return data[curr_pos][max_steps][max_left];
+int CalcMaxScore(const std::vector<int>& data, int max_steps, int max_left) {
+  int res = std::accumulate(data.begin(), data.begin() + max_steps + 1, 0);
+  for (int left = 1; left < max_left + 1; ++left) {
+    int tmp = 0;
+    int max_val = 0;
+    int guaranteed_steps = max_steps - 2 * left;
+    if (guaranteed_steps < 0) continue;
+    for (int i = 0; i < guaranteed_steps + 1; ++i) {
+      max_val = std::max(max_val, data[i] + data[i + 1]);
+      tmp += data[i];
+    }
+    res = std::max(res, tmp + left * max_val);
   }
-  if (max_steps == 0) {
-    data[curr_pos][max_steps][max_left] = array[curr_pos];
-    return data[curr_pos][max_steps][max_left];
-  }
-  if (max_left == 0) {
-    auto it = array.begin() + curr_pos;
-    data[curr_pos][max_steps][max_left] = std::accumulate(
-        it, it + std::min<int>(max_steps + 1, array.size() - curr_pos), 0);
-    return data[curr_pos][max_steps][max_left];
-  }
-  int left_step = kEmptyValue;
-  if (curr_pos > 0 && max_left > 0 && can_step_left) {
-    left_step = CalcMaxScore(curr_pos - 1, max_steps - 1, max_left - 1, false,
-                             data, array);
-  }
-  int right_step = kEmptyValue;
-  if (curr_pos < array.size() - 1 && max_steps > 0) {
-    right_step =
-        CalcMaxScore(curr_pos + 1, max_steps - 1, max_left, true, data, array);
-  }
-  data[curr_pos][max_steps][max_left] =
-      array[curr_pos] + std::max(left_step, right_step);
-  return data[curr_pos][max_steps][max_left];
+  return res;
 }
 
 void RunTests() {
