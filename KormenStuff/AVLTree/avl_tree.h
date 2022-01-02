@@ -1,6 +1,7 @@
 ﻿#ifndef AVL_TREE_H
 #define AVL_TREE_H
 
+#include <algorithm>
 #include <cassert>
 
 template <typename Key, typename Value>
@@ -10,6 +11,7 @@ class AVLTree {
 
     Key key;
     Value value;
+    int height = 1;
     Node* left = nullptr;
     Node* right = nullptr;
     Node* parent = nullptr;
@@ -51,6 +53,7 @@ class AVLTree {
       parent->left = node;
     }
     node->parent = parent;
+    UpdateHeight(node, 1);
     return true;
   }
 
@@ -126,6 +129,7 @@ class AVLTree {
     } else {
       leaf->parent->left = nullptr;
     }
+    UpdateHeight(leaf, 0);
     delete leaf;
   }
 
@@ -137,6 +141,11 @@ class AVLTree {
     } else {
       replacement = FindTreeMax(node->left);
     }
+    int new_replacement_h = replacement->parent->height - 1;
+    int alternative = replacement->parent->key < replacement->key
+                          ? GetHeight(replacement->parent->left)
+                          : GetHeight(replacement->parent->right);
+    UpdateHeight(replacement->parent, std::max(new_replacement_h, alternative));
     ExtractOneLinkNode(replacement);
     ReplaceNode(node, replacement);
     delete node;
@@ -182,6 +191,7 @@ class AVLTree {
     } else {
       source->right = nullptr;
     }
+    source->height = target->height;
   }
 
   static void DeleteNode(Node* tree_head) {
@@ -190,6 +200,55 @@ class AVLTree {
     } else {
       DeleteInsideNode(tree_head);
     }
+  }
+
+  static int GetHeight(Node* node) { return node ? node->height : 0; }
+
+  static void UpdateHeight(Node* bot_node, int new_height) {
+    assert(bot_node);
+    bot_node->height = new_height;
+    Node* parent = bot_node->parent;
+    while (parent) {
+      parent->height =
+          std::max(GetHeight(parent->right), GetHeight(parent->left)) + 1;
+      parent = parent->parent;
+    }
+  }
+
+  static void RotateLeft(Node* head) {
+    Node* new_head = head->right;
+    head->right = new_head->left;
+    if (new_head->left) {
+      new_head->left->parent = head;
+    }
+    new_head->parent = head->parent;
+    if (head->parent) {
+      if (head->parent->key < head->key) {
+        head->parent->right = new_head;
+      } else {
+        head->parent->left = new_head;
+      }
+    }
+    new_head->left = head;
+    head->parent = new_head;
+  }
+
+  static void RotateRight(Node* head) {
+    Node* new_head = head->left;
+    head->left = new_head->right;
+    if (new_head->right) {
+      new_head->right->parent = head;
+    }
+    new_head->parent = head->parent;
+    if (head->parent) {
+      if (head->parent->key < head->key) {
+        head->parent->right = new_head;
+      } else {
+        head->parent->left = new_head;
+      }
+    }
+    new_head->right = head;
+    head->parent = new_head;
   }
 
   void DeleteHead() {
