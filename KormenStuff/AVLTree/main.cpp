@@ -26,6 +26,14 @@ TEST(AVLTree, InsertExists) {
   EXPECT_TRUE(test.Exists(4));
   EXPECT_TRUE(test.Exists(6));
   EXPECT_TRUE(test.Exists(8));
+
+  EXPECT_FALSE(test.Insert(5, 2));
+  EXPECT_FALSE(test.Insert(3, 2));
+  EXPECT_FALSE(test.Insert(4, 2));
+  EXPECT_FALSE(test.Insert(2, 2));
+  EXPECT_FALSE(test.Insert(6, 2));
+  EXPECT_FALSE(test.Insert(7, 2));
+  EXPECT_FALSE(test.Insert(8, 2));
 }
 
 TEST(AVLTree, NextPrevExisting) {
@@ -74,6 +82,234 @@ TEST(AVLTree, NextPrevNonexisting) {
   EXPECT_EQ(test.Next(25)->key, 30);
   EXPECT_EQ(test.Prev(75)->key, 70);
   EXPECT_EQ(test.Next(75)->key, 80);
+}
+
+TEST(AVLTree, DeleteLeafs) {
+  AVLTree<int, int> test;
+  EXPECT_TRUE(test.Insert(5, 0));
+  EXPECT_TRUE(test.Insert(3, 0));
+  EXPECT_TRUE(test.Insert(4, 0));
+  EXPECT_TRUE(test.Insert(2, 0));
+  EXPECT_TRUE(test.Insert(7, 0));
+  EXPECT_TRUE(test.Insert(6, 0));
+  EXPECT_TRUE(test.Insert(8, 0));
+
+  EXPECT_TRUE(test.Delete(2));
+  EXPECT_FALSE(test.Exists(2));
+  EXPECT_TRUE(test.Delete(4));
+  EXPECT_FALSE(test.Exists(4));
+  EXPECT_TRUE(test.Delete(6));
+  EXPECT_FALSE(test.Exists(6));
+  EXPECT_TRUE(test.Delete(8));
+  EXPECT_FALSE(test.Exists(8));
+  EXPECT_TRUE(test.Delete(3));
+  EXPECT_FALSE(test.Exists(3));
+  EXPECT_TRUE(test.Delete(7));
+  EXPECT_FALSE(test.Exists(7));
+  EXPECT_TRUE(test.Delete(5));
+  EXPECT_FALSE(test.Exists(5));
+  EXPECT_TRUE(test.Empty());
+}
+
+TEST(AVLTree, DeleteInsideNodesWithLeafMax1) {
+  AVLTree<int, int> test;
+  EXPECT_TRUE(test.Insert(50, 0));
+  EXPECT_TRUE(test.Insert(30, 0));
+  EXPECT_TRUE(test.Insert(40, 0));
+  EXPECT_TRUE(test.Insert(20, 0));
+  EXPECT_TRUE(test.Insert(70, 0));
+  EXPECT_TRUE(test.Insert(60, 0));
+  EXPECT_TRUE(test.Insert(80, 0));
+  EXPECT_TRUE(test.Insert(10, 0));
+  EXPECT_TRUE(test.Insert(25, 0));
+  EXPECT_TRUE(test.Insert(35, 0));
+  EXPECT_TRUE(test.Insert(45, 0));
+  EXPECT_TRUE(test.Insert(55, 0));
+  EXPECT_TRUE(test.Insert(65, 0));
+  EXPECT_TRUE(test.Insert(75, 0));
+  EXPECT_TRUE(test.Insert(85, 0));
+
+  EXPECT_TRUE(test.Delete(30));
+  EXPECT_FALSE(test.Exists(30));
+  EXPECT_TRUE(test.Delete(70));
+  EXPECT_FALSE(test.Exists(70));
+}
+
+TEST(AVLTree, DeleteInsideNodesWithLeafMin) {
+  AVLTree<int, int> test;
+  EXPECT_TRUE(test.Insert(50, 0));
+  EXPECT_TRUE(test.Insert(30, 0));
+  EXPECT_TRUE(test.Insert(20, 0));
+  EXPECT_TRUE(test.Insert(70, 0));
+  EXPECT_TRUE(test.Insert(60, 0));
+  EXPECT_TRUE(test.Insert(10, 0));
+  EXPECT_TRUE(test.Insert(25, 0));
+  EXPECT_TRUE(test.Insert(55, 0));
+  EXPECT_TRUE(test.Insert(65, 0));
+
+  EXPECT_TRUE(test.Delete(30));
+  EXPECT_FALSE(test.Exists(30));
+  EXPECT_TRUE(test.Delete(70));
+  EXPECT_FALSE(test.Exists(70));
+}
+
+TEST(AVLTree, DeleteInsideNodesWithLeafMax2) {
+  AVLTree<int, int> test;
+  EXPECT_TRUE(test.Insert(50, 0));
+  EXPECT_TRUE(test.Insert(30, 0));
+  EXPECT_TRUE(test.Insert(40, 0));
+  EXPECT_TRUE(test.Insert(70, 0));
+  EXPECT_TRUE(test.Insert(80, 0));
+  EXPECT_TRUE(test.Insert(35, 0));
+  EXPECT_TRUE(test.Insert(45, 0));
+  EXPECT_TRUE(test.Insert(75, 0));
+  EXPECT_TRUE(test.Insert(85, 0));
+
+  EXPECT_TRUE(test.Delete(30));
+  EXPECT_FALSE(test.Exists(30));
+  EXPECT_TRUE(test.Delete(70));
+  EXPECT_FALSE(test.Exists(70));
+}
+
+TEST(AVLTree, DeleteInsideNodeNotLeafMax) {
+  AVLTree<int, int> test;
+  EXPECT_TRUE(test.Insert(50, 0));
+  EXPECT_TRUE(test.Insert(30, 0));
+  EXPECT_TRUE(test.Insert(40, 0));
+  EXPECT_TRUE(test.Insert(20, 0));
+  EXPECT_TRUE(test.Insert(70, 0));
+  EXPECT_TRUE(test.Insert(60, 0));
+  EXPECT_TRUE(test.Insert(80, 0));
+  EXPECT_TRUE(test.Insert(10, 0));
+  EXPECT_TRUE(test.Insert(25, 0));
+  EXPECT_TRUE(test.Insert(35, 0));
+  EXPECT_TRUE(test.Insert(45, 0));
+  EXPECT_TRUE(test.Insert(55, 0));
+  EXPECT_TRUE(test.Insert(65, 0));
+  EXPECT_TRUE(test.Insert(75, 0));
+  EXPECT_TRUE(test.Insert(85, 0));
+  EXPECT_TRUE(test.Insert(37, 0));
+
+  EXPECT_TRUE(test.Delete(30));
+  EXPECT_FALSE(test.Exists(30));
+}
+
+TEST(AVLTree, DeleteInsideNodeNotLeafMin) {
+  AVLTree<int, int> test;
+  EXPECT_TRUE(test.Insert(50, 0));
+  EXPECT_TRUE(test.Insert(30, 0));
+  EXPECT_TRUE(test.Insert(20, 0));
+  EXPECT_TRUE(test.Insert(70, 0));
+  EXPECT_TRUE(test.Insert(60, 0));
+  EXPECT_TRUE(test.Insert(80, 0));
+  EXPECT_TRUE(test.Insert(10, 0));
+  EXPECT_TRUE(test.Insert(25, 0));
+  EXPECT_TRUE(test.Insert(55, 0));
+  EXPECT_TRUE(test.Insert(65, 0));
+  EXPECT_TRUE(test.Insert(75, 0));
+  EXPECT_TRUE(test.Insert(85, 0));
+  EXPECT_TRUE(test.Insert(23, 0));
+
+  EXPECT_TRUE(test.Delete(30));
+  EXPECT_FALSE(test.Exists(30));
+}
+
+TEST(AVLTree, DeleteLastButOneMax) {
+  AVLTree<int, int> test;
+  EXPECT_TRUE(test.Insert(50, 0));
+  EXPECT_TRUE(test.Insert(30, 0));
+  EXPECT_TRUE(test.Insert(40, 0));
+  EXPECT_TRUE(test.Insert(20, 0));
+  EXPECT_TRUE(test.Insert(70, 0));
+  EXPECT_TRUE(test.Insert(60, 0));
+  EXPECT_TRUE(test.Insert(80, 0));
+
+  EXPECT_TRUE(test.Delete(30));
+  EXPECT_FALSE(test.Exists(30));
+  EXPECT_TRUE(test.Delete(70));
+  EXPECT_FALSE(test.Exists(70));
+  EXPECT_FALSE(test.Exists(45));
+}
+
+TEST(AVLTree, DeleteLastButOneMin) {
+  AVLTree<int, int> test;
+  EXPECT_TRUE(test.Insert(50, 0));
+  EXPECT_TRUE(test.Insert(30, 0));
+  EXPECT_TRUE(test.Insert(20, 0));
+  EXPECT_TRUE(test.Insert(70, 0));
+  EXPECT_TRUE(test.Insert(60, 0));
+
+  EXPECT_TRUE(test.Delete(30));
+  EXPECT_FALSE(test.Exists(30));
+  EXPECT_TRUE(test.Delete(70));
+  EXPECT_FALSE(test.Exists(70));
+}
+
+TEST(AVLTree, DeleteHeadBothBranchesFull) {
+  AVLTree<int, int> test;
+  EXPECT_TRUE(test.Insert(5, 0));
+  EXPECT_TRUE(test.Insert(3, 0));
+  EXPECT_TRUE(test.Insert(4, 0));
+  EXPECT_TRUE(test.Insert(2, 0));
+  EXPECT_TRUE(test.Insert(7, 0));
+  EXPECT_TRUE(test.Insert(6, 0));
+  EXPECT_TRUE(test.Insert(8, 0));
+
+  EXPECT_TRUE(test.Delete(5));
+  EXPECT_FALSE(test.Exists(5));
+  EXPECT_FALSE(test.Empty());
+  EXPECT_TRUE(test.Exists(3));
+  EXPECT_TRUE(test.Exists(4));
+  EXPECT_TRUE(test.Exists(2));
+  EXPECT_TRUE(test.Exists(6));
+  EXPECT_TRUE(test.Exists(7));
+  EXPECT_TRUE(test.Exists(8));
+}
+
+TEST(AVLTree, DeleteHeadOnlyLeftBranchPresent) {
+  AVLTree<int, int> test;
+  EXPECT_TRUE(test.Insert(5, 0));
+  EXPECT_TRUE(test.Insert(3, 0));
+  EXPECT_TRUE(test.Insert(4, 0));
+  EXPECT_TRUE(test.Insert(2, 0));
+
+  EXPECT_TRUE(test.Delete(5));
+  EXPECT_FALSE(test.Exists(5));
+  EXPECT_FALSE(test.Empty());
+  EXPECT_TRUE(test.Exists(3));
+  EXPECT_TRUE(test.Exists(4));
+  EXPECT_TRUE(test.Exists(2));
+}
+
+TEST(AVLTree, DeleteHead) {
+  AVLTree<int, int> test;
+  EXPECT_TRUE(test.Insert(5, 0));
+
+  EXPECT_TRUE(test.Delete(5));
+  EXPECT_FALSE(test.Exists(5));
+  EXPECT_TRUE(test.Empty());
+}
+
+TEST(AVLTree, DeleteHeadOnlyOneOnTheLeft) {
+  AVLTree<int, int> test;
+  EXPECT_TRUE(test.Insert(5, 0));
+  EXPECT_TRUE(test.Insert(3, 0));
+
+  EXPECT_TRUE(test.Delete(5));
+  EXPECT_FALSE(test.Exists(5));
+  EXPECT_FALSE(test.Empty());
+  EXPECT_TRUE(test.Exists(3));
+}
+
+TEST(AVLTree, DeleteHeadOnlyOneOnTheRight) {
+  AVLTree<int, int> test;
+  EXPECT_TRUE(test.Insert(5, 0));
+  EXPECT_TRUE(test.Insert(8, 0));
+
+  EXPECT_TRUE(test.Delete(5));
+  EXPECT_FALSE(test.Exists(5));
+  EXPECT_FALSE(test.Empty());
+  EXPECT_TRUE(test.Exists(8));
 }
 
 int main(int argc, char** argv) {
