@@ -8,6 +8,9 @@ void RunTests();
 uint64_t CalcEvenSum(const std::vector<int>& vec);
 uint64_t CalcBestEvenSum(const std::vector<int>& vec);
 bool IsEven(int val);
+uint64_t CalcBestEvenSum2(const std::vector<int>& vec);
+
+uint64_t AccumulatePositiveChanges(const std::vector<int>& vec);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -27,8 +30,7 @@ void Solution(std::istream& input) {
     for (auto& el : vec) {
       input >> el;
     }
-
-    std::cout << CalcBestEvenSum(vec) << '\n';
+    std::cout << CalcBestEvenSum2(vec) << '\n';
   }
 }
 
@@ -59,6 +61,29 @@ uint64_t CalcBestEvenSum(const std::vector<int>& vec) {
     }
   }
   return res;
+}
+
+uint64_t AccumulatePositiveChanges(const std::vector<int>& vec) {
+  uint64_t from_start = 0;
+  uint64_t sum = 0;
+  for (int i = 1; i < vec.size(); i += 2) {
+    int change = vec[i] - vec[i - 1];
+    sum = (change < 0 && sum < -change) ? 0 : sum + change;
+    from_start = std::max(sum, from_start);
+  }
+  uint64_t from_first = 0;
+  sum = 0;
+  for (int i = 2; i < vec.size(); i += 2) {
+    int change = vec[i - 1] - vec[i];
+    sum = (change < 0 && sum < -change) ? 0 : sum + change;
+    from_first = std::max(from_first, sum);
+  }
+  return std::max(from_first, from_start);
+}
+
+uint64_t CalcBestEvenSum2(const std::vector<int>& vec) {
+  uint64_t init_sum = CalcEvenSum(vec);
+  return init_sum + AccumulatePositiveChanges(vec);
 }
 
 bool IsEven(int val) { return !(val % 2); }
