@@ -1,18 +1,22 @@
 #include <cassert>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
+
+constexpr int kTheLowest = std::numeric_limits<int>::min();
+constexpr int kTheHighest = std::numeric_limits<int>::max();
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
 class AVLTree {
   struct Node {
-    Node(int g_key) : key(g_key), integ_sum(g_key) {}
+    Node(int g_key) : key(g_key), tree_sum(g_key) {}
 
     int key;
     int height = 1;
-    uint64_t integ_sum = 0;
+    uint64_t tree_sum = 0;
     Node* left = nullptr;
     Node* right = nullptr;
   };
@@ -35,13 +39,7 @@ class AVLTree {
   }
 
   uint64_t Sum(int left, int right) const {
-    // find lower_bound node
-    Node* lower = LowerBound(head_, left);
-    if (!lower) return 0;
-    // find prev_to_upper_bound node
-    Node* upper = LowerBound(head_, right);
-    // calc sum
-    return upper->integ_sum - lower->integ_sum;
+    return SumImpl(head_, kTheLowest, kTheHighest, left, right);
   }
 
   bool Exists(int key) const {
@@ -68,6 +66,24 @@ class AVLTree {
     delete tree_head;
   }
 
+  static uint64_t SumImpl(Node* node, int tree_low, int tree_high, int left,
+                          int right) {
+    if (!node) return 0;
+    if (tree_low > right) return 0;
+    if (tree_high < left) return 0;
+    if (left <= tree_low && tree_high <= right) {
+      return node->tree_sum;
+    }
+    uint64_t sum = left <= node->key && node->key <= right ? node->key : 0;
+    if (node->left) {
+      sum += SumImpl(node->left, tree_low, node->key, left, right);
+    }
+    if (node->right) {
+      sum += SumImpl(node->right, node->key, tree_high, left, right);
+    }
+    return sum;
+  }
+
   static int GetHeight(Node* node) { return node ? node->height : 0; }
 
   static int GetFactor(Node* node) {
@@ -75,17 +91,15 @@ class AVLTree {
     return GetHeight(node->right) - GetHeight(node->left);
   }
 
-  static uint64_t GetIntegSum(Node* node) { return node ? node->integ_sum : 0; }
-
   static void FixHeight(Node* node) {
     node->height = std::max(GetHeight(node->left), GetHeight(node->right)) + 1;
   }
 
-  static void GetIntegsum(Node* node) {
-    node->integ_sum =
-        GetIntegSum(node->left) + GetIntegSum(node->right) + node->key;
-    // need to connect nodes in consequent order so I can access previous
-    // integ_value
+  static uint64_t GetTreeSum(Node* node) { return node ? node->tree_sum : 0; }
+
+  static void FixTreeSum(Node* node) {
+    node->tree_sum =
+        GetTreeSum(node->left) + GetTreeSum(node->right) + node->key;
   }
 
   static Node* RotateRight(Node* head) {
@@ -180,8 +194,8 @@ class AVLTree {
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  // RunTests();
-  Solution(std::cin);
+  RunTests();
+  // Solution(std::cin);
   return 0;
 }
 
@@ -212,9 +226,15 @@ void Solution(std::istream& input) {
 void RunTests() {
   {
     std::stringstream ss;
-    ss << R"(
+    ss << R"(6
++ 1
++ 3
++ 3
+? 2 4
++ 1
+? 2 4
 )";
     Solution(ss);
-    std::cout << "expected = \n";
+    std::cout << "expected = 3; 7\n";
   }
 }
