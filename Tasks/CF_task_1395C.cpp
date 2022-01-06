@@ -7,14 +7,14 @@
 void Solution(std::istream& input = std::cin);
 void RunTests();
 int UpdateMinVal(int curr_min_val, int val, const std::vector<int>& match_bin);
-std::vector<int> BuildMinVals(const std::vector<int>& pick_bin,
-                              const std::vector<int>& match_bin);
+int GetBestFor(int index, const std::vector<int>& pick_bin,
+               const std::vector<int>& match_bin);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -31,7 +31,11 @@ void Solution(std::istream& input) {
     input >> el;
   }
 
-  std::vector<int> min_vals = BuildMinVals(pick_bin, match_bin);
+  std::vector<int> min_vals;
+  min_vals.reserve(pick_bin.size());
+  for (int i = 0; i < pick_bin.size(); ++i) {
+    min_vals.push_back(GetBestFor(i, pick_bin, match_bin));
+  }
   std::cout << *std::min_element(min_vals.begin(), min_vals.end()) << '\n';
 }
 
@@ -42,21 +46,19 @@ void Print(const std::vector<int>& data) {
   std::cout << '\n';
 }
 
-std::vector<int> BuildMinVals(const std::vector<int>& pick_bin,
-                              const std::vector<int>& match_bin) {
+int GetBestFor(int index, const std::vector<int>& pick_bin,
+               const std::vector<int>& match_bin) {
   std::vector<int> result;
   result.reserve(match_bin.size());
   for (const auto& el : match_bin) {
-    result.push_back((pick_bin.front() & el));
+    result.push_back((pick_bin[index] & el));
   }
-  Print(result);
   for (const auto& el : pick_bin) {
     for (auto& res_el : result) {
       res_el = UpdateMinVal(res_el, el, match_bin);
     }
-    Print(result);
   }
-  return result;
+  return *std::min_element(result.begin(), result.end());
 }
 
 int UpdateMinVal(int curr_min_val, int val, const std::vector<int>& match_bin) {
@@ -78,32 +80,31 @@ void RunTests() {
     Solution(ss);
     std::cout << "expected = 72\n";
   }
-  /*
-    {
-      std::stringstream ss;
-      ss << R"(4 2
+  {
+    std::stringstream ss;
+    ss << R"(4 2
   2 6 4 0
   2 4
   )";
-      Solution(ss);
-      std::cout << "expected = 2\n";
-    }
-    {
-      std::stringstream ss;
-      ss << R"(7 6
+    Solution(ss);
+    std::cout << "expected = 2\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(7 6
   1 9 1 9 8 1 0
   1 1 4 5 1 4
   )";
-      Solution(ss);
-      std::cout << "expected = 0\n";
-    }
-    {
-      std::stringstream ss;
-      ss << R"(8 5
+    Solution(ss);
+    std::cout << "expected = 0\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(8 5
   179 261 432 162 82 43 10 38
   379 357 202 184 197
   )";
-      Solution(ss);
-      std::cout << "expected = 147\n";
-    }*/
+    Solution(ss);
+    std::cout << "expected = 147\n";
+  }
 }
