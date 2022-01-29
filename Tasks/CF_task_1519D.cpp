@@ -6,12 +6,12 @@
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
-uint64_t CalcOneRealization(const std::vector<int>& stable,
-                            const std::vector<int>& rev, uint64_t stable_result,
-                            int left, int right);
+uint64_t CalcOneRealization(const std::vector<uint64_t>& stable,
+                            const std::vector<uint64_t>& rev,
+                            uint64_t stable_result, int left, int right);
 
-uint64_t CalcStableResult(const std::vector<int>& lhs,
-                          const std::vector<int>& rhs);
+uint64_t CalcStableResult(const std::vector<uint64_t>& lhs,
+                          const std::vector<uint64_t>& rhs);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -24,11 +24,11 @@ int main() {
 void Solution(std::istream& input) {
   int n;
   input >> n;
-  std::vector<int> rev(n);
+  std::vector<uint64_t> rev(n);
   for (auto& el : rev) {
     input >> el;
   }
-  std::vector<int> stable(n);
+  std::vector<uint64_t> stable(n);
   for (auto& el : stable) {
     input >> el;
   }
@@ -43,12 +43,12 @@ void Solution(std::istream& input) {
   std::cout << ans << '\n';
 }
 
-uint64_t CalcOneRealization(const std::vector<int>& stable,
-                            const std::vector<int>& rev, uint64_t stable_result,
-                            int left, int right) {
+uint64_t CalcOneRealization(const std::vector<uint64_t>& stable,
+                            const std::vector<uint64_t>& rev,
+                            uint64_t stable_result, int left, int right) {
   uint64_t ans = stable_result;
   uint64_t prev_value = stable_result;
-  while (left > 0 && right < rev.size()) {
+  while (left >= 0 && right < rev.size()) {
     prev_value -= stable[left] * rev[left] + stable[right] * rev[right];
     prev_value += stable[left] * rev[right] + stable[right] * rev[left];
     ans = std::max(ans, prev_value);
@@ -58,8 +58,8 @@ uint64_t CalcOneRealization(const std::vector<int>& stable,
   return ans;
 }
 
-uint64_t CalcStableResult(const std::vector<int>& lhs,
-                          const std::vector<int>& rhs) {
+uint64_t CalcStableResult(const std::vector<uint64_t>& lhs,
+                          const std::vector<uint64_t>& rhs) {
   uint64_t result = 0;
   for (size_t i = 0; i < lhs.size(); ++i) {
     result += lhs[i] * rhs[i];
