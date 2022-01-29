@@ -6,14 +6,12 @@
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
-std::vector<uint64_t> GetIntegral(const std::vector<int>& lhs,
-                                  const std::vector<int>& rhs);
-uint64_t CalcRealization(const std::vector<int>& stable,
-                         const std::vector<int>& rev,
-                         const std::vector<uint64_t>& integral, int start_rev,
-                         int end_rev);
-uint64_t CalcOutSum(const std::vector<uint64_t>& integral, int start_gap,
-                    int end_gap);
+uint64_t CalcOneRealization(const std::vector<int>& stable,
+                            const std::vector<int>& rev, uint64_t stable_result,
+                            int left, int right);
+
+uint64_t CalcStableResult(const std::vector<int>& lhs,
+                          const std::vector<int>& rhs);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -34,44 +32,39 @@ void Solution(std::istream& input) {
   for (auto& el : stable) {
     input >> el;
   }
-  std::vector<uint64_t> integral = GetIntegral(rev, stable);
-  uint64_t ans = integral.back();
-  int window_width = 1;
-  while (window_width < stable.size()) {
-    for (int i = 0; i < stable.size() - window_width; ++i) {
-      ans = std::max(
-          ans, CalcRealization(stable, rev, integral, i, i + window_width));
-    }
-    ++window_width;
+
+  uint64_t stable_result = CalcStableResult(stable, rev);
+  uint64_t ans = stable_result;
+  for (int i = 1; i < stable.size(); ++i) {
+    ans =
+        std::max({ans, CalcOneRealization(stable, rev, stable_result, i - 1, i),
+                  CalcOneRealization(stable, rev, stable_result, i, i)});
   }
   std::cout << ans << '\n';
 }
 
-std::vector<uint64_t> GetIntegral(const std::vector<int>& lhs,
-                                  const std::vector<int>& rhs) {
-  std::vector<uint64_t> result(lhs.size());
-  result.front() = lhs.front() * rhs.front();
-  for (size_t i = 1; i < lhs.size(); ++i) {
-    result[i] = result[i - 1] + lhs[i] * rhs[i];
+uint64_t CalcOneRealization(const std::vector<int>& stable,
+                            const std::vector<int>& rev, uint64_t stable_result,
+                            int left, int right) {
+  uint64_t ans = stable_result;
+  uint64_t prev_value = stable_result;
+  while (left > 0 && right < rev.size()) {
+    prev_value -= stable[left] * rev[left] + stable[right] * rev[right];
+    prev_value += stable[left] * rev[right] + stable[right] * rev[left];
+    ans = std::max(ans, prev_value);
+    --left;
+    ++right;
   }
-  return result;
+  return ans;
 }
 
-uint64_t CalcRealization(const std::vector<int>& stable,
-                         const std::vector<int>& rev,
-                         const std::vector<uint64_t>& integral, int start_rev,
-                         int end_rev) {
-  uint64_t result = CalcOutSum(integral, start_rev, end_rev);
-  for (int i = start_rev, j = end_rev; i <= end_rev; ++i, --j) {
-    result += stable[i] * rev[j];
+uint64_t CalcStableResult(const std::vector<int>& lhs,
+                          const std::vector<int>& rhs) {
+  uint64_t result = 0;
+  for (size_t i = 0; i < lhs.size(); ++i) {
+    result += lhs[i] * rhs[i];
   }
   return result;
-}
-
-uint64_t CalcOutSum(const std::vector<uint64_t>& integral, int start_gap,
-                    int end_gap) {
-  return integral.back() - integral[end_gap] +
-         (start_gap > 0 ? integral[start_gap - 1] : 0ULL);
 }
 
 void RunTests() {
