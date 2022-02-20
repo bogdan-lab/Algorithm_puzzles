@@ -14,10 +14,12 @@ struct Node {
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
-uint64_t GetMaxPretty(const Graph& data, const std::vector<Node>& values);
-uint64_t DFS(const Graph& data, const std::vector<Node>& values,
-             bool left_on_start);
-uint64_t GetBestValue(uint64_t curr_val, uint64_t lo, uint64_t hi);
+Graph DFS(const Graph& data);
+uint64_t AbsDiff(uint64_t lhs, uint64_t rhs);
+
+uint64_t CalcSubtree(const Graph& direct_data, const std::vector<Node>& values,
+                     std::vector<Node>& subtree_results, int root,
+                     bool is_left);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -47,49 +49,79 @@ void Solution(std::istream& input) {
       data[left].push_back(right);
       data[right].push_back(left);
     }
-    std::cout << GetMaxPretty(data, values) << '\n';
+    Graph direct_data = DFS(data);
+    std::vector<Node> subtree_results(data.size());
+    std::cout << std::max(CalcSubtree(direct_data, values, subtree_results,
+                                      /*root=*/0, /*is_left=*/true),
+                          CalcSubtree(direct_data, values, subtree_results,
+                                      /*root=*/0, /*is_left=*/false))
+              << '\n';
   }
 }
 
-uint64_t GetMaxPretty(const Graph& data, const std::vector<Node>& values) {
-  return std::max(DFS(data, values, /*left_on_start=*/true),
-                  DFS(data, values, /*left_on_start=*/false));
+uint64_t AbsDiff(uint64_t lhs, uint64_t rhs) {
+  return lhs > rhs ? lhs - rhs : rhs - lhs;
 }
 
-uint64_t DFS(const Graph& data, const std::vector<Node>& values,
-             bool left_on_start) {
-  uint64_t max_pretty = 0;
-  std::vector<uint64_t> chosen_values(data.size());
+uint64_t CalcSubtree(const Graph& direct_data, const std::vector<Node>& values,
+                     std::vector<Node>& subtree_results, int root,
+                     bool is_left) {
+  if (direct_data[root].empty()) {
+    return 0;
+  }
+  if (is_left) {
+    if (!subtree_results[root].left) {
+      for (const auto& id : direct_data[root]) {
+        subtree_results[root].left +=
+            std::max(AbsDiff(values[root].left, values[id].left) +
+                         CalcSubtree(direct_data, values, subtree_results, id,
+                                     /*is_left=*/true),
+                     AbsDiff(values[root].left, values[id].right) +
+                         CalcSubtree(direct_data, values, subtree_results, id,
+                                     /*is_left=*/false));
+      }
+    }
+    return subtree_results[root].left;
+  } else {
+    if (!subtree_results[root].right) {
+      for (const auto& id : direct_data[root]) {
+        subtree_results[root].right +=
+            std::max(AbsDiff(values[root].right, values[id].left) +
+                         CalcSubtree(direct_data, values, subtree_results, id,
+                                     /*is_left=*/true),
+                     AbsDiff(values[root].right, values[id].right) +
+                         CalcSubtree(direct_data, values, subtree_results, id,
+                                     /*is_left=*/false));
+      }
+    }
+    return subtree_results[root].right;
+  }
+}
+
+Graph DFS(const Graph& data) {
+  Graph dfs_res(data.size());
+  std::vector<uint8_t> visited(data.size());
   std::stack<int> buffer;
-  chosen_values[0] = left_on_start ? values[0].left : values[0].right;
+  visited[0] = 1;
   buffer.push(0);
   while (!buffer.empty()) {
     int curr_id = buffer.top();
     int next_id = std::numeric_limits<int>::max();
     for (const auto& id : data[curr_id]) {
-      if (!chosen_values[id]) {
+      if (!visited[id]) {
         next_id = id;
         break;
       }
     }
-    if (next_id >= chosen_values.size()) {
+    if (next_id >= visited.size()) {
       buffer.pop();
     } else {
-      chosen_values[next_id] = GetBestValue(
-          chosen_values[curr_id], values[next_id].left, values[next_id].right);
-      max_pretty += chosen_values[next_id] > chosen_values[curr_id]
-                        ? chosen_values[next_id] - chosen_values[curr_id]
-                        : chosen_values[curr_id] - chosen_values[next_id];
+      visited[next_id] = 1;
+      dfs_res[curr_id].push_back(next_id);
       buffer.push(next_id);
     }
   }
-  return max_pretty;
-}
-
-uint64_t GetBestValue(uint64_t curr_val, uint64_t lo, uint64_t hi) {
-  if (curr_val <= lo) return hi;
-  if (curr_val >= hi) return lo;
-  return curr_val - lo < hi - curr_val ? hi : lo;
+  return dfs_res;
 }
 
 void RunTests() {
