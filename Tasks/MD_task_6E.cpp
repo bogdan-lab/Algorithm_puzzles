@@ -13,7 +13,7 @@ class Loss {
 
   static Loss ZeroLoss() { return Loss(0); }
 
-  Loss(int curr_spent, const Loss& lhs, const Loss& rhs) {
+  Loss(int day_index, int curr_spent, const Loss& lhs, const Loss& rhs) {
     const Loss& chosen_loss = lhs.total_loss_ < rhs.total_loss_ ||
                                       (lhs.total_loss_ == rhs.total_loss_ &&
                                        lhs.coupon_left_ > rhs.coupon_left_)
@@ -24,15 +24,21 @@ class Loss {
     coupon_left_ = curr_spent > kSaleProp ? chosen_loss.coupon_left_ + 1
                                           : chosen_loss.coupon_left_;
     coupon_used_ = chosen_loss.coupon_used_;
+    coupon_days_ = chosen_loss.coupon_days_;
     if (curr_spent < 0) {
       coupon_used_ += 1;
       coupon_left_ -= 1;
+      coupon_days_.push_back(day_index + 1);
     }
   }
 
   int GetTotal() const { return total_loss_; }
   int GetCouponLeft() const { return coupon_left_; }
   int GetCouponUsed() const { return coupon_used_; }
+  const std::vector<int>& GetDays() {
+    std::reverse(coupon_days_.begin(), coupon_days_.end());
+    return coupon_days_;
+  }
 
  private:
   Loss(int total_loss) : total_loss_(total_loss) {}
@@ -40,6 +46,7 @@ class Loss {
   int total_loss_ = 0;
   int coupon_left_ = 0;
   int coupon_used_ = 0;
+  std::vector<int> coupon_days_;
 };
 
 struct SubtreeLoss {
@@ -60,8 +67,8 @@ Loss GetMinLoss(int k1, int day_index, StateToLoss& data,
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -79,6 +86,9 @@ void Solution(std::istream& input) {
   std::cout << min_loss.GetTotal() << '\n'
             << min_loss.GetCouponLeft() << ' ' << min_loss.GetCouponUsed()
             << '\n';
+  for (const auto& el : min_loss.GetDays()) {
+    std::cout << el << '\n';
+  }
 }
 
 StateToLoss CreateStateToLoss(int day_num) {
@@ -98,7 +108,7 @@ Loss GetMinLoss(int k1, int day_index, StateToLoss& data,
     if (!data[k1][day_index].buy) {
       int k = prices[day_index] > kSaleProp ? k1 + 1 : k1;
       data[k1][day_index].buy =
-          Loss{prices[day_index],
+          Loss{day_index, prices[day_index],
                GetMinLoss(k, day_index + 1, data, prices, /*buy=*/true),
                GetMinLoss(k, day_index + 1, data, prices, /*buy=*/false)};
     }
@@ -109,7 +119,7 @@ Loss GetMinLoss(int k1, int day_index, StateToLoss& data,
         data[k1][day_index].coupon = Loss::InfiniteLoss();
       } else {
         data[k1][day_index].coupon = Loss{
-            /*curr_spent=*/-1,
+            day_index, /*curr_spent=*/-1,
             GetMinLoss(k1 - 1, day_index + 1, data, prices, /*buy=*/true),
             GetMinLoss(k1 - 1, day_index + 1, data, prices, /*buy=*/false)};
       }
@@ -129,7 +139,7 @@ void RunTests() {
 60
 )";
     Solution(ss);
-    std::cout << "expected = 260; 0 2\n";
+    std::cout << "expected = 260; 0 2; 3; 5\n";
   }
   {
     std::stringstream ss;
@@ -139,6 +149,13 @@ void RunTests() {
 110
 )";
     Solution(ss);
-    std::cout << "expected = 220; 1 1\n";
+    std::cout << "expected = 220; 1 1; 2\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(0
+)";
+    Solution(ss);
+    std::cout << "expected = 0; 0 0;\n";
   }
 }
