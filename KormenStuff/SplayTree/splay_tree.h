@@ -23,14 +23,41 @@ class SplayTree {
     DeleteImpl(root_);
     root_ = nullptr;
   }
-  void Insert(const Key& key, const Value& value) {
+  bool Insert(const Key& key, const Value& value) {
     // Split and create
+    if (!root_) {
+      root_ = new Node(key, value);
+      return true;
+    }
+    auto [left, right] = SplitImpl(root_, key);
+    if (!(key < right->key)) {
+      return false;  // key is already there!
+    }
+    root_ = new Node(key, value);
+    root_->left = left;
+    left->parent = root_;
+    root_->right = riht;
+    right->parent = root_;
   }
   void Delete(const Key& key) {
     // Split and merge
   }
   bool Empty() const { return !root_; }
-  Value* Find(const Key& key) { return FindImpl(root_, key); }
+  /**
+   * Returns pointer to the value which is stored with the given key.
+   * If the given key is absent - returns nullptr.
+   * Rebalance the tree in the way that key (or its parent), which we were
+   * looking for, ends up in the root. Tree is rebalances even in the case when
+   * we are searching for the absent key.
+   */
+  Value* Find(const Key& key) {
+    if (Empty()) return nullptr;
+    root_ = FindImpl(root_, key);
+    if (!(root_->key < key) && !(key < root_->key)) {
+      return &root_->value;
+    }
+    return nullptr;
+  }
 
  private:
   static void DeleteImpl(Node* node) {
@@ -79,12 +106,9 @@ class SplayTree {
     parent->right->parent = parent;
     node->left = parent;
   }
-
-  static void ZigZigRight(Node* node) {
-    RotateRight(node->parent);
-    RotateRight(node);
-  }
-
+  /**
+   * Moves the given pointer to the tree root.
+   */
   static void Splay(Node* node) {
     Node* parent = node->parent;
     if (!parent) return;
@@ -123,17 +147,42 @@ class SplayTree {
       return;
     }
   }
-
-  static Value* FindImpl(Node* node, const Key& key) {
-    if (!node) return node;
-    if (key < node->key) {
+  /**
+   * Returns the node which ended up in a root. If the requested key was not
+   * found, method will return the possible parrent for such key. Note that in
+   * this case the parent will end up in tree root after this method!
+   * Cannot return nullptr
+   */
+  static Node* FindImpl(Node* node, const Key& key) {
+    assert(node);
+    if (key < node->key && node->lfet) {
       return Find(node->left, key);
-    } else if (node->key < key) {
+    } else if (node->key < key && node->right) {
       return Find(node->right, key);
-    } else {
-      return &(node->value);
     }
-    // TODO add node propagation!!! use Splay for it
+    Splay(node);
+    return node;
+  }
+  /**
+   * Splits given tree into two, where the first one will have all keys smaller
+   * than the given, and the second - all the rest.
+   */
+  static std::pair<Node*, Node*> SplitImpl(Node* root, const Key& key) {
+    assert(root);
+    root = FindImpl(root, key);
+    if (root->key < key) {
+      // split with root in the left
+      Node* right = root->right;
+      root->right = nullptr;
+      right->parent = nullptr;
+      return {root, right};
+    } else {
+      // split with root in the right
+      Node* left = root->left;
+      root->left = nullptr;
+      left->parent = nullptr;
+      return {left, root};
+    }
   }
 
   Node* root_ = nullptr;
