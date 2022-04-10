@@ -1,85 +1,87 @@
-
+#include <cassert>
 #include <string>
 #include <string_view>
+#include <vector>
+
+struct Token {
+  char c = '\0';
+  bool any_number = false;
+};
+
+std::vector<Token> LexPattern(std::string_view pattern) {
+  std::vector<Token> result;
+  result.reserve(pattern.size());
+  int i = 0;
+  while (i < pattern.size()) {
+    Token t;
+    t.c = pattern[i];
+    i++;
+    if (i != pattern.size() && pattern[i] == '*') {
+      t.any_number = true;
+      i++;
+    }
+    result.push_back(t);
+  }
+  return result;
+}
+
+bool CharMatchToken(char ch, Token token) {
+  return token.c == '.' || ch == token.c || token.any_number;
+}
+
+bool CharCanBeConsumed(char ch, Token token) {
+  return token.c == '.' || ch == token.c;
+}
+
+bool CanIgnoreRightTokens(const std::vector<Token>& tokens, int ti) {
+  for (int i = ti; i < tokens.size(); ++i) {
+    if (!tokens[i].any_number) return false;
+  }
+  return true;
+}
+
+bool MatchImpl(std::string_view s, const std::vector<Token>& tokens, int ti) {
+  if (s.empty()) return CanIgnoreRightTokens(tokens, ti);
+  if (ti >= tokens.size()) return false;
+  if (CharMatchToken(s[0], tokens[ti])) {
+    if (CharCanBeConsumed(s[0], tokens[ti])) {
+      std::string_view s_cons = s;
+      s_cons.remove_prefix(1);
+      if (tokens[ti].any_number) {
+        return MatchImpl(s_cons, tokens, ti) || MatchImpl(s, tokens, ti + 1);
+      } else {
+        return MatchImpl(s_cons, tokens, ti + 1);
+      }
+    } else {
+      return MatchImpl(s, tokens, ti + 1);
+    }
+  } else {
+    return false;
+  }
+}
 
 class Solution {
-  bool ConsumeDotStar(std::string_view s, std::string_view p, int& s_idx,
-                      int& p_idx) {
-    p_idx += 2;
-    if (p_idx == p.size()) {
-      // match entire word
-      s_idx = s.size();
-      return true;
-    }
-    // assume that after .* we have valid symbol
-    // regex operates greadely -> search for the character match from the back
-    size_t new_pos = s.find_last_of(p[p_idx]);
-    if (new_pos == std::string_view::npos || s_idx > new_pos) {
-      return false;
-    }
-    s_idx = static_cast<int>(new_pos);
-    return true;
-  }
-
-  bool NextNotStar(std::string_view p, int p_idx) {
-    return p_idx == p.size() - 1 || p[p_idx + 1] != '*';
-  }
-
-  bool ConsumeCharStar(std::string_view s, std::string_view p, int& s_idx,
-                       int& p_idx) {
-    const char mc = p[p_idx];
-    const int s_init_idx = s_idx;
-    p_idx += 2;
-    while (s_idx < s.size() && s[s_idx] == mc) {
-      s_idx++;
-    }
-    int tmp_idx = s_idx;
-    while (p_idx < p.size() && p[p_idx] == mc) {
-      if (tmp_idx < s_init_idx) {
-        return false;
-      }
-      tmp_idx--;
-      p_idx++;
-    }
-    return true;
-  }
-
-  bool ConsumeChar(std::string_view s, std::string_view p, int& s_idx,
-                   int& p_idx) {
-    if (s[s_idx] != p[p_idx]) return false;
-    s_idx++;
-    p_idx++;
-    return true;
-  }
-
  public:
   bool isMatch(std::string s, std::string p) {
-    int s_idx = 0;
-    int p_idx = 0;
-    bool not_failed = true;
-    while (not_failed && s_idx < s.size() && p_idx < p.size()) {
-      if (p[p_idx] == '.') {
-        if (NextNotStar(p, p_idx)) {
-          s_idx++;
-          p_idx++;
-        } else {
-          // .* case
-          not_failed = ConsumeDotStar(s, p, s_idx, p_idx);
-        }
-      } else {
-        // p[p_idx] valid character
-        if (NextNotStar(p, p_idx)) {
-          not_failed = ConsumeChar(s, p, s_idx, p_idx);
-        } else {
-          // case with [c]*, where c = p[p_idx]
-          not_failed = ConsumeCharStar(s, p, s_idx, p_idx);
-        }
-      }
-    }
-    // if we need we can throw away zero characters in the end of the pattern
-    if (p_idx == p.size() - 2 && p.back() == '*') {
-      p_idx = p.size();
-    }
-    return not_failed && p_idx == p.size() && s_idx == s.size();
+    std::vector<Token> tokens = LexPattern(p);
+    return MatchImpl(s, tokens, 0);
   }
 };
+
+int main() {
+  Solution s;
+  assert(!s.isMatch("aa", "a"));
+  assert(s.isMatch("aa", "a*"));
+  assert(s.isMatch("ab", ".*"));
+  assert(s.isMatch("aaa", "a*a"));
+  assert(s.isMatch("aaa", "a*aa"));
+  assert(s.isMatch("aaa", "a*aaa"));
+  assert(s.isMatch("aaa", "aaaa*"));
+  assert(s.isMatch("aaa", "aaa*"));
+  assert(s.isMatch("aaa", "aa*"));
+  assert(s.isMatch("aaa", "ab*a*c*a"));
+  assert(!s.isMatch("ab", ".*c"));
+  assert(s.isMatch("cab", "c.*"));
+  assert(s.isMatch("cabc", "c.*c"));
+}
+
