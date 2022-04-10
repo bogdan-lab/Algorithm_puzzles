@@ -3,6 +3,8 @@
 #include <string_view>
 #include <vector>
 
+constexpr int kEmptyValue = -1;
+
 struct Token {
   char c = '\0';
   bool any_number = false;
@@ -40,31 +42,43 @@ bool CanIgnoreRightTokens(const std::vector<Token>& tokens, int ti) {
   return true;
 }
 
-bool MatchImpl(std::string_view s, const std::vector<Token>& tokens, int ti) {
-  if (s.empty()) return CanIgnoreRightTokens(tokens, ti);
-  if (ti >= tokens.size()) return false;
-  if (CharMatchToken(s[0], tokens[ti])) {
-    if (CharCanBeConsumed(s[0], tokens[ti])) {
-      std::string_view s_cons = s;
-      s_cons.remove_prefix(1);
-      if (tokens[ti].any_number) {
-        return MatchImpl(s_cons, tokens, ti) || MatchImpl(s, tokens, ti + 1);
+bool MatchImpl(std::string_view s, const std::vector<Token>& tokens, int ti,
+               std::vector<std::vector<int>>& submatches) {
+  if (ti == tokens.size()) return s.empty();
+  if (submatches[s.size()][ti] == kEmptyValue) {
+    if (s.empty()) {
+      submatches[s.size()][ti] = CanIgnoreRightTokens(tokens, ti);
+    } else if (CharMatchToken(s[0], tokens[ti])) {
+      if (CharCanBeConsumed(s[0], tokens[ti])) {
+        std::string_view s_cons = s;
+        s_cons.remove_prefix(1);
+        if (tokens[ti].any_number) {
+          submatches[s.size()][ti] =
+              MatchImpl(s_cons, tokens, ti, submatches) ||
+              MatchImpl(s, tokens, ti + 1, submatches);
+        } else {
+          submatches[s.size()][ti] =
+              MatchImpl(s_cons, tokens, ti + 1, submatches);
+        }
       } else {
-        return MatchImpl(s_cons, tokens, ti + 1);
+        submatches[s.size()][ti] = MatchImpl(s, tokens, ti + 1, submatches);
       }
     } else {
-      return MatchImpl(s, tokens, ti + 1);
+      submatches[s.size()][ti] = false;
     }
-  } else {
-    return false;
   }
+  return submatches[s.size()][ti];
 }
 
 class Solution {
  public:
   bool isMatch(std::string s, std::string p) {
     std::vector<Token> tokens = LexPattern(p);
-    return MatchImpl(s, tokens, 0);
+    std::vector<std::vector<int>> submatches(s.size() + 1);
+    for (auto& el : submatches) {
+      el.resize(tokens.size(), kEmptyValue);
+    }
+    return MatchImpl(s, tokens, 0, submatches);
   }
 };
 
