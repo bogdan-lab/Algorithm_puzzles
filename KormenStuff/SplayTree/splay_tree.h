@@ -55,9 +55,9 @@ class SplayTree {
       return false;
     }
     Node* left = root_->left;
-    left->parent = nullptr;
+    if (left) left->parent = nullptr;
     Node* right = root_->right;
-    right->parent = nullptr;
+    if (right) right->parent = nullptr;
     delete root_;
     root_ = MergeImpl(left, right);
     return true;
