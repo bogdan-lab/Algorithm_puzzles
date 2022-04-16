@@ -1,317 +1,118 @@
 ﻿#include "gtest/gtest.h"
 #include "splay_tree.h"
-/*
+
 TEST(SplayTree, EmptyTree) {
   SplayTree<int, int> test;
   EXPECT_TRUE(test.Empty());
-  EXPECT_FALSE(test.Exists(1));
-  EXPECT_FALSE(test.Exists(0));
+  EXPECT_FALSE(test.Find(1));
+  EXPECT_FALSE(test.Find(0));
 }
 
-TEST(SplayTree, InsertExists) {
+TEST(SplayTree, InsertFind1) {
+  // Only head
   SplayTree<int, int> test;
   EXPECT_TRUE(test.Empty());
-  test.Insert(5, 0);
-  EXPECT_FALSE(test.Empty());
-  test.Insert(3, 0);
-  test.Insert(4, 0);
-  test.Insert(2, 0);
-  test.Insert(7, 0);
-  test.Insert(6, 0);
-  test.Insert(8, 0);
-  EXPECT_TRUE(test.Exists(5));
-  EXPECT_TRUE(test.Exists(3));
-  EXPECT_TRUE(test.Exists(7));
-  EXPECT_TRUE(test.Exists(2));
-  EXPECT_TRUE(test.Exists(4));
-  EXPECT_TRUE(test.Exists(6));
-  EXPECT_TRUE(test.Exists(8));
-
-  test.Insert(5, 2);
-  test.Insert(3, 2);
-  test.Insert(4, 2);
-  test.Insert(2, 2);
-  test.Insert(6, 2);
-  test.Insert(7, 2);
-  test.Insert(8, 2);
+  EXPECT_TRUE(test.Insert(5, 50));
+  ASSERT_TRUE(test.Find(5));
+  EXPECT_EQ(*test.Find(5), 50);
+  EXPECT_FALSE(test.Insert(5, 30));
+  ASSERT_TRUE(test.Find(5));
+  EXPECT_EQ(*test.Find(5), 50);
 }
 
-TEST(SplayTree, NextPrevExisting) {
-  SplayTree<int, int> test;
-  test.Insert(5, 0);
-  test.Insert(3, 0);
-  test.Insert(4, 0);
-  test.Insert(2, 0);
-  test.Insert(7, 0);
-  test.Insert(6, 0);
-  test.Insert(8, 0);
-
-  EXPECT_EQ(test.Prev(5)->key, 4);
-  EXPECT_EQ(test.Next(5)->key, 6);
-  EXPECT_EQ(test.Prev(3)->key, 2);
-  EXPECT_EQ(test.Next(3)->key, 4);
-  EXPECT_EQ(test.Prev(7)->key, 6);
-  EXPECT_EQ(test.Next(7)->key, 8);
-  EXPECT_EQ(test.Prev(8)->key, 7);
-  EXPECT_FALSE(test.Next(8));
-  EXPECT_FALSE(test.Next(100));
-  EXPECT_FALSE(test.Prev(2));
-  EXPECT_FALSE(test.Prev(-50));
-  EXPECT_EQ(test.Next(2)->key, 3);
+TEST(SplayTree, InsertFind2) {
+  // searching in each cycle in the new tree since it is rebalanced after each
+  // search
+  std::vector<std::pair<int, int>> input{{1, 10}, {2, 20}, {3, 30}, {4, 40},
+                                         {5, 50}, {6, 60}, {7, 70}, {8, 80}};
+  int count = 0;
+  do {
+    count++;
+    for (const auto& search_el : input) {
+      SplayTree<int, int> test;
+      for (const auto& el : input) {
+        EXPECT_TRUE(test.Insert(el.first, el.second))
+            << "count = " << count << " key = " << el.first << '\n';
+      }
+      int* res = test.Find(search_el.first);
+      ASSERT_TRUE(res) << "count = " << count << " key = " << search_el.first
+                       << '\n';
+      EXPECT_EQ(*res, search_el.second)
+          << "count = " << count << " key = " << search_el.first << '\n';
+    }
+  } while (std::next_permutation(input.begin(), input.end()));
 }
 
-TEST(SplayTree, NextPrevNonexisting) {
-  SplayTree<int, int> test;
-  test.Insert(50, 0);
-  test.Insert(30, 0);
-  test.Insert(40, 0);
-  test.Insert(20, 0);
-  test.Insert(70, 0);
-  test.Insert(60, 0);
-  test.Insert(80, 0);
-
-  EXPECT_EQ(test.Prev(45)->key, 40);
-  EXPECT_EQ(test.Next(45)->key, 50);
-  EXPECT_EQ(test.Prev(55)->key, 50);
-  EXPECT_EQ(test.Next(55)->key, 60);
-  EXPECT_EQ(test.Prev(35)->key, 30);
-  EXPECT_EQ(test.Next(35)->key, 40);
-  EXPECT_EQ(test.Prev(65)->key, 60);
-  EXPECT_EQ(test.Next(65)->key, 70);
-  EXPECT_EQ(test.Prev(25)->key, 20);
-  EXPECT_EQ(test.Next(25)->key, 30);
-  EXPECT_EQ(test.Prev(75)->key, 70);
-  EXPECT_EQ(test.Next(75)->key, 80);
+TEST(SplayTree, InsertFind3) {
+  // Generate different trees and try to find there each element
+  std::vector<std::pair<int, int>> input{{1, 10}, {2, 20}, {3, 30}, {4, 40},
+                                         {5, 50}, {6, 60}, {7, 70}, {8, 80}};
+  int count = 0;
+  do {
+    count++;
+    SplayTree<int, int> test;
+    for (const auto& el : input) {
+      EXPECT_TRUE(test.Insert(el.first, el.second))
+          << "count = " << count << " key = " << el.first << '\n';
+    }
+    for (const auto& search_el : input) {
+      int* res = test.Find(search_el.first);
+      ASSERT_TRUE(res) << "count = " << count << " key = " << search_el.first
+                       << '\n';
+      EXPECT_EQ(*res, search_el.second)
+          << "count = " << count << " key = " << search_el.first << '\n';
+    }
+  } while (std::next_permutation(input.begin(), input.end()));
 }
 
-TEST(SplayTree, DeleteLeafs) {
-  SplayTree<int, int> test;
-  test.Insert(5, 0);
-  test.Insert(3, 0);
-  test.Insert(4, 0);
-  test.Insert(2, 0);
-  test.Insert(7, 0);
-  test.Insert(6, 0);
-  test.Insert(8, 0);
-
-  test.Delete(2);
-  EXPECT_FALSE(test.Exists(2));
-  test.Delete(4);
-  EXPECT_FALSE(test.Exists(4));
-  test.Delete(6);
-  EXPECT_FALSE(test.Exists(6));
-  test.Delete(8);
-  EXPECT_FALSE(test.Exists(8));
-  test.Delete(3);
-  EXPECT_FALSE(test.Exists(3));
-  test.Delete(7);
-  EXPECT_FALSE(test.Exists(7));
-  test.Delete(5);
-  EXPECT_FALSE(test.Exists(5));
-  EXPECT_TRUE(test.Empty());
+TEST(SplayTree, InsertFind4) {
+  // Create different trees and try to add there elements which are already
+  // present there
+  std::vector<std::pair<int, int>> input{{1, 10}, {2, 20}, {3, 30}, {4, 40},
+                                         {5, 50}, {6, 60}, {7, 70}, {8, 80}};
+  int count = 0;
+  do {
+    count++;
+    SplayTree<int, int> test;
+    for (const auto& el : input) {
+      EXPECT_TRUE(test.Insert(el.first, el.second))
+          << "count = " << count << " key = " << el.first << '\n';
+    }
+    for (const auto& search_el : input) {
+      EXPECT_FALSE(test.Insert(search_el.first, search_el.first))
+          << "count = " << count << " key = " << search_el.first << '\n';
+      EXPECT_FALSE(test.Insert(search_el.first, search_el.second))
+          << "count = " << count << " key = " << search_el.first << '\n';
+    }
+  } while (std::next_permutation(input.begin(), input.end()));
 }
 
-TEST(SplayTree, DeleteInsideNodesWithLeafMax1) {
-  SplayTree<int, int> test;
-  test.Insert(50, 0);
-  test.Insert(30, 0);
-  test.Insert(40, 0);
-  test.Insert(20, 0);
-  test.Insert(70, 0);
-  test.Insert(60, 0);
-  test.Insert(80, 0);
-  test.Insert(10, 0);
-  test.Insert(25, 0);
-  test.Insert(35, 0);
-  test.Insert(45, 0);
-  test.Insert(55, 0);
-  test.Insert(65, 0);
-  test.Insert(75, 0);
-  test.Insert(85, 0);
-
-  test.Delete(30);
-  EXPECT_FALSE(test.Exists(30));
-  test.Delete(70);
-  EXPECT_FALSE(test.Exists(70));
+TEST(SplayTree, InsertFind5) {
+  // Search for absent elements in different trees
+  std::vector<std::pair<int, int>> input{{10, 10}, {20, 20}, {30, 30},
+                                         {40, 40}, {50, 50}, {60, 60},
+                                         {70, 70}, {80, 80}};
+  std::vector<int> search_keys{5, 15, 25, 35, 45, 55, 65, 75, 85};
+  int count = 0;
+  do {
+    count++;
+    SplayTree<int, int> test;
+    for (const auto& el : input) {
+      EXPECT_TRUE(test.Insert(el.first, el.second))
+          << "count = " << count << " key = " << el.first << '\n';
+    }
+    for (const auto& key : search_keys) {
+      EXPECT_FALSE(test.Find(key))
+          << "count = " << count << " key = " << key << '\n';
+    }
+  } while (std::next_permutation(input.begin(), input.end()));
 }
 
-TEST(SplayTree, DeleteInsideNodesWithLeafMin) {
-  SplayTree<int, int> test;
-  test.Insert(50, 0);
-  test.Insert(30, 0);
-  test.Insert(20, 0);
-  test.Insert(70, 0);
-  test.Insert(60, 0);
-  test.Insert(10, 0);
-  test.Insert(25, 0);
-  test.Insert(55, 0);
-  test.Insert(65, 0);
+// TODO Delete one element from different trees, check that all other elements
+// are present
+// TODO Delete all elements from different trees, check that tree is empty at
+// the end
 
-  test.Delete(30);
-  EXPECT_FALSE(test.Exists(30));
-  test.Delete(70);
-  EXPECT_FALSE(test.Exists(70));
-}
-
-TEST(SplayTree, DeleteInsideNodesWithLeafMax2) {
-  SplayTree<int, int> test;
-  test.Insert(50, 0);
-  test.Insert(30, 0);
-  test.Insert(40, 0);
-  test.Insert(70, 0);
-  test.Insert(80, 0);
-  test.Insert(35, 0);
-  test.Insert(45, 0);
-  test.Insert(75, 0);
-  test.Insert(85, 0);
-
-  test.Delete(30);
-  EXPECT_FALSE(test.Exists(30));
-  test.Delete(70);
-  EXPECT_FALSE(test.Exists(70));
-}
-
-TEST(SplayTree, DeleteInsideNodeNotLeafMax) {
-  SplayTree<int, int> test;
-  test.Insert(50, 0);
-  test.Insert(30, 0);
-  test.Insert(40, 0);
-  test.Insert(20, 0);
-  test.Insert(70, 0);
-  test.Insert(60, 0);
-  test.Insert(80, 0);
-  test.Insert(10, 0);
-  test.Insert(25, 0);
-  test.Insert(35, 0);
-  test.Insert(45, 0);
-  test.Insert(55, 0);
-  test.Insert(65, 0);
-  test.Insert(75, 0);
-  test.Insert(85, 0);
-  test.Insert(37, 0);
-
-  test.Delete(30);
-  EXPECT_FALSE(test.Exists(30));
-}
-
-TEST(SplayTree, DeleteInsideNodeNotLeafMin) {
-  SplayTree<int, int> test;
-  test.Insert(50, 0);
-  test.Insert(30, 0);
-  test.Insert(20, 0);
-  test.Insert(70, 0);
-  test.Insert(60, 0);
-  test.Insert(80, 0);
-  test.Insert(10, 0);
-  test.Insert(25, 0);
-  test.Insert(55, 0);
-  test.Insert(65, 0);
-  test.Insert(75, 0);
-  test.Insert(85, 0);
-  test.Insert(23, 0);
-
-  test.Delete(30);
-  EXPECT_FALSE(test.Exists(30));
-}
-
-TEST(SplayTree, DeleteLastButOneMax) {
-  SplayTree<int, int> test;
-  test.Insert(50, 0);
-  test.Insert(30, 0);
-  test.Insert(40, 0);
-  test.Insert(20, 0);
-  test.Insert(70, 0);
-  test.Insert(60, 0);
-  test.Insert(80, 0);
-
-  test.Delete(30);
-  EXPECT_FALSE(test.Exists(30));
-  test.Delete(70);
-  EXPECT_FALSE(test.Exists(70));
-  EXPECT_FALSE(test.Exists(45));
-}
-
-TEST(SplayTree, DeleteLastButOneMin) {
-  SplayTree<int, int> test;
-  test.Insert(50, 0);
-  test.Insert(30, 0);
-  test.Insert(20, 0);
-  test.Insert(70, 0);
-  test.Insert(60, 0);
-
-  test.Delete(30);
-  EXPECT_FALSE(test.Exists(30));
-  test.Delete(70);
-  EXPECT_FALSE(test.Exists(70));
-}
-
-TEST(SplayTree, DeleteHeadBothBranchesFull) {
-  SplayTree<int, int> test;
-  test.Insert(5, 0);
-  test.Insert(3, 0);
-  test.Insert(4, 0);
-  test.Insert(2, 0);
-  test.Insert(7, 0);
-  test.Insert(6, 0);
-  test.Insert(8, 0);
-
-  test.Delete(5);
-  EXPECT_FALSE(test.Exists(5));
-  EXPECT_FALSE(test.Empty());
-  EXPECT_TRUE(test.Exists(3));
-  EXPECT_TRUE(test.Exists(4));
-  EXPECT_TRUE(test.Exists(2));
-  EXPECT_TRUE(test.Exists(6));
-  EXPECT_TRUE(test.Exists(7));
-  EXPECT_TRUE(test.Exists(8));
-}
-
-TEST(SplayTree, DeleteHeadOnlyLeftBranchPresent) {
-  SplayTree<int, int> test;
-  test.Insert(5, 0);
-  test.Insert(3, 0);
-  test.Insert(4, 0);
-  test.Insert(2, 0);
-
-  test.Delete(5);
-  EXPECT_FALSE(test.Exists(5));
-  EXPECT_FALSE(test.Empty());
-  EXPECT_TRUE(test.Exists(3));
-  EXPECT_TRUE(test.Exists(4));
-  EXPECT_TRUE(test.Exists(2));
-}
-
-TEST(SplayTree, DeleteHead) {
-  SplayTree<int, int> test;
-  test.Insert(5, 0);
-
-  test.Delete(5);
-  EXPECT_FALSE(test.Exists(5));
-  EXPECT_TRUE(test.Empty());
-}
-
-TEST(SplayTree, DeleteHeadOnlyOneOnTheLeft) {
-  SplayTree<int, int> test;
-  test.Insert(5, 0);
-  test.Insert(3, 0);
-
-  test.Delete(5);
-  EXPECT_FALSE(test.Exists(5));
-  EXPECT_FALSE(test.Empty());
-  EXPECT_TRUE(test.Exists(3));
-}
-
-TEST(SplayTree, DeleteHeadOnlyOneOnTheRight) {
-  SplayTree<int, int> test;
-  test.Insert(5, 0);
-  test.Insert(8, 0);
-
-  test.Delete(5);
-  EXPECT_FALSE(test.Exists(5));
-  EXPECT_FALSE(test.Empty());
-  EXPECT_TRUE(test.Exists(8));
-}
-*/
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

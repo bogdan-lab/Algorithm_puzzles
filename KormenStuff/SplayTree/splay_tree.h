@@ -29,15 +29,17 @@ class SplayTree {
       root_ = new Node(key, value);
       return true;
     }
-    auto [left, right] = SplitImpl(root_, key);
-    if (!(key < right->key)) {
+    auto [left, right] = SplitImpl(key);
+    if (right && !(key < right->key)) {
+      root_ = MergeImpl(left, right);
       return false;  // key is already there!
     }
     root_ = new Node(key, value);
     root_->left = left;
-    left->parent = root_;
+    if (left) left->parent = root_;
     root_->right = right;
-    right->parent = root_;
+    if (right) right->parent = root_;
+    return true;
   }
   /**
    * Deletes element with given key from the tree.
@@ -85,9 +87,17 @@ class SplayTree {
     if (node->left) DeleteImpl(node->left);
     delete node;
   }
-  /**Call when node is left child*/
+  /**
+   * Rotates subtree to the right around given node.
+   * In the result of the operation given node becomes parent of its parent
+   * and its parent becomes the left child of the node.
+   *
+   * @warning method expects that node and its parent are not nullptr
+   * Also it expects that node is the left child of the parent
+   */
   static void RotateRight(Node* node) {
     assert(node && node->parent);
+    assert(node == node->parent->left);
     Node* parent = node->parent;
     // parent connection
     Node* grand = parent->parent;
@@ -102,12 +112,20 @@ class SplayTree {
     parent->parent = node;
     // child connection
     parent->left = node->right;
-    parent->left->parent = parent;
+    if (parent->left) parent->left->parent = parent;
     node->right = parent;
   }
-  /**Call when node is right child*/
+  /**
+   * Rotates subtree to the left around given node.
+   * In the result of the operation given node becomes parent of its parent
+   * and its parent becomes the left child of the node.
+   *
+   * @warning method expects that node and its parent are not nullptr
+   * Also it expects that node is the right child of the parent
+   */
   static void RotateLeft(Node* node) {
     assert(node && node->parent);
+    assert(node == node->parent->right);
     Node* parent = node->parent;
     // parent connection
     Node* grand = parent->parent;
@@ -122,7 +140,7 @@ class SplayTree {
     parent->parent = node;
     // child connection
     parent->right = node->left;
-    parent->right->parent = parent;
+    if (parent->right) parent->right->parent = parent;
     node->left = parent;
   }
   /**
@@ -138,6 +156,8 @@ class SplayTree {
       } else {
         RotateLeft(node);
       }
+      Splay(node);
+      assert(!node->parent);
       return;
     }
     // Here we have grandparent
@@ -145,24 +165,28 @@ class SplayTree {
       RotateRight(node->parent);
       RotateRight(node);
       Splay(node);
+      assert(!node->parent);
       return;
     }
     if (parent->right == node && grand->right == parent) {
       RotateLeft(node->parent);
       RotateLeft(node);
       Splay(node);
+      assert(!node->parent);
       return;
     }
     if (parent->right == node && grand->left == parent) {
       RotateLeft(node);
       RotateRight(node);
       Splay(node);
+      assert(!node->parent);
       return;
     }
     if (parent->left == node && grand->right == parent) {
       RotateRight(node);
       RotateLeft(node);
       Splay(node);
+      assert(!node->parent);
       return;
     }
   }
@@ -174,10 +198,10 @@ class SplayTree {
    */
   static Node* FindImpl(Node* node, const Key& key) {
     assert(node);
-    if (key < node->key && node->lfet) {
-      return Find(node->left, key);
+    if (key < node->key && node->left) {
+      return FindImpl(node->left, key);
     } else if (node->key < key && node->right) {
-      return Find(node->right, key);
+      return FindImpl(node->right, key);
     }
     Splay(node);
     return node;
@@ -185,39 +209,44 @@ class SplayTree {
   /**
    * Splits given tree into two, where the first one will have all keys smaller
    * than the given, and the second - all the rest.
+   *
+   * @warning Method breaks tree into two and the one should be restored
+   * explicitly after required work is done!
+   * Expects that tree is not empty
    */
-  static std::pair<Node*, Node*> SplitImpl(Node* root, const Key& key) {
-    assert(root);
-    root = FindImpl(root, key);
-    if (root->key < key) {
+  std::pair<Node*, Node*> SplitImpl(const Key& key) {
+    assert(root_);
+    root_ = FindImpl(root_, key);
+    if (root_->key < key) {
       // split with root in the left
-      Node* right = root->right;
-      root->right = nullptr;
-      right->parent = nullptr;
-      return {root, right};
+      Node* right = root_->right;
+      root_->right = nullptr;
+      if (right) right->parent = nullptr;
+      return {root_, right};
     } else {
       // split with root in the right
-      Node* left = root->left;
-      root->left = nullptr;
-      left->parent = nullptr;
-      return {left, root};
+      Node* left = root_->left;
+      root_->left = nullptr;
+      if (left) left->parent = nullptr;
+      return {left, root_};
     }
   }
 
   /**
-   * Merges two trees. Assumes that all keys in the left tree are smaller than
-   * all keys in the right tree.
-   * left and right pointers are expected to be pointers to the tree roots
+   * Merges two trees.
+   * @warning Assumes that all keys in the left tree are smaller than all keys
+   * in the right tree. Left and right pointers are expected to be pointers to
+   * the tree roots
    */
   static Node* MergeImpl(Node* left, Node* right) {
-    assert(!left->parent);
-    assert(!right->parent);
+    assert(!left || !left->parent);
+    assert(!right || !right->parent);
     if (!right) return left;
     if (!left) return right;
     Node* root = FindImpl(right, left->key);
     assert(!root->left);
     root->left = left;
-    left->parent = root->left;
+    left->parent = root;
     return root;
   }
 
