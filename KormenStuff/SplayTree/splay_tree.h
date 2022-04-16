@@ -19,10 +19,20 @@ class SplayTree {
 
  public:
   SplayTree() = default;
+
   ~SplayTree() {
-    DeleteImpl(root_);
+    if (!root_) return;
+    while (root_->left || root_->right) {
+      DeleteFromRoot();
+    }
+    delete root_;
     root_ = nullptr;
   }
+  /**
+   * Inserts given pair into the tree. If given key is already present in the
+   * tree method does nothing. Returns true if the element was added and false
+   * otherwise.
+   */
   bool Insert(const Key& key, const Value& value) {
     // Split and create
     if (!root_) {
@@ -54,14 +64,10 @@ class SplayTree {
     if (key < root_->key || root_->key < key) {
       return false;
     }
-    Node* left = root_->left;
-    if (left) left->parent = nullptr;
-    Node* right = root_->right;
-    if (right) right->parent = nullptr;
-    delete root_;
-    root_ = MergeImpl(left, right);
+    DeleteFromRoot();
     return true;
   }
+
   /**Returns true if tree is empty*/
   bool Empty() const { return !root_; }
   /**
@@ -81,12 +87,6 @@ class SplayTree {
   }
 
  private:
-  static void DeleteImpl(Node* node) {
-    if (!node) return;
-    if (node->right) DeleteImpl(node->right);
-    if (node->left) DeleteImpl(node->left);
-    delete node;
-  }
   /**
    * Rotates subtree to the right around given node.
    * In the result of the operation given node becomes parent of its parent
@@ -144,52 +144,39 @@ class SplayTree {
     node->left = parent;
   }
   /**
-   * Moves the given pointer to the tree root.
+   * Moves the given pointer to the tree root and returns it.
    */
-  static void Splay(Node* node) {
+  static Node* Splay(Node* node) {
+    assert(node);
     Node* parent = node->parent;
-    if (!parent) return;
-    Node* grand = parent->parent;
-    if (!grand) {
-      if (node == parent->left) {
+    while (parent) {
+      bool node_is_left_child = parent->left == node;
+      Node* grand = parent->parent;
+      if (!grand) {
+        if (node_is_left_child) {
+          RotateRight(node);
+        } else {
+          RotateLeft(node);
+        }
+      } else if (node_is_left_child && grand->left == parent) {
+        RotateRight(parent);
+        RotateRight(node);
+      } else if (!node_is_left_child && grand->right == parent) {
+        RotateLeft(parent);
+        RotateLeft(node);
+      } else if (!node_is_left_child && grand->left == parent) {
+        RotateLeft(node);
         RotateRight(node);
       } else {
+        RotateRight(node);
         RotateLeft(node);
       }
-      Splay(node);
-      assert(!node->parent);
-      return;
+      parent = node->parent;
     }
-    // Here we have grandparent
-    if (parent->left == node && grand->left == parent) {
-      RotateRight(node->parent);
-      RotateRight(node);
-      Splay(node);
-      assert(!node->parent);
-      return;
-    }
-    if (parent->right == node && grand->right == parent) {
-      RotateLeft(node->parent);
-      RotateLeft(node);
-      Splay(node);
-      assert(!node->parent);
-      return;
-    }
-    if (parent->right == node && grand->left == parent) {
-      RotateLeft(node);
-      RotateRight(node);
-      Splay(node);
-      assert(!node->parent);
-      return;
-    }
-    if (parent->left == node && grand->right == parent) {
-      RotateRight(node);
-      RotateLeft(node);
-      Splay(node);
-      assert(!node->parent);
-      return;
-    }
+    assert(!node->parent);  // we are returnung root
+    return node;
   }
+
   /**
    * Returns the node which ended up in a root. If the requested key was not
    * found, method will return the possible parrent for such key. Note that in
@@ -198,13 +185,16 @@ class SplayTree {
    */
   static Node* FindImpl(Node* node, const Key& key) {
     assert(node);
-    if (key < node->key && node->left) {
-      return FindImpl(node->left, key);
-    } else if (node->key < key && node->right) {
-      return FindImpl(node->right, key);
+    while (true) {
+      if (key < node->key && node->left) {
+        node = node->left;
+      } else if (node->key < key && node->right) {
+        node = node->right;
+      } else {
+        break;
+      }
     }
-    Splay(node);
-    return node;
+    return Splay(node);
   }
   /**
    * Splits given tree into two, where the first one will have all keys smaller
@@ -231,7 +221,6 @@ class SplayTree {
       return {left, root_};
     }
   }
-
   /**
    * Merges two trees.
    * @warning Assumes that all keys in the left tree are smaller than all keys
@@ -248,6 +237,18 @@ class SplayTree {
     root->left = left;
     left->parent = root;
     return root;
+  }
+  /**
+   * Deletes node from the root.
+   */
+  void DeleteFromRoot() {
+    assert(root_);
+    Node* left = root_->left;
+    if (left) left->parent = nullptr;
+    Node* right = root_->right;
+    if (right) right->parent = nullptr;
+    delete root_;
+    root_ = MergeImpl(left, right);
   }
 
   Node* root_ = nullptr;
