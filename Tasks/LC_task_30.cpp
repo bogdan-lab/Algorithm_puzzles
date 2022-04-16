@@ -4,6 +4,7 @@
 #include <queue>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <vector>
 
 std::queue<size_t> FindWord(std::string_view input, std::string_view word) {
@@ -37,7 +38,7 @@ struct WordPos {
 
 struct PriorityCompare {
   bool operator()(const WordPos& lhs, const WordPos& rhs) const {
-    return lhs.pos > rhs.pos;
+    return std::tie(lhs.pos, lhs.id) > std::tie(rhs.pos, rhs.id);
   }
 };
 
@@ -62,15 +63,31 @@ class Solution {
         map_queue;
 
     for (size_t i = 0; i < word_map.size(); ++i) {
-      map_queue.push({i, word_map[i].front()});
-      word_map[i].pop();
+      while (!word_map[i].empty()) {
+        map_queue.push({i, word_map[i].front()});
+        word_map[i].pop();
+      }
     }
 
     std::vector<int> word_is_present(word_views.size());
     std::queue<WordPos> picked_queue;
     size_t next_index = 0;
     while (!map_queue.empty()) {
-      const WordPos& top = map_queue.top();
+      // When we can pick several same words, we try to pick it one by one
+      // and pick first that is not picked yet.
+      // It is critical to pick the first, because of the logic of the deletion
+      // of the picked_queue tail when we need to do it
+      WordPos top = map_queue.top();
+      WordPos next_top = map_queue.top();
+      bool set_first_valid = false;
+      while (!map_queue.empty() && top.pos == next_top.pos) {
+        if (!word_is_present[next_top.id] && !set_first_valid) {
+          set_first_valid = true;
+          top = next_top;
+        }
+        map_queue.pop();
+        next_top = map_queue.top();
+      }
       if (top.pos == next_index) {
         // add to the current picked_queue
         if (word_is_present[top.id]) {
@@ -99,12 +116,6 @@ class Solution {
         result.push_back(picked_queue.front().pos);
       }
       next_index = picked_queue.back().pos + word_views.front().size();
-      if (!word_map[top.id].empty()) {
-        WordPos new_el{top.id, word_map[top.id].front()};
-        word_map[top.id].pop();
-        map_queue.push(new_el);
-      }
-      map_queue.pop();
     }
     return result;
   }
@@ -140,6 +151,14 @@ int main() {
     std::string str = "wordgoodgoodgoodbestword";
     std::vector<std::string> words{"word", "good", "best", "good"};
     std::vector<int> expected{8};
+    auto result = test.findSubstring(str, words);
+    assert(result == expected);
+  }
+  {
+    Solution test;
+    std::string str = "ababababab";
+    std::vector<std::string> words{"ababa", "babab"};
+    std::vector<int> expected{0};
     auto result = test.findSubstring(str, words);
     assert(result == expected);
   }
