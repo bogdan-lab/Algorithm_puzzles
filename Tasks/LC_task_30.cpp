@@ -86,14 +86,20 @@ std::vector<WordPos> CreateWordString(
   return result;
 }
 
+void ClearQueue(std::queue<int>& data) {
+  while (!data.empty()) {
+    data.pop();
+  }
+}
+
 void AddToSolution(std::vector<int>& result, size_t start_index,
                    size_t word_size, size_t string_size,
                    const std::vector<WordPos>& word_string,
                    const std::vector<int>& initial_count_pattern) {
   std::vector<int> curr_pattern = initial_count_pattern;
-  size_t start_pos = word_string[start_index].pos;
-  size_t next_pos = start_pos;
+  std::queue<int> picked_indexes;
   auto it = word_string.begin() + start_index;
+  size_t next_pos = it->pos;
   // if we find pattern match_count == count_pattern.size()
   size_t match_count = 0;
   while (true) {
@@ -105,11 +111,12 @@ void AddToSolution(std::vector<int>& result, size_t start_index,
       // found gap -> restart counting
       match_count = 0;
       curr_pattern = initial_count_pattern;
-      start_index = it - word_string.begin();
-      start_pos = word_string[start_index].pos;
-      next_pos = start_pos;
+      ClearQueue(picked_indexes);
+      next_pos = it->pos;
     }
     // make_count
+    picked_indexes.push(it - word_string.begin());
+    int match_start_idx = picked_indexes.front();
     curr_pattern[it->id]--;
     if (curr_pattern[it->id] == 0) {
       match_count++;
@@ -117,22 +124,21 @@ void AddToSolution(std::vector<int>& result, size_t start_index,
       match_count--;
     }
     // check for the answer
-    if (match_count == count_pattern.size()) {
-      result.push_back(start_pos);
+    if (match_count == curr_pattern.size()) {
+      result.push_back(word_string[match_start_idx].pos);
     }
     // update next_pos and delete tail if needed
     next_pos += word_size;
-    if (next_pos - start_pos >= string_size) {
+    if (next_pos - word_string[match_start_idx].pos >= string_size) {
       // unmake count at start_pos
-      size_t id = word_string[start_index].id;
+      size_t id = word_string[match_start_idx].id;
       curr_pattern[id]++;
       if (curr_pattern[id] == 0) {
         match_count++;
       } else if (curr_pattern[id] == 1) {
         match_count--;
       }
-      start_index++;
-      start_pos = word_string[start_index].pos;
+      picked_indexes.pop();
     }
   }
 }
@@ -152,71 +158,14 @@ class Solution {
     if (word_string.empty()) {
       return result;
     }
-    // TODO for each index in word string call AddToSolution
 
-    // OLD SOLUTION
-
-    for (const auto& el : word_map) {
-      if (el.empty()) return result;
+    size_t word_size = words.front().size();
+    for (size_t i = 0; i < word_string.size(); ++i) {
+      AddToSolution(result, i, word_size, words.size() * word_size, word_string,
+                    pattern.GetCount());
     }
-    std::priority_queue<WordPos, std::vector<WordPos>, PriorityCompare>
-        map_queue;
-
-    for (size_t i = 0; i < word_map.size(); ++i) {
-      while (!word_map[i].empty()) {
-        map_queue.push({i, word_map[i].front()});
-        word_map[i].pop();
-      }
-    }
-
-    std::vector<int> word_is_present(word_views.size());
-    std::queue<WordPos> picked_queue;
-    size_t next_index = 0;
-    while (!map_queue.empty()) {
-      // When we can pick several same words, we try to pick it one by one
-      // and pick first that is not picked yet.
-      // It is critical to pick the first, because of the logic of the deletion
-      // of the picked_queue tail when we need to do it
-      WordPos top = map_queue.top();
-      WordPos next_top = map_queue.top();
-      bool set_first_valid = false;
-      while (!map_queue.empty() && top.pos == next_top.pos) {
-        if (!word_is_present[next_top.id] && !set_first_valid) {
-          set_first_valid = true;
-          top = next_top;
-        }
-        map_queue.pop();
-        next_top = map_queue.top();
-      }
-      if (top.pos == next_index) {
-        // add to the current picked_queue
-        if (word_is_present[top.id]) {
-          // delete all chosen words before it and itself
-          size_t curr_id = picked_queue.front().id;
-          while (curr_id != top.id) {
-            word_is_present[curr_id] = 0;
-            picked_queue.pop();
-            curr_id = picked_queue.front().id;
-          }
-          word_is_present[top.id] = 0;
-          picked_queue.pop();  // deleted old top.id
-        }
-      } else {
-        // found substring that does not match any word -> free picked_queue
-        while (!picked_queue.empty()) {
-          word_is_present[picked_queue.front().id] = 0;
-          picked_queue.pop();
-        }
-      }
-      word_is_present[top.id] = 1;
-      picked_queue.push(top);
-      // Finalize step - guarantee map_queu reduction, update next index and
-      // check for success
-      if (picked_queue.size() == word_views.size()) {
-        result.push_back(picked_queue.front().pos);
-      }
-      next_index = picked_queue.back().pos + word_views.front().size();
-    }
+    std::sort(result.begin(), result.end());
+    result.erase(std::unique(result.begin(), result.end()), result.end());
     return result;
   }
 };
@@ -259,6 +208,22 @@ int main() {
     std::string str = "ababababab";
     std::vector<std::string> words{"ababa", "babab"};
     std::vector<int> expected{0};
+    auto result = test.findSubstring(str, words);
+    assert(result == expected);
+  }
+  {
+    Solution test;
+    std::string str = "a";
+    std::vector<std::string> words{"a"};
+    std::vector<int> expected{0};
+    auto result = test.findSubstring(str, words);
+    assert(result == expected);
+  }
+  {
+    Solution test;
+    std::string str = "sheateateseatea";
+    std::vector<std::string> words{"sea", "tea", "ate"};
+    std::vector<int> expected{6};
     auto result = test.findSubstring(str, words);
     assert(result == expected);
   }
