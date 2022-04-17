@@ -36,26 +36,126 @@ struct WordPos {
   size_t pos;
 };
 
+class WordPattern {
+ public:
+  void AddWord(std::string_view word) {
+    auto it = std::find(words_.begin(), words_.end(), word);
+    if (it == words_.end()) {
+      words_.push_back(word);
+      count_.push_back(1);
+    } else {
+      count_[it - words_.begin()] += 1;
+    }
+  }
+
+  const std::vector<std::string_view> GetUniqueWords() const { return words_; }
+
+  const std::vector<int> GetCount() const { return count_; }
+
+ private:
+  std::vector<std::string_view> words_;
+  std::vector<int> count_;
+};
+
 struct PriorityCompare {
   bool operator()(const WordPos& lhs, const WordPos& rhs) const {
     return std::tie(lhs.pos, lhs.id) > std::tie(rhs.pos, rhs.id);
   }
 };
 
+std::vector<WordPos> CreateWordString(
+    std::string_view input, const std::vector<std::string_view>& unique_words) {
+  std::vector<WordPos> result;
+  std::vector<std::queue<size_t>> word_map =
+      GetWordsStartPos(input, unique_words);
+  std::priority_queue<WordPos, std::vector<WordPos>, PriorityCompare> map_queue;
+  for (size_t i = 0; i < word_map.size(); ++i) {
+    if (word_map[i].empty()) return result;
+    map_queue.push({i, word_map[i].front()});
+    word_map[i].pop();
+  }
+  while (!map_queue.empty()) {
+    WordPos top = map_queue.top();
+    result.push_back(top);
+    map_queue.pop();
+    if (!word_map[top.id].empty()) {
+      map_queue.push({top.id, word_map[top.id].front()});
+      word_map[top.id].pop();
+    }
+  }
+  return result;
+}
+
+void AddToSolution(std::vector<int>& result, size_t start_index,
+                   size_t word_size, size_t string_size,
+                   const std::vector<WordPos>& word_string,
+                   const std::vector<int>& initial_count_pattern) {
+  std::vector<int> curr_pattern = initial_count_pattern;
+  size_t start_pos = word_string[start_index].pos;
+  size_t next_pos = start_pos;
+  auto it = word_string.begin() + start_index;
+  // if we find pattern match_count == count_pattern.size()
+  size_t match_count = 0;
+  while (true) {
+    it = std::find_if(it, word_string.end(), [&next_pos](const WordPos& el) {
+      return next_pos <= el.pos;
+    });
+    if (it == word_string.end()) return;
+    if (it->pos > next_pos) {
+      // found gap -> restart counting
+      match_count = 0;
+      curr_pattern = initial_count_pattern;
+      start_index = it - word_string.begin();
+      start_pos = word_string[start_index].pos;
+      next_pos = start_pos;
+    }
+    // make_count
+    curr_pattern[it->id]--;
+    if (curr_pattern[it->id] == 0) {
+      match_count++;
+    } else if (curr_pattern[it->id] == -1) {
+      match_count--;
+    }
+    // check for the answer
+    if (match_count == count_pattern.size()) {
+      result.push_back(start_pos);
+    }
+    // update next_pos and delete tail if needed
+    next_pos += word_size;
+    if (next_pos - start_pos >= string_size) {
+      // unmake count at start_pos
+      size_t id = word_string[start_index].id;
+      curr_pattern[id]++;
+      if (curr_pattern[id] == 0) {
+        match_count++;
+      } else if (curr_pattern[id] == 1) {
+        match_count--;
+      }
+      start_index++;
+      start_pos = word_string[start_index].pos;
+    }
+  }
+}
+
 class Solution {
  public:
   std::vector<int> findSubstring(std::string s,
                                  std::vector<std::string>& words) {
-    std::vector<std::string_view> word_views;
-    word_views.reserve(words.size());
+    WordPattern pattern;
     for (const auto& el : words) {
-      word_views.push_back(el);
+      pattern.AddWord(el);
     }
-    std::string_view s_view = s;
-    std::vector<std::queue<size_t>> word_map =
-        GetWordsStartPos(s_view, word_views);
 
+    std::vector<WordPos> word_string =
+        CreateWordString(s, pattern.GetUniqueWords());
     std::vector<int> result;
+    if (word_string.empty()) {
+      return result;
+    }
+    // TODO for each index in word string call AddToSolution
+
+    // OLD SOLUTION
+
     for (const auto& el : word_map) {
       if (el.empty()) return result;
     }
