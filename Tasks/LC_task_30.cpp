@@ -92,7 +92,7 @@ void ClearQueue(std::queue<int>& data) {
   }
 }
 
-void AddToSolution(std::vector<int>& result, size_t start_index,
+void AddToSolution(std::vector<int>& lookup_table, size_t start_index,
                    size_t word_size, size_t string_size,
                    const std::vector<WordPos>& word_string,
                    const std::vector<int>& initial_count_pattern) {
@@ -125,7 +125,13 @@ void AddToSolution(std::vector<int>& result, size_t start_index,
     }
     // check for the answer
     if (match_count == curr_pattern.size()) {
-      result.push_back(word_string[match_start_idx].pos);
+      size_t pos = word_string[match_start_idx].pos;
+      if (!lookup_table[pos]) {
+        lookup_table[pos] = 1;
+      } else {
+        // we are on the path we have already studied
+        return;
+      }
     }
     // update next_pos and delete tail if needed
     next_pos += word_size;
@@ -143,6 +149,14 @@ void AddToSolution(std::vector<int>& result, size_t start_index,
   }
 }
 
+std::vector<int> ConvertLookUpTable(const std::vector<int>& table) {
+  std::vector<int> result;
+  for (size_t i = 0; i < table.size(); ++i) {
+    if (table[i]) result.push_back(i);
+  }
+  return result;
+}
+
 class Solution {
  public:
   std::vector<int> findSubstring(std::string s,
@@ -154,19 +168,17 @@ class Solution {
 
     std::vector<WordPos> word_string =
         CreateWordString(s, pattern.GetUniqueWords());
-    std::vector<int> result;
     if (word_string.empty()) {
-      return result;
+      return {};
     }
 
+    std::vector<int> lookup_table(s.size());
     size_t word_size = words.front().size();
     for (size_t i = 0; i < word_string.size(); ++i) {
-      AddToSolution(result, i, word_size, words.size() * word_size, word_string,
-                    pattern.GetCount());
+      AddToSolution(lookup_table, i, word_size, words.size() * word_size,
+                    word_string, pattern.GetCount());
     }
-    std::sort(result.begin(), result.end());
-    result.erase(std::unique(result.begin(), result.end()), result.end());
-    return result;
+    return ConvertLookUpTable(lookup_table);
   }
 };
 
