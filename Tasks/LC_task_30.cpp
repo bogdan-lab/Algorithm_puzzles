@@ -1,40 +1,12 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
-#include <queue>
+#include <limits>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <vector>
 
-std::queue<size_t> FindWord(std::string_view input, std::string_view word) {
-  std::queue<size_t> result;
-  size_t pos = 0;
-  while (true) {
-    size_t new_pos = input.find(word, pos);
-    if (new_pos == std::string_view::npos) {
-      break;
-    }
-    result.push(new_pos);
-    pos = new_pos + 1;
-  }
-  return result;
-}
-
-std::vector<std::queue<size_t>> GetWordsStartPos(
-    std::string_view input, const std::vector<std::string_view>& words) {
-  std::vector<std::queue<size_t>> res;
-  res.reserve(words.size());
-  for (const auto& el : words) {
-    res.push_back(FindWord(input, el));
-  }
-  return res;
-}
-
-struct WordPos {
-  size_t id;
-  size_t pos;
-};
+constexpr size_t kEmptyId = std::numeric_limits<size_t>::max();
 
 class WordPattern {
  public:
@@ -57,104 +29,71 @@ class WordPattern {
   std::vector<int> count_;
 };
 
-struct PriorityCompare {
-  bool operator()(const WordPos& lhs, const WordPos& rhs) const {
-    return std::tie(lhs.pos, lhs.id) > std::tie(rhs.pos, rhs.id);
+void AddPosForWord(std::vector<size_t>& word_map, size_t w_id,
+                   std::string_view word, std::string_view input) {
+  size_t curr_pos = 0;
+  while (true) {
+    curr_pos = input.find(word, curr_pos);
+    if (curr_pos == std::string_view::npos) return;
+    word_map[curr_pos] = w_id;
+    curr_pos++;
   }
-};
+}
 
-std::vector<WordPos> CreateWordString(
+std::vector<size_t> CreateWordString(
     std::string_view input, const std::vector<std::string_view>& unique_words) {
-  std::vector<WordPos> result;
-  std::vector<std::queue<size_t>> word_map =
-      GetWordsStartPos(input, unique_words);
-  std::priority_queue<WordPos, std::vector<WordPos>, PriorityCompare> map_queue;
-  for (size_t i = 0; i < word_map.size(); ++i) {
-    if (word_map[i].empty()) return result;
-    map_queue.push({i, word_map[i].front()});
-    word_map[i].pop();
-  }
-  while (!map_queue.empty()) {
-    WordPos top = map_queue.top();
-    result.push_back(top);
-    map_queue.pop();
-    if (!word_map[top.id].empty()) {
-      map_queue.push({top.id, word_map[top.id].front()});
-      word_map[top.id].pop();
-    }
+  std::vector<size_t> result(input.size(), kEmptyId);
+  for (size_t i = 0; i < unique_words.size(); ++i) {
+    AddPosForWord(result, i, unique_words[i], input);
   }
   return result;
 }
 
-void ClearQueue(std::queue<int>& data) {
-  while (!data.empty()) {
-    data.pop();
-  }
-}
-
-void AddToSolution(std::vector<int>& lookup_table, size_t start_index,
+void AddToSolution(std::vector<int>& result, size_t start_index,
                    size_t word_size, size_t string_size,
-                   const std::vector<WordPos>& word_string,
+                   const std::vector<size_t>& word_string,
                    const std::vector<int>& initial_count_pattern) {
   std::vector<int> curr_pattern = initial_count_pattern;
-  std::queue<int> picked_indexes;
-  auto it = word_string.begin() + start_index;
-  size_t next_pos = it->pos;
+  // count first word if it exist
+  std::optional<size_t> begin_index;
+  size_t next_index = start_index;
   // if we find pattern match_count == count_pattern.size()
   size_t match_count = 0;
-  while (true) {
-    it = std::find_if(it, word_string.end(), [&next_pos](const WordPos& el) {
-      return next_pos <= el.pos;
-    });
-    if (it == word_string.end()) return;
-    if (it->pos > next_pos) {
+  while (next_index < word_string.size()) {
+    if (word_string[next_index] == kEmptyId) {
       // found gap -> restart counting
       match_count = 0;
       curr_pattern = initial_count_pattern;
-      ClearQueue(picked_indexes);
-      next_pos = it->pos;
-    }
-    // make_count
-    picked_indexes.push(it - word_string.begin());
-    int match_start_idx = picked_indexes.front();
-    curr_pattern[it->id]--;
-    if (curr_pattern[it->id] == 0) {
-      match_count++;
-    } else if (curr_pattern[it->id] == -1) {
-      match_count--;
-    }
-    // check for the answer
-    if (match_count == curr_pattern.size()) {
-      size_t pos = word_string[match_start_idx].pos;
-      if (!lookup_table[pos]) {
-        lookup_table[pos] = 1;
-      } else {
-        // we are on the path we have already studied
-        return;
+      begin_index.reset();
+    } else {
+      if (!begin_index) {
+        begin_index = next_index;
       }
-    }
-    // update next_pos and delete tail if needed
-    next_pos += word_size;
-    if (next_pos - word_string[match_start_idx].pos >= string_size) {
-      // unmake count at start_pos
-      size_t id = word_string[match_start_idx].id;
-      curr_pattern[id]++;
+      // make count
+      size_t id = word_string[next_index];
+      curr_pattern[id]--;
       if (curr_pattern[id] == 0) {
         match_count++;
-      } else if (curr_pattern[id] == 1) {
+      } else if (curr_pattern[id] == -1) {
         match_count--;
       }
-      picked_indexes.pop();
+      // check for the answer
+      if (match_count == curr_pattern.size()) {
+        result.push_back(*begin_index);
+      }
+      if (next_index - *begin_index + word_size >= string_size) {
+        size_t del_id = word_string[*begin_index];
+        begin_index = *begin_index + word_size;
+        curr_pattern[del_id]++;
+        if (curr_pattern[del_id] == 0) {
+          match_count++;
+        } else if (curr_pattern[del_id] == 1) {
+          match_count--;
+        }
+      }
     }
+    next_index += word_size;
   }
-}
-
-std::vector<int> ConvertLookUpTable(const std::vector<int>& table) {
-  std::vector<int> result;
-  for (size_t i = 0; i < table.size(); ++i) {
-    if (table[i]) result.push_back(i);
-  }
-  return result;
 }
 
 class Solution {
@@ -165,20 +104,16 @@ class Solution {
     for (const auto& el : words) {
       pattern.AddWord(el);
     }
-
-    std::vector<WordPos> word_string =
+    std::vector<size_t> word_string =
         CreateWordString(s, pattern.GetUniqueWords());
-    if (word_string.empty()) {
-      return {};
-    }
 
-    std::vector<int> lookup_table(s.size());
+    std::vector<int> result;
     size_t word_size = words.front().size();
-    for (size_t i = 0; i < word_string.size(); ++i) {
-      AddToSolution(lookup_table, i, word_size, words.size() * word_size,
-                    word_string, pattern.GetCount());
+    for (size_t i = 0; i < word_size; ++i) {
+      AddToSolution(result, i, word_size, words.size() * word_size, word_string,
+                    pattern.GetCount());
     }
-    return ConvertLookUpTable(lookup_table);
+    return result;
   }
 };
 
@@ -236,6 +171,14 @@ int main() {
     std::string str = "sheateateseatea";
     std::vector<std::string> words{"sea", "tea", "ate"};
     std::vector<int> expected{6};
+    auto result = test.findSubstring(str, words);
+    assert(result == expected);
+  }
+  {
+    Solution test;
+    std::string str = "abaababbaba";
+    std::vector<std::string> words{"ab", "ba", "ab", "ba"};
+    std::vector<int> expected{1, 3};
     auto result = test.findSubstring(str, words);
     assert(result == expected);
   }
