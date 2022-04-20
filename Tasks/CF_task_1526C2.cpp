@@ -40,8 +40,8 @@ size_t CountPotions(const std::vector<Node>& seg_tree);
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -131,7 +131,8 @@ Node GetRangeNode(const std::vector<Node>& seg_tree, size_t head, size_t begin,
 }
 
 void DeleteElement(std::vector<Node>& seg_tree, size_t id) {
-  seg_tree[id] = Node{};
+  seg_tree[id].health_sum = kEmptyValue;
+  seg_tree[id].max_drop = kEmptyDrop;
   while (id != 0) {
     id = Parent(id);
     seg_tree[id] = AddNodes(seg_tree[Left(id)], seg_tree[Right(id)]);
@@ -140,7 +141,7 @@ void DeleteElement(std::vector<Node>& seg_tree, size_t id) {
 
 size_t CountPotions(const std::vector<Node>& seg_tree) {
   size_t count = 0;
-  for (size_t i = (seg_tree.size() + 1) / 2; i < seg_tree.size(); ++i) {
+  for (size_t i = (seg_tree.size() + 1) / 2 - 1; i < seg_tree.size(); ++i) {
     if (seg_tree[i].health_sum != kEmptyValue) {
       count++;
     }
