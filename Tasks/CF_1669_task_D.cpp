@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
@@ -13,8 +14,8 @@ bool CheckSplitedPart(std::string_view part);
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -32,7 +33,9 @@ void Solution(std::istream& input) {
 
 bool CheckSplitedPart(std::string_view part) {
   if (part.size() == 1) return false;
-  return part.front() != part[1] && part.back() != part[part.size() - 1];
+  size_t b = part.find('B');
+  size_t r = part.find('R');
+  return r != std::string_view::npos && b != std::string_view::npos;
 }
 
 std::vector<std::string_view> SplitByW(std::string_view input) {
