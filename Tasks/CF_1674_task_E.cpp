@@ -22,6 +22,7 @@ int SolveForTriplet(const std::vector<Health>& data, size_t index,
 
 int SimpleShotCount(Health first, Health second);
 int ShotParallel(Health first, Health second);
+int ShotByOnes(Health lhs, Health rhs);
 std::vector<int> GetPrefixMinCCounts(const std::vector<Health>& data);
 
 void Solution(std::istream& input = std::cin);
@@ -62,7 +63,7 @@ int SolveForTriplet(const std::vector<Health>& data, size_t index,
       {SimpleShotCount(data[index], data[index + 1]),
        SimpleShotCount(data[index + 1], data[index]),
        ShotParallel(data[index + 1], data[index]),
-       /*2->X=*/std::max(data[index].health, data[index + 2].health),
+       ShotByOnes(data[index], data[index + 2]),
        SimpleShotCount(data[index + 1], data[index + 2]),
        SimpleShotCount(data[index + 2], data[index + 1]),
        ShotParallel(data[index + 2], data[index + 1]),
@@ -82,6 +83,14 @@ int ShotParallel(Health first, Health second) {
   second = Health(second.health - damage);
   return 2 * count_pair_shot + std::min(SimpleShotCount(first, second),
                                         SimpleShotCount(second, first));
+}
+
+int ShotByOnes(Health lhs, Health rhs) {
+  if (lhs.health < rhs.health) {
+    return lhs.health + (rhs.health - lhs.health + 1) / 2;
+  } else {
+    return rhs.health + (lhs.health - rhs.health + 1) / 2;
+  }
 }
 
 std::vector<int> GetPrefixMinCCounts(const std::vector<Health>& data) {
@@ -140,5 +149,13 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = 7\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(3
+3 89 1
+)";
+    Solution(ss);
+    std::cout << "expected = 2\n";
   }
 }
