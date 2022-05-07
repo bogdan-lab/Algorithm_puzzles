@@ -4,29 +4,12 @@
 #include <sstream>
 #include <vector>
 
-constexpr int kMaxValue = 1'000'001;
-
-struct Health {
-  Health(int g_health) {
-    if (g_health <= 0) return;
-    health = g_health;
-    count_c_hits = (health + 1) / 2;
-  }
-
-  int health = 0;
-  int count_c_hits = 0;
-};
-
-int SolveForTriplet(const std::vector<Health>& data, size_t index,
-                    const std::vector<int>& pref_min_c_counts);
-
-int SimpleShotCount(Health first, Health second);
-int ShotParallel(Health first, Health second);
-int ShotByOnes(Health lhs, Health rhs);
-std::vector<int> GetPrefixMinCCounts(const std::vector<Health>& data);
-
 void Solution(std::istream& input = std::cin);
 void RunTests();
+
+int SolveSeparate(const std::vector<int>& data);
+int SolveByOne(const std::vector<int>& data);
+int SolveNeighbours(const std::vector<int>& data);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -39,66 +22,61 @@ int main() {
 void Solution(std::istream& input) {
   int n;
   input >> n;
-  std::vector<Health> data;
-  data.reserve(n);
-  while (n--) {
-    int tmp = 0;
-    input >> tmp;
-    data.push_back(Health(tmp));
+  std::vector<int> data(n);
+  for (auto& el : data) {
+    input >> el;
   }
-  int min_val = std::min({SimpleShotCount(data[0], data[1]),
-                          SimpleShotCount(data[1], data[0]),
-                          ShotParallel(data[0], data[1])});
-  // pref_...[i] stores min counts for all values before i
-  std::vector<int> pref_min_c_counts = GetPrefixMinCCounts(data);
-  for (size_t i = 0; i < data.size() - 2; ++i) {
-    min_val = std::min(min_val, SolveForTriplet(data, i, pref_min_c_counts));
+  std::cout << std::min({SolveSeparate(data), SolveByOne(data),
+                         SolveNeighbours(data)})
+            << '\n';
+}
+
+int SolveSeparate(const std::vector<int>& data) {
+  // Do not care about separation, since method is expensive -> if we have two
+  // minimums closer one to another correct answer will occur in some of the
+  // other methods
+  std::vector<int> res(2, std::numeric_limits<int>::max());
+  for (size_t i = 0; i < data.size(); ++i) {
+    if (res[0] > data[i]) {
+      res[0] = data[i];
+    }
+    if (res[0] < res[1]) {
+      std::swap(res[0], res[1]);
+    }
   }
-  std::cout << min_val << '\n';
+  return (res[0] + 1) / 2 + (res[1] + 1) / 2;
 }
 
-int SolveForTriplet(const std::vector<Health>& data, size_t index,
-                    const std::vector<int>& pref_min_c_counts) {
-  return std::min(
-      {SimpleShotCount(data[index], data[index + 1]),
-       SimpleShotCount(data[index + 1], data[index]),
-       ShotParallel(data[index + 1], data[index]),
-       ShotByOnes(data[index], data[index + 2]),
-       SimpleShotCount(data[index + 1], data[index + 2]),
-       SimpleShotCount(data[index + 2], data[index + 1]),
-       ShotParallel(data[index + 2], data[index + 1]),
-       data[index].count_c_hits + pref_min_c_counts[index],
-       data[index + 1].count_c_hits + pref_min_c_counts[index + 1],
-       data[index + 2].count_c_hits + pref_min_c_counts[index + 2]});
-}
-
-int SimpleShotCount(Health first, Health second) {
-  return first.count_c_hits + std::max(0, second.health - first.count_c_hits);
-}
-
-int ShotParallel(Health first, Health second) {
-  int count_pair_shot = std::min(first.health, second.health) / 3;
-  int damage = count_pair_shot * 3;
-  first = Health(first.health - damage);
-  second = Health(second.health - damage);
-  return 2 * count_pair_shot + std::min(SimpleShotCount(first, second),
-                                        SimpleShotCount(second, first));
-}
-
-int ShotByOnes(Health lhs, Health rhs) {
-  if (lhs.health < rhs.health) {
-    return lhs.health + (rhs.health - lhs.health + 1) / 2;
-  } else {
-    return rhs.health + (lhs.health - rhs.health + 1) / 2;
+int SolveByOne(const std::vector<int>& data) {
+  int min_count = std::numeric_limits<int>::max();
+  for (size_t i = 1; i <= data.size() - 2; ++i) {
+    min_count = std::min(min_count, (data[i - 1] + data[i + 1] + 1) / 2);
   }
+  return min_count;
 }
 
-std::vector<int> GetPrefixMinCCounts(const std::vector<Health>& data) {
-  std::vector<int> res(data.size(), kMaxValue);
+int SolveNeighbours(const std::vector<int>& data) {
+  int min_count = std::numeric_limits<int>::max();
   for (size_t i = 1; i < data.size(); ++i) {
-    res[i] = std::min(res[i - 1], data[i - 1].count_c_hits);
+    int lo = data[i - 1];
+    int hi = data[i];
+    if (hi < lo) std::swap(hi, lo);
+    int count_to_eq = 0;
+    if (hi != lo) {
+      // accumulate count_to_eq and make them eq
+      count_to_eq = hi - lo;
+      if (lo - count_to_eq <= 0) {
+        min_count = std::min(min_count, (hi + 1) / 2);
+        continue;
+      }
+      lo -= count_to_eq;
+    }
+    int tripple = (lo / 3);
+    lo -= tripple * 3;
+    int additional = lo == 2 ? 2 : (lo == 1) ? 1 : 0;
+    min_count = std::min(min_count, additional + 2 * tripple + count_to_eq);
   }
-  return res;
+  return min_count;
 }
 
 void RunTests() {
