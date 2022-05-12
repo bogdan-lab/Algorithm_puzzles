@@ -2,6 +2,7 @@
 #include <iostream>
 #include <limits>
 #include <sstream>
+#include <tuple>
 #include <vector>
 
 constexpr int64_t kEmptyValue = std::numeric_limits<int64_t>::min();
@@ -41,8 +42,8 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -57,9 +58,12 @@ void Solution(std::istream& input) {
     data.push_back({.start = i - 1, .end = j, .res = q});
   }
 
-  std::sort(
-      data.begin(), data.end(),
-      [](const Request& lhs, const Request& rhs) { return lhs.res < rhs.res; });
+  std::sort(data.begin(), data.end(),
+            [](const Request& lhs, const Request& rhs) {
+              int l = lhs.end - lhs.start;
+              int r = rhs.end - rhs.start;
+              return std::tie(lhs.res, l) < std::tie(rhs.res, r);
+            });
 
   std::vector<Node> tree = BuildEmptyTree(n);
   tree[0].val = data.front().res;
@@ -107,7 +111,9 @@ void ApplyRequest(std::vector<Node>& tree, int pos, int i_s, int i_e,
     tree[pos].val = req_res;
     while (pos > 0) {
       pos = Parent(pos);
+      int64_t old_val = tree[pos].val;
       tree[pos].val = std::min(tree[Left(pos)].val, tree[Right(pos)].val);
+      if (old_val == tree[pos].val) break;
     }
     return;
   } else if (i_s >= tree[pos].end || i_e <= tree[pos].start) {
@@ -269,5 +275,25 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = consistent; 1 2 3 4\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(1 2
+1 1 1
+1 1 4
+)";
+    Solution(ss);
+    std::cout << "expected = inconsistent\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4 4
+1 1 1
+2 2 1
+3 3 1
+4 4 1
+)";
+    Solution(ss);
+    std::cout << "expected = consistent; 1 1 1 1\n";
   }
 }
