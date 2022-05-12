@@ -1,9 +1,10 @@
+#include <algorithm>
 #include <iostream>
 #include <limits>
 #include <sstream>
 #include <vector>
 
-constexpr int64_t kEmptyValue = std::numeric_limits<int64_t>::max();
+constexpr int64_t kEmptyValue = std::numeric_limits<int64_t>::min();
 
 struct Request {
   int start = 0;
@@ -20,8 +21,12 @@ struct Node {
 std::vector<Node> BuildEmptyTree(int n);
 bool ApplyRequest(std::vector<Node>& tree, int pos, int i_s, int i_e,
                   int64_t res);
-bool PushValue(std::vector<Node>& tree, int pos);
 void PrintArray(const std::vector<Node>& tree, int array_size);
+
+void RecursivelyPush(std::vector<Node>& tree, int pos);
+
+void PushCurrentvalue(std::vector<Node>& tree, int pos);
+bool CheckNode(const std::vector<Node>& tree, int pos);
 
 int Left(int index);
 int Right(int index);
@@ -50,15 +55,23 @@ void Solution(std::istream& input) {
     data.push_back({.start = i - 1, .end = j, .res = q});
   }
 
+  std::sort(
+      data.begin(), data.end(),
+      [](const Request& lhs, const Request& rhs) { return lhs.res < rhs.res; });
+
   std::vector<Node> tree = BuildEmptyTree(n);
+  tree[0].val = data.front().res;
   for (const auto& el : data) {
     if (!ApplyRequest(tree, 0, el.start, el.end, el.res)) {
       std::cout << "inconsistent\n";
       return;
     }
   }
+  // TODO Check resulting tree
   std::cout << "consistent\n";
+  RecursivelyPush(tree, 0);
   PrintArray(tree, n);
+  std::cout << '\n';
 }
 
 std::vector<Node> BuildEmptyTree(int n) {
@@ -89,26 +102,46 @@ bool ApplyRequest(std::vector<Node>& tree, int pos, int i_s, int i_e,
                   int64_t req_res) {
   if (tree[pos].start == i_s && tree[pos].end == i_e) {
     // Request exactly corresponds to the range of current node
-    // If it is not empty -> I recieved two different answers on the same range
-    if (tree[pos].val == kEmptyValue) {
-      tree[pos].val = req_res;
+    tree[pos].val = req_res;
+    if (pos == 0) {
       return true;
+    } else {
+      return CheckNode(tree, Parent(pos));
     }
-    return req_res == tree[pos].val;
-  } else if (tree[pos].start <= i_s && tree[pos].end >= i_e) {
-    // Request is totally inside the current node
-    // Recursively call on the left and right parts of this node.
-    // If we have empty values below we need to push current value.
-  } else if (tree[pos].end > i_s && tree[pos].end <= i_e &&
-             tree[pos].start < i_s) {
-    // Request is on the right wing of the node.
-    // Push what is needed and
-    // Recursively call right wing
-    // If left wing crossects with the request call it recursively
-    // Otherwise store there old value.
+  } else if (i_s >= tree[pos].end || i_e <= tree[pos].start) {
+    return true;
   } else {
-    // Request is on the left wing of the node.
-    // Do similarly to the above
+    // Have crossection
+    int li = Left(pos);
+    int ri = Right(pos);
+    PushCurrentvalue(tree, pos);
+    return ApplyRequest(tree, li, i_s, std::min(tree[li].end, i_e), req_res) &&
+           ApplyRequest(tree, ri, std::max(i_s, tree[ri].start), i_e, req_res);
+  }
+}
+
+bool CheckNode(const std::vector<Node>& tree, int pos) {
+  int li = Left(pos);
+  if (li >= tree.size()) return true;
+  int ri = Right(pos);
+  return std::min(tree[ri].val, tree[li].val) == tree[pos].val;
+}
+
+void PushCurrentvalue(std::vector<Node>& tree, int pos) {
+  int li = Left(pos);
+  if (li >= tree.size()) return;
+  int ri = Right(pos);
+  tree[li].val = std::max(tree[pos].val, tree[li].val);
+  tree[ri].val = std::max(tree[pos].val, tree[ri].val);
+}
+
+void RecursivelyPush(std::vector<Node>& tree, int pos) {
+  PushCurrentvalue(tree, pos);
+  int li = Left(pos);
+  if (li < tree.size()) {
+    RecursivelyPush(tree, li);
+    int ri = Right(pos);
+    RecursivelyPush(tree, ri);
   }
 }
 
@@ -119,22 +152,71 @@ void PrintArray(const std::vector<Node>& tree, int array_size) {
   }
   int index = size - 1;
   while (array_size--) {
-    int64_t res = tree[index].val;
-    int ci = index;
-    while (res == kEmptyValue) {
-      ci = Parent(ci);
-      res = tree[ci].val;
-    }
-    std::cout << res << ' ';
-    index++;
+    std::cout << tree[index++].val << ' ';
   }
 }
 
 void RunTests() {
   {
     std::stringstream ss;
-    ss << R"()";
+    ss << R"(3 2
+1 2 1
+2 3 2
+)";
     Solution(ss);
-    std::cout << "expected = 0\n";
+    std::cout << "expected = consistent; 1 2 2\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(3 3
+1 2 1
+1 1 2
+2 3 2
+)";
+    Solution(ss);
+    std::cout << "expected = inconsistent\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(1 1
+1 1 1
+)";
+    Solution(ss);
+    std::cout << "expected = consistent; 1\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4 3
+1 1 1
+2 2 2
+3 3 3
+)";
+    Solution(ss);
+    std::cout << "expected = consistent; 1 2 3 X\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4 5
+1 1 1
+2 2 2
+3 3 3
+1 3 1
+2 4 2
+)";
+    Solution(ss);
+    std::cout << "expected = consistent; 1 2 3 2\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4 6
+1 1 1
+2 2 2
+3 3 3
+1 3 1
+2 4 2
+4 4 4
+)";
+    Solution(ss);
+    std::cout << "expected = consistent; 1 2 3 4\n";
   }
 }
