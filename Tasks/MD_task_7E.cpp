@@ -19,14 +19,16 @@ struct Node {
 };
 
 std::vector<Node> BuildEmptyTree(int n);
-bool ApplyRequest(std::vector<Node>& tree, int pos, int i_s, int i_e,
+void ApplyRequest(std::vector<Node>& tree, int pos, int i_s, int i_e,
                   int64_t res);
 void PrintArray(const std::vector<Node>& tree, int array_size);
 
 void RecursivelyPush(std::vector<Node>& tree, int pos);
 
 void PushCurrentvalue(std::vector<Node>& tree, int pos);
-bool CheckNode(const std::vector<Node>& tree, int pos);
+
+bool CheckRequests(const std::vector<Node>& tree,
+                   const std::vector<Request>& data);
 
 int Left(int index);
 int Right(int index);
@@ -62,12 +64,12 @@ void Solution(std::istream& input) {
   std::vector<Node> tree = BuildEmptyTree(n);
   tree[0].val = data.front().res;
   for (const auto& el : data) {
-    if (!ApplyRequest(tree, 0, el.start, el.end, el.res)) {
-      std::cout << "inconsistent\n";
-      return;
-    }
+    ApplyRequest(tree, 0, el.start, el.end, el.res);
   }
-  // TODO Check resulting tree
+  if (!CheckRequests(tree, data)) {
+    std::cout << "inconsistent\n";
+    return;
+  }
   std::cout << "consistent\n";
   RecursivelyPush(tree, 0);
   PrintArray(tree, n);
@@ -98,33 +100,51 @@ bool IsLeaf(const std::vector<Node>& tree, int index) {
   return tree.size() < Left(index);
 }
 
-bool ApplyRequest(std::vector<Node>& tree, int pos, int i_s, int i_e,
+void ApplyRequest(std::vector<Node>& tree, int pos, int i_s, int i_e,
                   int64_t req_res) {
   if (tree[pos].start == i_s && tree[pos].end == i_e) {
     // Request exactly corresponds to the range of current node
     tree[pos].val = req_res;
-    if (pos == 0) {
-      return true;
-    } else {
-      return CheckNode(tree, Parent(pos));
+    while (pos > 0) {
+      pos = Parent(pos);
+      tree[pos].val = std::min(tree[Left(pos)].val, tree[Right(pos)].val);
     }
+    return;
   } else if (i_s >= tree[pos].end || i_e <= tree[pos].start) {
-    return true;
+    return;
   } else {
     // Have crossection
     int li = Left(pos);
     int ri = Right(pos);
     PushCurrentvalue(tree, pos);
-    return ApplyRequest(tree, li, i_s, std::min(tree[li].end, i_e), req_res) &&
-           ApplyRequest(tree, ri, std::max(i_s, tree[ri].start), i_e, req_res);
+    ApplyRequest(tree, li, i_s, std::min(tree[li].end, i_e), req_res);
+    ApplyRequest(tree, ri, std::max(i_s, tree[ri].start), i_e, req_res);
+    return;
   }
 }
 
-bool CheckNode(const std::vector<Node>& tree, int pos) {
-  int li = Left(pos);
-  if (li >= tree.size()) return true;
-  int ri = Right(pos);
-  return std::min(tree[ri].val, tree[li].val) == tree[pos].val;
+int64_t GetMin(const std::vector<Node>& tree, int pos, int start, int end) {
+  if (start >= end) return std::numeric_limits<int64_t>::max();
+  if (tree[pos].start == start && tree[pos].end == end) {
+    return tree[pos].val;
+  } else if (start >= tree[pos].end || end <= tree[pos].start) {
+    return std::numeric_limits<int64_t>::max();
+  } else {
+    int li = Left(pos);
+    int ri = Right(pos);
+    return std::min(GetMin(tree, li, start, std::min(tree[li].end, end)),
+                    GetMin(tree, ri, std::max(start, tree[ri].start), end));
+  }
+}
+
+bool CheckRequests(const std::vector<Node>& tree,
+                   const std::vector<Request>& data) {
+  for (const auto& req : data) {
+    if (GetMin(tree, 0, req.start, req.end) != req.res) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void PushCurrentvalue(std::vector<Node>& tree, int pos) {
@@ -208,12 +228,43 @@ void RunTests() {
   }
   {
     std::stringstream ss;
-    ss << R"(4 6
+    ss << R"(4 9
 1 1 1
 2 2 2
 3 3 3
 1 3 1
 2 4 2
+4 4 4
+2 3 2
+3 4 3
+1 4 1
+)";
+    Solution(ss);
+    std::cout << "expected = consistent; 1 2 3 4\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4 10
+1 1 1
+2 2 2
+3 3 3
+1 3 1
+2 4 2
+4 4 4
+2 3 2
+3 4 3
+1 4 1
+2 4 1
+)";
+    Solution(ss);
+    std::cout << "expected = inconsistent\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4 4
+1 1 1
+2 2 2
+3 3 3
 4 4 4
 )";
     Solution(ss);
