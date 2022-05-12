@@ -42,8 +42,8 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  // RunTests();
-  Solution(std::cin);
+  RunTests();
+  // Solution(std::cin);
   return 0;
 }
 
@@ -70,12 +70,12 @@ void Solution(std::istream& input) {
   for (const auto& el : data) {
     ApplyRequest(tree, 0, el.start, el.end, el.res);
   }
+  RecursivelyPush(tree, 0);
   if (!CheckRequests(tree, data)) {
     std::cout << "inconsistent\n";
     return;
   }
   std::cout << "consistent\n";
-  RecursivelyPush(tree, 0);
   PrintArray(tree, n);
   std::cout << '\n';
 }
@@ -295,5 +295,36 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = consistent; 1 1 1 1\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(8 3
+3 6 5
+1 4 3
+5 8 4
+)";
+    Solution(ss);
+    std::cout << "expected = consistent; 3 3 5 5 5 5 4 4\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(8 3
+3 6 3
+1 4 5
+5 8 4
+)";
+    Solution(ss);
+    std::cout << "expected = inconsistent\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(8 4
+3 6 5
+1 4 3
+5 8 4
+1 2 6
+)";
+    Solution(ss);
+    std::cout << "expected = inconsistent\n";
   }
 }
