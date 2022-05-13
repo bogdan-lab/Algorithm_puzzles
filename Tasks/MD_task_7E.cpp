@@ -42,8 +42,8 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -57,13 +57,6 @@ void Solution(std::istream& input) {
     input >> i >> j >> q;
     data.push_back({.start = i - 1, .end = j, .res = q});
   }
-
-  std::sort(data.begin(), data.end(),
-            [](const Request& lhs, const Request& rhs) {
-              int l = lhs.end - lhs.start;
-              int r = rhs.end - rhs.start;
-              return std::tie(lhs.res, l) < std::tie(rhs.res, r);
-            });
 
   std::vector<Node> tree = BuildEmptyTree(n);
   tree[0].val = data.front().res;
@@ -108,7 +101,7 @@ void ApplyRequest(std::vector<Node>& tree, int pos, int i_s, int i_e,
                   int64_t req_res) {
   if (tree[pos].start == i_s && tree[pos].end == i_e) {
     // Request exactly corresponds to the range of current node
-    tree[pos].val = req_res;
+    tree[pos].val = std::max(tree[pos].val, req_res);
     while (pos > 0) {
       pos = Parent(pos);
       int64_t old_val = tree[pos].val;
