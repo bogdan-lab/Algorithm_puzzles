@@ -36,8 +36,8 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  // RunTests();
-  Solution(std::cin);
+  RunTests();
+  // Solution(std::cin);
   return 0;
 }
 
@@ -348,6 +348,42 @@ void RunTests() {
 1 4 3
 5 8 4
 1 2 6
+)";
+    Solution(ss);
+    std::cout << "expected = inconsistent\n";
+    std::cout << "==============================\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4 4
+2 3 3
+1 4 1
+4 4 5
+2 2 6
+)";
+    Solution(ss);
+    std::cout << "expected = consistent 1 6 3 5\n";
+    std::cout << "==============================\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4 4
+1 4 1
+2 4 2
+3 4 3
+4 4 4
+)";
+    Solution(ss);
+    std::cout << "expected = consistent 1 2 3 4\n";
+    std::cout << "==============================\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4 4
+1 4 4
+2 4 3
+3 4 2
+4 4 1
 )";
     Solution(ss);
     std::cout << "expected = inconsistent\n";
