@@ -36,8 +36,8 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -55,7 +55,7 @@ void Solution(std::istream& input) {
   std::sort(data.begin(), data.end(), [](const auto& lhs, const auto& rhs) {
     int ls = lhs.end - lhs.start;
     int rs = rhs.end - rhs.start;
-    return std::tie(lhs.res, ls) < std::tie(rhs.res, rs);
+    return std::tie(lhs.res, ls) > std::tie(rhs.res, rs);
   });
 
   std::vector<Node> tree = BuildEmptyTree(n);
@@ -110,44 +110,68 @@ std::vector<Node> BuildEmptyTree(int n) {
   return result;
 }
 
+void BalanceCurrent(std::vector<Node>& tree, int pos) {
+  int pi = Parent(pos);
+  int li = Left(pi);
+  int ri = Right(pi);
+  if (tree[li].val == kEmptyValue) {
+    tree[li].val = tree[pi].val;
+  }
+  if (tree[ri].val == kEmptyValue) {
+    tree[ri].val = tree[pi].val;
+  }
+}
+
+void EnsureInvariant(std::vector<Node>& tree, int pos) {
+  if (pos != 0) {
+    int pi = Parent(pos);
+    BalanceCurrent(tree, pos);
+    while (pi >= 0) {
+      tree[pi].val = std::min(tree[Left(pi)].val, tree[Right(pi)].val);
+      if (pi == 0) break;
+      pi = Parent(pi);
+    }
+  }
+}
+
 void ApplyRequest(std::vector<Node>& tree, int pos, Request rec) {
   if (rec.start >= rec.end || pos >= tree.size()) return;
   if (rec.start == tree[pos].start && rec.end == tree[pos].end) {
+    int li = Left(pos);
+    int ri = Right(pos);
     if (tree[pos].val == kEmptyValue) {
       tree[pos].val = rec.res;
-    } else {
-      tree[pos].val = std::max(tree[pos].val, rec.res);
+      EnsureInvariant(tree, pos);
+      return;
+    } else if (li < tree.size() && tree[li].val == kEmptyValue &&
+               tree[ri].val == kEmptyValue) {
+      tree[pos].val = rec.res;
+      EnsureInvariant(tree, pos);
+      return;
+    } else if (li < tree.size() && tree[li].val == kEmptyValue &&
+               tree[ri].val != kEmptyValue) {
+      // Here rely on fact that requests with small result comes later
+      tree[pos].val = rec.res;
+      tree[li].val = rec.res;
+      EnsureInvariant(tree, li);
+      return;
+    } else if (ri < tree.size() && tree[ri].val == kEmptyValue) {
+      tree[pos].val = rec.res;
+      tree[ri].val = rec.res;
+      EnsureInvariant(tree, ri);
+      return;
     }
-    if (pos != 0) {
-      int pi = Parent(pos);
-      while (pi >= 0) {
-        int li = Left(pi);
-        int ri = Right(pi);
-        if (tree[li].val == kEmptyValue) {
-          tree[li].val = tree[pi].val;
-        }
-        if (tree[ri].val == kEmptyValue) {
-          tree[ri].val = tree[pi].val;
-        }
-        tree[pi].val = std::min(tree[Left(pi)].val, tree[Right(pi)].val);
-        if (pi == 0) break;
-        pi = Parent(pi);
-      }
-    }
-    return;
+    // Here we are in the node and everything is filled -> find recursively what
+    // can be replaced
   }
-  if (rec.start >= tree[pos].start && rec.end <= tree[pos].end) {
-    // Request is inside the node
-    Request lhs = rec;
-    int li = Left(pos);
-    lhs.end = std::min(tree[li].end, rec.end);
-    ApplyRequest(tree, li, lhs);
-    Request rhs = rec;
-    int ri = Right(pos);
-    rhs.start = std::max(tree[ri].start, rec.start);
-    ApplyRequest(tree, ri, rhs);
-    return;
-  }
+  Request lhs = rec;
+  int li = Left(pos);
+  lhs.end = std::min(tree[li].end, rec.end);
+  ApplyRequest(tree, li, lhs);
+  Request rhs = rec;
+  int ri = Right(pos);
+  rhs.start = std::max(tree[ri].start, rec.start);
+  ApplyRequest(tree, ri, rhs);
 }
 
 int64_t GetMin(const std::vector<Node>& tree, int pos, int start, int end) {
