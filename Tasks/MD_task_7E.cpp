@@ -5,7 +5,7 @@
 #include <tuple>
 #include <vector>
 
-constexpr int64_t kEmptyValue = std::numeric_limits<int64_t>::min();
+constexpr int64_t kEmptyValue = std::numeric_limits<int64_t>::max();
 
 struct Request {
   int start = 0;
@@ -20,21 +20,14 @@ struct Node {
 };
 
 std::vector<Node> BuildEmptyTree(int n);
-void ApplyRequest(std::vector<Node>& tree, int pos, int i_s, int i_e,
-                  int64_t res);
-void PrintArray(const std::vector<Node>& tree, int array_size);
 
-void RecursivelyPush(std::vector<Node>& tree, int pos);
+void ApplyRequest(std::vector<Node>& tree, int pos, Request rec);
+int64_t GetMin(const std::vector<Node>& tree, int pos, int start, int end);
+void PrintArray(const std::vector<Node>& tree, int arr_size);
 
-void PushCurrentvalue(std::vector<Node>& tree, int pos);
-
-bool CheckRequests(const std::vector<Node>& tree,
-                   const std::vector<Request>& data);
-
-int Left(int index);
-int Right(int index);
-int Parent(int index);
-bool IsLeaf(int index, int tree_size);
+int Left(int index) { return 2 * index + 1; }
+int Right(int index) { return 2 * (index + 1); }
+int Parent(int index) { return (index - 1) / 2; }
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
@@ -42,8 +35,8 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  // RunTests();
-  Solution(std::cin);
+  RunTests();
+  // Solution(std::cin);
   return 0;
 }
 
@@ -58,18 +51,39 @@ void Solution(std::istream& input) {
     data.push_back({.start = i - 1, .end = j, .res = q});
   }
 
+  std::sort(data.begin(), data.end(), [](const auto& lhs, const auto& rhs) {
+    int ls = lhs.end - lhs.start;
+    int rs = rhs.end - rhs.start;
+    return std::tie(lhs.res, ls) < std::tie(rhs.res, rs);
+  });
+
   std::vector<Node> tree = BuildEmptyTree(n);
-  tree[0].val = data.front().res;
-  for (const auto& el : data) {
-    ApplyRequest(tree, 0, el.start, el.end, el.res);
+  for (const auto& rec : data) {
+    int64_t curr_val = GetMin(tree, 0, rec.start, rec.end);
+    if (curr_val != rec.res) {
+      ApplyRequest(tree, 0, rec);
+    }
   }
-  RecursivelyPush(tree, 0);
-  if (!CheckRequests(tree, data)) {
-    std::cout << "inconsistent\n";
-    return;
+
+  for (const auto& rec : data) {
+    if (GetMin(tree, 0, rec.start, rec.end) != rec.res) {
+      std::cout << "inconsistent\n";
+      return;
+    }
   }
   std::cout << "consistent\n";
   PrintArray(tree, n);
+}
+
+void PrintArray(const std::vector<Node>& tree, int arr_size) {
+  int pos = 1;
+  while (pos < arr_size) {
+    pos *= 2;
+  }
+  --pos;
+  while (arr_size--) {
+    std::cout << tree[pos++].val << ' ';
+  }
   std::cout << '\n';
 }
 
@@ -90,89 +104,61 @@ std::vector<Node> BuildEmptyTree(int n) {
   return result;
 }
 
-int Left(int index) { return 2 * index + 1; }
-int Right(int index) { return 2 * (index + 1); }
-int Parent(int index) { return (index - 1) / 2; }
-bool IsLeaf(const std::vector<Node>& tree, int index) {
-  return tree.size() < Left(index);
+void PullParent(std::vector<Node>& tree, int pos) {
+  if (pos == 0 || tree[pos].val != kEmptyValue) return;
+  int pi = Parent(pos);
+  int li = Left(pi);
+  int ri = Right(pi);
+  if (li < tree.size() && tree[li].val == kEmptyValue) {
+    tree[li].val = tree[pi].val;
+  }
+  if (ri < tree.size() && tree[ri].val == kEmptyValue) {
+    tree[ri].val = tree[pi].val;
+  }
 }
 
-void ApplyRequest(std::vector<Node>& tree, int pos, int i_s, int i_e,
-                  int64_t req_res) {
-  if (tree[pos].start == i_s && tree[pos].end == i_e) {
-    // Request exactly corresponds to the range of current node
-    tree[pos].val = std::max(tree[pos].val, req_res);
-    while (pos > 0) {
-      pos = Parent(pos);
-      int64_t old_val = tree[pos].val;
-      tree[pos].val = std::min(tree[Left(pos)].val, tree[Right(pos)].val);
-      if (old_val == tree[pos].val) break;
+void ApplyRequest(std::vector<Node>& tree, int pos, Request rec) {
+  if (rec.start >= rec.end || pos >= tree.size()) return;
+  PullParent(tree, pos);
+  if (rec.start == tree[pos].start && rec.end == tree[pos].end) {
+    if (tree[pos].val == kEmptyValue) {
+      tree[pos].val = rec.res;
+    } else {
+      tree[pos].val = std::max(tree[pos].val, rec.res);
+    }
+    if (pos != 0) {
+      int pi = Parent(pos);
+      while (pi >= 0) {
+        tree[pi].val = std::min(tree[Left(pi)].val, tree[Right(pi)].val);
+        if (pi == 0) break;
+        pi = Parent(pi);
+      }
     }
     return;
-  } else if (i_s >= tree[pos].end || i_e <= tree[pos].start) {
-    return;
-  } else {
-    // Have crossection
+  }
+  if (rec.start >= tree[pos].start && rec.end <= tree[pos].end) {
+    // Request is inside the node
+    Request lhs = rec;
     int li = Left(pos);
+    lhs.end = std::min(tree[li].end, rec.end);
+    ApplyRequest(tree, li, lhs);
+    Request rhs = rec;
     int ri = Right(pos);
-    PushCurrentvalue(tree, pos);
-    ApplyRequest(tree, li, i_s, std::min(tree[li].end, i_e), req_res);
-    ApplyRequest(tree, ri, std::max(i_s, tree[ri].start), i_e, req_res);
+    rhs.start = std::max(tree[ri].start, rec.start);
+    ApplyRequest(tree, ri, rhs);
     return;
   }
 }
 
 int64_t GetMin(const std::vector<Node>& tree, int pos, int start, int end) {
-  if (start >= end) return std::numeric_limits<int64_t>::max();
+  if (start >= end || pos >= tree.size()) return kEmptyValue;
   if (tree[pos].start == start && tree[pos].end == end) {
     return tree[pos].val;
-  } else if (start >= tree[pos].end || end <= tree[pos].start) {
-    return std::numeric_limits<int64_t>::max();
-  } else {
-    int li = Left(pos);
-    int ri = Right(pos);
-    return std::min(GetMin(tree, li, start, std::min(tree[li].end, end)),
-                    GetMin(tree, ri, std::max(start, tree[ri].start), end));
   }
-}
-
-bool CheckRequests(const std::vector<Node>& tree,
-                   const std::vector<Request>& data) {
-  for (const auto& req : data) {
-    if (GetMin(tree, 0, req.start, req.end) != req.res) {
-      return false;
-    }
-  }
-  return true;
-}
-
-void PushCurrentvalue(std::vector<Node>& tree, int pos) {
   int li = Left(pos);
-  if (li >= tree.size()) return;
   int ri = Right(pos);
-  tree[li].val = std::max(tree[pos].val, tree[li].val);
-  tree[ri].val = std::max(tree[pos].val, tree[ri].val);
-}
-
-void RecursivelyPush(std::vector<Node>& tree, int pos) {
-  PushCurrentvalue(tree, pos);
-  int li = Left(pos);
-  if (li < tree.size()) {
-    RecursivelyPush(tree, li);
-    int ri = Right(pos);
-    RecursivelyPush(tree, ri);
-  }
-}
-
-void PrintArray(const std::vector<Node>& tree, int array_size) {
-  int size = 1;
-  while (size < array_size) {
-    size *= 2;
-  }
-  int index = size - 1;
-  while (array_size--) {
-    std::cout << tree[index++].val << ' ';
-  }
+  return std::min(GetMin(tree, li, start, std::min(tree[li].end, end)),
+                  GetMin(tree, ri, std::max(start, tree[ri].start), end));
 }
 
 void RunTests() {
@@ -184,6 +170,7 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = consistent; 1 2 2\n";
+    std::cout << "==============================\n";
   }
   {
     std::stringstream ss;
@@ -194,6 +181,7 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = inconsistent\n";
+    std::cout << "==============================\n";
   }
   {
     std::stringstream ss;
@@ -202,6 +190,7 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = consistent; 1\n";
+    std::cout << "==============================\n";
   }
   {
     std::stringstream ss;
@@ -212,6 +201,7 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = consistent; 1 2 3 X\n";
+    std::cout << "==============================\n";
   }
   {
     std::stringstream ss;
@@ -223,7 +213,8 @@ void RunTests() {
 2 4 2
 )";
     Solution(ss);
-    std::cout << "expected = consistent; 1 2 3 2\n";
+    std::cout << "expected = consistent; 1 2 3 >2\n";
+    std::cout << "==============================\n";
   }
   {
     std::stringstream ss;
@@ -240,6 +231,7 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = consistent; 1 2 3 4\n";
+    std::cout << "==============================\n";
   }
   {
     std::stringstream ss;
@@ -257,6 +249,7 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = inconsistent\n";
+    std::cout << "==============================\n";
   }
   {
     std::stringstream ss;
@@ -268,6 +261,7 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = consistent; 1 2 3 4\n";
+    std::cout << "==============================\n";
   }
   {
     std::stringstream ss;
@@ -277,6 +271,7 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = inconsistent\n";
+    std::cout << "==============================\n";
   }
   {
     std::stringstream ss;
@@ -288,6 +283,7 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = consistent; 1 1 1 1\n";
+    std::cout << "==============================\n";
   }
   {
     std::stringstream ss;
@@ -298,6 +294,7 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = consistent; 3 3 5 5 5 5 4 4\n";
+    std::cout << "==============================\n";
   }
   {
     std::stringstream ss;
@@ -308,6 +305,7 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = inconsistent\n";
+    std::cout << "==============================\n";
   }
   {
     std::stringstream ss;
@@ -319,5 +317,6 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = inconsistent\n";
+    std::cout << "==============================\n";
   }
 }
