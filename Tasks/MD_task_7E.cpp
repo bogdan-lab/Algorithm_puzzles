@@ -24,6 +24,7 @@ std::vector<Node> BuildEmptyTree(int n);
 void ApplyRequest(std::vector<Node>& tree, int pos, Request rec);
 int64_t GetMin(const std::vector<Node>& tree, int pos, int start, int end);
 void PrintArray(const std::vector<Node>& tree, int arr_size);
+int64_t GetNonEmptyAncestor(const std::vector<Node>& tree, int pos);
 
 int Left(int index) { return 2 * index + 1; }
 int Right(int index) { return 2 * (index + 1); }
@@ -82,7 +83,12 @@ void PrintArray(const std::vector<Node>& tree, int arr_size) {
   }
   --pos;
   while (arr_size--) {
-    std::cout << tree[pos++].val << ' ';
+    int64_t v = tree[pos].val;
+    if (v == kEmptyValue) {
+      v = GetNonEmptyAncestor(tree, pos);
+    }
+    std::cout << v << ' ';
+    ++pos;
   }
   std::cout << '\n';
 }
@@ -104,22 +110,8 @@ std::vector<Node> BuildEmptyTree(int n) {
   return result;
 }
 
-void PullParent(std::vector<Node>& tree, int pos) {
-  if (pos == 0 || tree[pos].val != kEmptyValue) return;
-  int pi = Parent(pos);
-  int li = Left(pi);
-  int ri = Right(pi);
-  if (li < tree.size() && tree[li].val == kEmptyValue) {
-    tree[li].val = tree[pi].val;
-  }
-  if (ri < tree.size() && tree[ri].val == kEmptyValue) {
-    tree[ri].val = tree[pi].val;
-  }
-}
-
 void ApplyRequest(std::vector<Node>& tree, int pos, Request rec) {
   if (rec.start >= rec.end || pos >= tree.size()) return;
-  PullParent(tree, pos);
   if (rec.start == tree[pos].start && rec.end == tree[pos].end) {
     if (tree[pos].val == kEmptyValue) {
       tree[pos].val = rec.res;
@@ -129,6 +121,14 @@ void ApplyRequest(std::vector<Node>& tree, int pos, Request rec) {
     if (pos != 0) {
       int pi = Parent(pos);
       while (pi >= 0) {
+        int li = Left(pi);
+        int ri = Right(pi);
+        if (tree[li].val == kEmptyValue) {
+          tree[li].val = tree[pi].val;
+        }
+        if (tree[ri].val == kEmptyValue) {
+          tree[ri].val = tree[pi].val;
+        }
         tree[pi].val = std::min(tree[Left(pi)].val, tree[Right(pi)].val);
         if (pi == 0) break;
         pi = Parent(pi);
@@ -159,6 +159,16 @@ int64_t GetMin(const std::vector<Node>& tree, int pos, int start, int end) {
   int ri = Right(pos);
   return std::min(GetMin(tree, li, start, std::min(tree[li].end, end)),
                   GetMin(tree, ri, std::max(start, tree[ri].start), end));
+}
+
+int64_t GetNonEmptyAncestor(const std::vector<Node>& tree, int pos) {
+  while (pos > 0) {
+    pos = Parent(pos);
+    if (tree[pos].val != kEmptyValue) {
+      return tree[pos].val;
+    }
+  }
+  return tree[pos].val;
 }
 
 void RunTests() {
