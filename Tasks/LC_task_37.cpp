@@ -1,30 +1,31 @@
 #include <algorithm>
-#include <array>
+#include <bitset>
 #include <limits>
 #include <vector>
 
 constexpr int kEmptyValue = 0;
 
 struct Cell {
-  Cell() { std::fill(count_arr.begin(), count_arr.end(), 1); }
-  Cell(int val) : count(1), value(val) {
-    std::fill(count_arr.begin(), count_arr.end(), 0);
-    count_arr[value - 1] = 1;
-  }
+  Cell() { count_map.flip(); }
+  Cell(int val) : count(1), value(val) { count_map.flip(value - 1); }
+
   void CrossValue(int val) {
     --val;
-    if (!count_arr[val]) return;
-    count_arr[val] = 0;
+    if (!count_map.test(val)) return;
+    count_map.flip(val);
     --count;
     if (count == 1) {
-      auto it = std::find(count_arr.begin(), count_arr.end(), 1);
-      value = it - count_arr.begin() + 1;
+      value = 0;
+      while (!count_map.test(value)) {
+        ++value;
+      }
+      ++value;  // since index starts from 0
     }
   }
 
   int count = 9;
   int value = kEmptyValue;
-  std::array<int, 9> count_arr;
+  std::bitset<9> count_map;
 };
 
 int ToInt(char ch);
