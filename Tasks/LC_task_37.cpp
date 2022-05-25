@@ -1,29 +1,41 @@
 #include <algorithm>
 #include <bitset>
+#include <iostream>
 #include <limits>
 #include <vector>
 
 constexpr int kEmptyValue = 0;
 
-struct Cell {
+class Cell {
+ public:
   Cell() { count_map.flip(); }
-  Cell(int val) : count(1), value(val) { count_map.flip(value - 1); }
+  Cell(int val) : value(val) { count_map.flip(value - 1); }
 
   void CrossValue(int val) {
+    if (IsDefined()) return;
     --val;
     if (!count_map.test(val)) return;
-    count_map.flip(val);
-    --count;
-    if (count == 1) {
-      value = 0;
-      while (!count_map.test(value)) {
-        ++value;
-      }
-      ++value;  // since index starts from 0
-    }
+    count_map.set(val, false);
+    TrySetValue(count_map);
   }
 
-  int count = 9;
+  bool TrySetValue(std::bitset<9> map) {
+    if (map.count() != 1) return false;
+    count_map = map;
+    value = 0;
+    while (!count_map.test(value)) {
+      ++value;
+    }
+    ++value;  // since index starts from 0
+    return true;
+  }
+
+  // true points to the number which CAN be placed in the cell
+  std::bitset<9> GetCountMap() const { return count_map; }
+  int GetValue() const { return value; }
+  bool IsDefined() const { return value != kEmptyValue; }
+
+ private:
   int value = kEmptyValue;
   std::bitset<9> count_map;
 };
@@ -34,7 +46,8 @@ std::vector<std::vector<Cell>> ParseBoard(
     const std::vector<std::vector<char>>& board);
 std::vector<std::vector<int>> CreateChecked();
 void CheckValue(std::vector<std::vector<Cell>>& data, int i, int j,
-                std::vector<std::vector<int>>& checked);
+                std::vector<std::vector<int>>& checked, int& count);
+bool CheckCrossection(std::vector<std::vector<Cell>>& data, int row, int col);
 std::vector<std::vector<char>> ConvertToChar(
     const std::vector<std::vector<Cell>>& board);
 
@@ -44,9 +57,23 @@ class Solution {
     std::vector<std::vector<Cell>> parsed = ParseBoard(board);
     std::vector<std::vector<int>> checked = CreateChecked();
 
+    int count = 0;
+    // Check all defined values
     for (size_t i = 0; i < parsed.size(); ++i) {
       for (size_t j = 0; j < parsed[i].size(); ++j) {
-        CheckValue(parsed, i, j, checked);
+        CheckValue(parsed, i, j, checked, count);
+      }
+    }
+    while (count < 81) {
+      // Check undefined
+      for (size_t i = 0; i < parsed.size(); ++i) {
+        for (size_t j = 0; j < parsed[i].size(); ++j) {
+          if (!checked[i][j]) {
+            if (CheckCrossection(parsed, i, j)) {
+              CheckValue(parsed, i, j, checked, count);
+            }
+          }
+        }
       }
     }
 
@@ -84,28 +111,69 @@ std::vector<std::vector<int>> CreateChecked() {
 }
 
 void CheckValue(std::vector<std::vector<Cell>>& data, int row, int col,
-                std::vector<std::vector<int>>& checked) {
-  if (checked[row][col] || data[row][col].value == kEmptyValue) return;
+                std::vector<std::vector<int>>& checked, int& count) {
+  if (checked[row][col] || !data[row][col].IsDefined()) return;
   checked[row][col] = 1;
+  ++count;
   // check in the column
   for (size_t i = 0; i < data.size(); ++i) {
-    data[i][col].CrossValue(data[row][col].value);
-    CheckValue(data, i, col, checked);
+    data[i][col].CrossValue(data[row][col].GetValue());
+    CheckValue(data, i, col, checked, count);
   }
   // check in the row
   for (size_t j = 0; j < data[row].size(); ++j) {
-    data[row][j].CrossValue(data[row][col].value);
-    CheckValue(data, row, j, checked);
+    data[row][j].CrossValue(data[row][col].GetValue());
+    CheckValue(data, row, j, checked, count);
   }
   // check in square
   int s_row = row / 3;
   int s_col = col / 3;
   for (int i = s_row * 3; i < s_row * 3 + 3; ++i) {
     for (int j = s_col * 3; j < s_col * 3 + 3; ++j) {
-      data[i][j].CrossValue(data[row][col].value);
-      CheckValue(data, i, j, checked);
+      data[i][j].CrossValue(data[row][col].GetValue());
+      CheckValue(data, i, j, checked, count);
     }
   }
+}
+
+// Should be called only for not checked cells!
+bool CheckCrossection(std::vector<std::vector<Cell>>& data, int row, int col) {
+  std::bitset<9> remainder;
+  for (size_t i = 0; i < data.size(); ++i) {
+    if (i != row) {
+      remainder |= data[i][col].GetCountMap();
+    }
+  }
+  remainder.flip();
+  auto curr = data[row][col].GetCountMap();
+  if (data[row][col].TrySetValue(curr & remainder)) {
+    return true;
+  }
+  remainder.reset();
+  for (size_t j = 0; j < data.size(); ++j) {
+    if (j != col) {
+      remainder |= data[row][j].GetCountMap();
+    }
+  }
+  remainder.flip();
+  if (data[row][col].TrySetValue(curr & remainder)) {
+    return true;
+  }
+  remainder.reset();
+  int s_row = row / 3;
+  int s_col = col / 3;
+  for (int i = s_row * 3; i < s_row * 3 + 3; ++i) {
+    for (int j = s_col * 3; j < s_col * 3 + 3; ++j) {
+      if (i != row || j != col) {
+        remainder |= data[i][j].GetCountMap();
+      }
+    }
+  }
+  remainder.flip();
+  if (data[row][col].TrySetValue(curr & remainder)) {
+    return true;
+  }
+  return false;
 }
 
 std::vector<std::vector<char>> ConvertToChar(
@@ -116,7 +184,7 @@ std::vector<std::vector<char>> ConvertToChar(
     result.emplace_back();
     result.back().reserve(board[i].size());
     for (size_t j = 0; j < board[i].size(); ++j) {
-      result.back().push_back(ToChar(board[i][j].value));
+      result.back().push_back(ToChar(board[i][j].GetValue()));
     }
   }
   return result;
