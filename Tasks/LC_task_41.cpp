@@ -8,34 +8,28 @@ class Solution {
   int firstMissingPositive(std::vector<int>& nums) {
     int size = nums.size();
     for (int i = 0; i < size; ++i) {
-      if (nums[i] <= 0) continue;
-      if (nums[i] > size) {
-        nums[i] = 0;
-        continue;
-      }
       while (nums[i] > 0 && nums[i] <= size && nums[i] - 1 != i) {
         int pos = nums[i] - 1;
         if (nums[pos] - 1 == pos) {
-          nums[i] = 0;
+          break;
         } else {
-          std::swap(nums[i], nums[nums[i] - 1]);
+          std::swap(nums[i], nums[pos]);
         }
       }
-      if (nums[i] > size) {
-        nums[i] = 0;
-      }
     }
-    auto it = std::find_if(nums.begin(), nums.end(),
-                           [](int val) { return val <= 0; });
-    return it - nums.begin() + 1;
+    int i = 0;
+    while (i < size && nums[i] == i + 1) {
+      ++i;
+    }
+    return i + 1;
   }
 };
 
 int main() {
   {
     Solution sol;
-    std::vector<int> test{3, 4, 45, 1};
-    int expected = 2;
+    std::vector<int> test{3, 4, 2, 1};
+    int expected = 5;
     int res = sol.firstMissingPositive(test);
     if (res != expected) {
       std::cout << "res = " << res << " expected = " << expected << '\n';
