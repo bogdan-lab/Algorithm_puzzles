@@ -1,79 +1,66 @@
 #include <algorithm>
 #include <vector>
 
-struct PosVol {
-  int position = 0;
-  int volume = 0;
-};
-
-PosVol CalcLeftVolume(int pos, const std::vector<int>& height);
-PosVol CalcRightVolume(int pos, const std::vector<int>& height);
+std::vector<int> GetPrefixMax(const std::vector<int>& data);
+std::vector<int> GetSuffixMax(const std::vector<int>& data);
 
 class Solution {
  public:
   int trap(std::vector<int>& height) {
     int pos = std::max_element(height.begin(), height.end()) - height.begin();
     int volume = 0;
-    int left = pos;
-    while (left >= 0) {
-      PosVol curr_res = CalcLeftVolume(left, height);
-      left = curr_res.position;
-      volume += curr_res.volume;
+    // accumulate to the left
+    std::vector<int> prefix = GetPrefixMax(height);
+    int start = pos;
+    while (start > 0) {
+      int end_val = prefix[start - 1];
+      int curr_pos = start;
+      int filled = 0;
+      while (height[curr_pos - 1] != end_val) {
+        --curr_pos;
+        filled += height[curr_pos];
+      }
+      volume += (start - curr_pos) * end_val - filled;
+      start = curr_pos - 1;
     }
-    int right = pos;
-    while (right < height.size()) {
-      PosVol curr_res = CalcRightVolume(right, height);
-      right = curr_res.position;
-      volume += curr_res.volume;
+    // accumulate to the right
+    std::vector<int> suffix = GetSuffixMax(height);
+    start = pos;
+    while (start < height.size() - 1) {
+      int end_val = suffix[start + 1];
+      int curr_pos = start;
+      int filled = 0;
+      while (height[curr_pos + 1] != end_val) {
+        ++curr_pos;
+        filled += height[curr_pos];
+      }
+      volume += (curr_pos - start) * end_val - filled;
+      start = curr_pos + 1;
     }
     return volume;
   }
 };
 
-PosVol CalcLeftVolume(int pos, const std::vector<int>& height) {
-  if (pos == 0) return {-1, 0};
-  int left_pos = pos;
-  int filled = 0;
-  while (left_pos > 0 && height[left_pos] >= height[left_pos - 1]) {
-    --left_pos;
-    filled += height[left_pos];
+std::vector<int> GetPrefixMax(const std::vector<int>& data) {
+  std::vector<int> res(data.size());
+  res[0] = data[0];
+  for (size_t i = 1; i < res.size(); ++i) {
+    res[i] = std::max(res[i - 1], data[i]);
   }
-  if (left_pos == 0) return {-1, 0};
-  while (left_pos > 0 && height[left_pos] <= height[left_pos - 1]) {
-    --left_pos;
-    filled += height[left_pos];
-  }
-  filled -= height[left_pos];
-  int empty =
-      (pos - left_pos - 1) * std::min(height[pos], height[left_pos]) - filled;
-  return {left_pos, empty};
+  return res;
 }
 
-PosVol CalcRightVolume(int pos, const std::vector<int>& height) {
-  if (pos == height.size()) return {static_cast<int>(height.size()), 0};
-  int right_pos = pos;
-  int filled = 0;
-  while (right_pos < height.size() - 1 &&
-         height[right_pos] >= height[right_pos + 1]) {
-    ++right_pos;
-    filled += height[right_pos];
+std::vector<int> GetSuffixMax(const std::vector<int>& data) {
+  std::vector<int> res(data.size());
+  res.back() = data.back();
+  auto rit = res.rbegin();
+  auto dit = ++data.rbegin();
+  while (dit != data.rend()) {
+    auto it = std::next(rit);
+    *it = std::max(*rit, *dit);
+    rit = it;
+    ++dit;
   }
-  if (right_pos == height.size() - 1)
-    return {static_cast<int>(height.size()), 0};
-  while (right_pos < height.size() - 1 &&
-         height[right_pos] <= height[right_pos + 1]) {
-    ++right_pos;
-    filled += height[right_pos];
-  }
-  filled -= height[right_pos];
-  int empty =
-      (right_pos - pos - 1) * std::min(height[pos], height[right_pos]) - filled;
-  return {right_pos, empty};
+  return res;
 }
 
-int main() {
-  Solution test;
-  std::vector<int> input{0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1};
-  test.trap(input);
-  return 0;
-}
