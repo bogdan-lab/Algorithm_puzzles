@@ -5,8 +5,9 @@
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
-int64_t ProcessRequest(int64_t lcm_ab, int64_t b, int64_t l, int64_t r);
-int64_t GetLCM(int64_t a, int64_t b);
+
+std::vector<int64_t> GetPrefixCount(int a, int b);
+int64_t CountForRightEdge(const std::vector<int64_t>& prefix, int64_t edge);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -22,16 +23,15 @@ void Solution(std::istream& input) {
   while (t--) {
     int64_t a, b, q;
     input >> a >> b >> q;
-    if (a > b) {
-      std::swap(a, b);
-    }
-    int64_t lcm_ab = GetLCM(a, b);
+    std::vector<int64_t> prefix = GetPrefixCount(a, b);
+
     std::vector<int64_t> answer;
     answer.reserve(q);
     while (q--) {
       int64_t l, r;
       input >> l >> r;
-      answer.push_back(ProcessRequest(lcm_ab, b, l, r));
+      answer.push_back(CountForRightEdge(prefix, r) -
+                       CountForRightEdge(prefix, l - 1));
     }
     for (const auto& el : answer) {
       std::cout << el << ' ';
@@ -40,32 +40,25 @@ void Solution(std::istream& input) {
   }
 }
 
-int64_t GetLCM(int64_t a, int64_t b) {
-  int64_t init_a = a;
-  int64_t init_b = b;
-  while (b != 0) {
-    int64_t t = b;
-    b = a % b;
-    a = t;
-  }
-  return (init_a * init_b) / a;
+bool ConditionCheck(int64_t x, int64_t a, int64_t b) {
+  return (x % a) % b != (x % b) % a;
 }
 
-int64_t ProcessRequest(int64_t lcm_ab, int64_t b, int64_t l, int64_t r) {
-  if (r == 1) return 0;
-  if (r < b) return 0;
-  // count how many of that occurs in the range
-  int64_t all_count = r / lcm_ab;
-  int64_t start_count = l / lcm_ab;
-  int64_t count = all_count - start_count;
-  // subtract adjusted occuring_number*b
-  int64_t bad_val_count = count * b;
-  int64_t last = count * lcm_ab + b;
-  if (last > r) {
-    bad_val_count -= b;
-    bad_val_count += r - count * lcm_ab + 1;
+std::vector<int64_t> GetPrefixCount(int a, int b) {
+  std::vector<int64_t> result(a * b);
+  for (size_t i = 0; i < a * b; ++i) {
+    result[i] = ConditionCheck(i, a, b) ? 1 : 0;
   }
-  return r - std::max(b, l) + 1 - bad_val_count;
+  for (size_t i = 1; i < result.size(); ++i) {
+    result[i] += result[i - 1];
+  }
+  return result;
+}
+
+int64_t CountForRightEdge(const std::vector<int64_t>& prefix, int64_t edge) {
+  int64_t count_full = edge / prefix.size() * prefix.back();
+  int64_t length = edge % prefix.size();
+  return count_full + prefix[length];
 }
 
 void RunTests() {
