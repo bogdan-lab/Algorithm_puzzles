@@ -6,13 +6,13 @@
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
-std::vector<int64_t> GetPrefixCount(int a, int b);
-int64_t CountForRightEdge(const std::vector<int64_t>& prefix, int64_t edge);
+int64_t GetGCD(int64_t a, int64_t b);
+int64_t GetNumberCount(int64_t lcm, int64_t b, int64_t l , int64_t r);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  // RunTests();
+  //RunTests();
   Solution(std::cin);
   return 0;
 }
@@ -23,15 +23,16 @@ void Solution(std::istream& input) {
   while (t--) {
     int64_t a, b, q;
     input >> a >> b >> q;
-    std::vector<int64_t> prefix = GetPrefixCount(a, b);
-
+    if(a > b){
+      std::swap(a, b);
+    }
+    int64_t lcm = (a*b)/GetGCD(a, b);
     std::vector<int64_t> answer;
     answer.reserve(q);
     while (q--) {
       int64_t l, r;
       input >> l >> r;
-      answer.push_back(CountForRightEdge(prefix, r) -
-                       CountForRightEdge(prefix, l - 1));
+      answer.push_back(GetNumberCount(lcm, b, l, r));
     }
     for (const auto& el : answer) {
       std::cout << el << ' ';
@@ -40,26 +41,39 @@ void Solution(std::istream& input) {
   }
 }
 
-bool ConditionCheck(int64_t x, int64_t a, int64_t b) {
-  return (x % a) % b != (x % b) % a;
+int64_t GetGCD(int64_t a, int64_t b){
+  while(b != 0){
+    int64_t t = b;
+    b = a % b;
+    a = t;
+  }
+  return a;
 }
 
-std::vector<int64_t> GetPrefixCount(int a, int b) {
-  std::vector<int64_t> result(a * b);
-  for (size_t i = 0; i < a * b; ++i) {
-    result[i] = ConditionCheck(i, a, b) ? 1 : 0;
+
+int64_t GetNumberCount(int64_t lcm, int64_t b, int64_t l , int64_t r){
+  if(r < b || b == lcm) return 0;
+  l = std::max(b, l);
+  int64_t lcm_before_l = l/lcm;
+  // Check if l is inside lcm range
+  int64_t l_lcm_range_start = lcm_before_l*lcm;
+  int64_t l_lcm_range_end = l_lcm_range_start + b - 1;
+  if(l <= l_lcm_range_end){
+    l = l_lcm_range_end + 1;
   }
-  for (size_t i = 1; i < result.size(); ++i) {
-    result[i] += result[i - 1];
+  // Synchronizing right edge
+  int64_t r_lcm_range_start = (r/lcm)*lcm;
+  int64_t r_lcm_range_end = r_lcm_range_start + b - 1;
+  if(r <= r_lcm_range_end){
+    r = r_lcm_range_start - 1;
   }
-  return result;
+  // Entire query was inside lcm range
+  if(l>r) return 0;
+  
+  int64_t lcm_inside_range = r/lcm - l/lcm;
+  return r - l + 1 - lcm_inside_range*b;
 }
 
-int64_t CountForRightEdge(const std::vector<int64_t>& prefix, int64_t edge) {
-  int64_t count_full = edge / prefix.size() * prefix.back();
-  int64_t length = edge % prefix.size();
-  return count_full + prefix[length];
-}
 
 void RunTests() {
   {
@@ -78,4 +92,87 @@ void RunTests() {
     Solution(ss);
     std::cout << "expected = 0 0 0 2 4 || 0 91\n";
   }
+  { // lcm is on the right edge
+    std::stringstream ss;
+    ss << R"(1
+    4 6 1
+    8 12)";
+    Solution(ss);
+    std::cout << "expected = 4\n";
+  }
+  { // Different crossections with the last range
+    std::stringstream ss;
+    ss << R"(1
+    4 6 4
+    8 13
+    8 14
+    8 17
+    8 18)";
+    Solution(ss);
+    std::cout << "expected = 4 4 4 5\n";
+  }
+  { // Case when our range is inside some lcm range
+    std::stringstream ss;
+    ss << R"(1
+    4 6 1
+    13 16)";
+    Solution(ss);
+    std::cout << "expected = 0\n";
+  }
+  { // Different crossections with the first range
+    std::stringstream ss;
+    ss << R"(1
+    4 6 4
+    12 18
+    14 18
+    15 20
+    17 19)";
+    Solution(ss);
+    std::cout << "expected = 1 1 3 2\n";
+  }
+  { // Start and end inside lcm range
+    std::stringstream ss;
+    ss << R"(1
+    4 6 8
+    12 24
+    17 24
+    12 29
+    17 29
+    14 25
+    12 30
+    17 30
+    14 30)";
+    Solution(ss);
+    std::cout << "expected = 6 6 6 6 6 7 7 7\n";
+  }
+  { // Edge case for a, b
+    std::stringstream ss;
+    ss << R"(1
+    1 1 2
+    4 6
+    17 24)";
+    Solution(ss);
+    std::cout << "expected = 0 0\n";
+  }
+  { // Edge case for a, b 2
+    std::stringstream ss;
+    ss << R"(1
+    200 200 3
+    300 500
+    100 400
+    17 24)";
+    Solution(ss);
+    std::cout << "expected = 0 0 0\n";
+  }
+  { // Edge case for a, b 3
+    std::stringstream ss;
+    ss << R"(1
+    1 5 3
+    300 500
+    3 8
+    17 24)";
+    Solution(ss);
+    std::cout << "expected = 0 0 0\n";
+  }
+
 }
