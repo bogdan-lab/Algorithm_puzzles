@@ -6,7 +6,6 @@ void Solution(std::istream& input = std::cin);
 void RunTests();
 
 int CountSubArrays(const std::vector<int>& data, int window);
-bool CheckWindow(const std::vector<int>& data, int index, int window);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -31,20 +30,18 @@ void Solution(std::istream& input) {
 }
 
 int CountSubArrays(const std::vector<int>& data, int window) {
-  int count = 0;
-  for (int i = 0; i < data.size() - window + 1; ++i) {
-    count += CheckWindow(data, i, window);
+  int curr_size = 0;
+  for (int i = 1; i < window; ++i) {
+    curr_size += (data[i - 1] < 2 * data[i]);
+  }
+  int match_size = window - 1;
+  int count = (curr_size == match_size);
+  for (int i = window; i < data.size(); ++i) {
+    curr_size -= (data[i - window] < 2 * data[i - window + 1]);
+    curr_size += (data[i - 1] < 2 * data[i]);
+    count += (curr_size == match_size);
   }
   return count;
-}
-
-bool CheckWindow(const std::vector<int>& data, int index, int window) {
-  for (int i = index; i < index + window - 1; ++i) {
-    if (data[i] >= 2 * data[i + 1]) {
-      return false;
-    }
-  }
-  return true;
 }
 
 void RunTests() {

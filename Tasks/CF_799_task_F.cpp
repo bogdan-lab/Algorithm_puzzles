@@ -10,8 +10,8 @@ bool CheckSum(const std::vector<int>& data);
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -34,20 +34,31 @@ bool CheckSum(const std::vector<int>& data) {
   for (const auto& el : data) {
     ++rem[el % 10];
   }
-  if (rem[1] >= 3) return true;
-  if (rem[2] >= 1 && rem[0] >= 1 && rem[1] >= 1) return true;
-  if (rem[0] >= 2 && rem[3] >= 1) return true;
-  if (rem[7] >= 1 && rem[3] >= 2) return true;
-  if (rem[8] >= 1 && rem[2] >= 1 && rem[3] >= 1) return true;
-  if (rem[9] >= 1 && rem[1] >= 1 && rem[3] >= 3) return true;
-  if (rem[7] >= 1 && rem[4] >= 1 && rem[2] >= 1) return true;
-  if (rem[6] >= 1 && rem[4] >= 1 && rem[3] >= 1) return true;
-  if (rem[5] >= 1 && rem[5] >= 1 && rem[3] >= 1) return true;
-  if (rem[8] >= 1 && rem[3] >= 1 && rem[2] >= 1) return true;
-  if (rem[9] >= 1 && rem[2] >= 1 && rem[2] >= 1) return true;
-  if (rem[8] >= 1 && rem[4] >= 1 && rem[1] >= 1) return true;
-  if (rem[9] >= 1 && rem[3] >= 1 && rem[1] >= 1) return true;
-  if (rem[9] >= 1 && rem[4] >= 1 && rem[0] >= 1) return true;
+  // Check tripples
+  for (int i = 0; i < rem.size(); ++i) {
+    if (rem[i] >= 3 && ((3 * i) % 10) == 3) {
+      return true;
+    }
+  }
+  // Check doubles
+  for (int i = 0; i < rem.size(); ++i) {
+    for (int j = 0; j < rem.size(); ++j) {
+      if (i != j && rem[i] >= 2 && rem[j] >= 1 && ((2 * i + j) % 10) == 3) {
+        return true;
+      }
+    }
+  }
+  // Check singles
+  for (int i = 0; i < rem.size(); ++i) {
+    for (int j = 0; j < rem.size(); ++j) {
+      for (int k = 0; k < rem.size(); ++k) {
+        if (i != j && j != k && i != k && rem[i] && rem[j] && rem[k] &&
+            ((i + j + k) % 10) == 3) {
+          return true;
+        }
+      }
+    }
+  }
   return false;
 }
 
