@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
@@ -9,13 +10,19 @@ void BuildBoards(std::vector<std::vector<std::string>>& sol_boards,
                  std::vector<std::string>& curr_board, int curr_row,
                  int curr_col);
 
+void AddMirrorReflection(std::vector<std::vector<std::string>>& sol_boards);
+
 class Solution {
  public:
   std::vector<std::vector<std::string>> solveNQueens(int n) {
     std::vector<std::vector<std::string>> result;
     std::vector<std::string> initial_board = CreateEmptyBoard(n);
-    for (int col = 0; col < n; ++col) {
+    for (int col = 0; col < n / 2; ++col) {
       BuildBoards(result, initial_board, 0, col);
+    }
+    AddMirrorReflection(result);
+    if (n % 2) {
+      BuildBoards(result, initial_board, 0, n / 2);
     }
     return result;
   }
@@ -63,4 +70,15 @@ bool CheckPos(const std::vector<std::string>& board, int row, int col) {
     ++curr_col;
   }
   return true;
+}
+
+void AddMirrorReflection(std::vector<std::vector<std::string>>& sol_boards) {
+  std::vector<std::vector<std::string>> reversed = sol_boards;
+  for (auto& brd : reversed) {
+    for (auto& row : brd) {
+      std::reverse(row.begin(), row.end());
+    }
+  }
+  sol_boards.insert(sol_boards.end(), std::make_move_iterator(reversed.begin()),
+                    std::make_move_iterator(reversed.end()));
 }
