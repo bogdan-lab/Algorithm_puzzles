@@ -65,7 +65,7 @@ class SpecialPriorityQueue {
 
   void SiftUp(int pos) {
     int parent = Parent(pos);
-    while (parent >= 0 && values_[parent] < values_[pos]) {
+    while (parent >= 0 && values_[parent] > values_[pos]) {
       Swap(parent, pos);
       pos = parent;
       parent = Parent(pos);
@@ -166,10 +166,33 @@ void RunTests() {
   {
     std::stringstream ss;
     ss << R"(2
-0 0
-1 1
-)";
+   0 0
+   1 1
+  )";
     Solution(ss);
     std::cout << "expected = 1.4142135624\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(5
+   0 0
+   1 1
+   2 2
+   3 3
+   4 4
+  )";
+    Solution(ss);
+    std::cout << "expected = 5.656854249\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4
+0 0
+1 1
+0 1
+1 0
+)";
+    Solution(ss);
+    std::cout << "expected = 3.0\n";
   }
 }
