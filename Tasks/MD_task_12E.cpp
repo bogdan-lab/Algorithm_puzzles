@@ -1,57 +1,33 @@
 #include <algorithm>
 #include <iostream>
+#include <numeric>
 #include <sstream>
 #include <utility>
 #include <vector>
 
-struct Node {
-  explicit Node(int gid) : id(gid), leader(gid), rank(1) {}
-  int id = 0;
-  int leader = 0;
-  int rank = 0;
-};
-
-int FindLeader(std::vector<Node>& dsu, int id);
-void Join(std::vector<Node>& dsu, int lhs, int rhs);
+constexpr int kEmptyId = -1;
 
 struct Edge {
-  int end = 0;
+  int from = 0;
+  int to = 0;
   int64_t weight = 0;
-};
-
-struct ReversedEdge {
-  int start = 0;
-  int64_t weight = 0;
-};
-
-class SortedVector {
- public:
-  void Sort() {
-    std::sort(data_.begin(), data_.end(),
-              [](const ReversedEdge& lhs, const ReversedEdge& rhs) {
-                return lhs.weight < rhs.weight;
-              });
-  }
-
-  void PushBack(ReversedEdge edge) { data_.push_back(edge); }
-
-  bool Empty() const { return pos_ >= data_.size(); }
-  ReversedEdge Top() const { return data_[pos_]; }
-  void PopFront() { ++pos_; }
-
- private:
-  std::vector<ReversedEdge> data_;
-  size_t pos_ = 0;
 };
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
-bool CheckIsConnected(const std::vector<std::vector<Edge>>& data);
+bool CheckIsConnected(const std::vector<std::vector<Edge>>& data, int root);
+int64_t FindMST(const std::vector<std::vector<Edge>>& data, int root);
+std::vector<int> Condensate(const std::vector<std::vector<Edge>>& data);
+void TimeSortDFS(const std::vector<std::vector<Edge>>& data,
+                 std::vector<int>& lookup, std::vector<int>& end_time_ids,
+                 int root);
+void ComponentDFS(const std::vector<std::vector<Edge>>& data,
+                  std::vector<int>& comp_map, int id, int curr_comp);
+std::vector<std::vector<Edge>> ReverseGraph(
+    const std::vector<std::vector<Edge>>& data);
 void DFS(int id, const std::vector<std::vector<Edge>>& data,
          std::vector<int>& lookup);
-
-int64_t GetMSTWeight(std::vector<SortedVector>& graph, std::vector<Node>& dsu);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -64,104 +40,121 @@ int main() {
 void Solution(std::istream& input) {
   int vertex_num, edge_num;
   input >> vertex_num >> edge_num;
-  std::vector<Node> dsu;
-  dsu.reserve(vertex_num);
-  for (int i = 0; i < vertex_num; ++i) {
-    dsu.push_back(Node(i));
-  }
-  std::vector<std::vector<Edge>> raw_edges(vertex_num);
-  std::vector<SortedVector> graph(vertex_num);
+  std::vector<std::vector<Edge>> edges(vertex_num);
   while (edge_num--) {
     int l, r;
     int64_t w;
     input >> l >> r >> w;
-    raw_edges[--l].push_back({--r, w});
-    graph[r].PushBack({l, w});
+    --l;
+    --r;
+    if (l == r) continue;
+    edges[l].push_back({l, r, w});
   }
-  for (auto& el : graph) {
-    el.Sort();
-  }
-  if (!CheckIsConnected(raw_edges)) {
+  if (!CheckIsConnected(edges, 0)) {
     std::cout << "NO\n";
     return;
   }
-  std::cout << "YES\n" << GetMSTWeight(graph, dsu) << '\n';
+  std::cout << "YES\n" << FindMST(edges, 0) << '\n';
 }
 
-void Join(std::vector<Node>& dsu, int lhs, int rhs) {
-  int lhs_leader = FindLeader(dsu, lhs);
-  int rhs_leader = FindLeader(dsu, rhs);
-  if (lhs_leader == rhs_leader) return;
-  if (dsu[lhs_leader].rank < dsu[rhs_leader].rank) {
-    dsu[rhs_leader].rank =
-        std::max(dsu[rhs_leader].rank, dsu[lhs_leader].rank + 1);
-    dsu[lhs_leader].leader = rhs_leader;
-  } else {
-    dsu[lhs_leader].rank =
-        std::max(dsu[lhs_leader].rank, dsu[rhs_leader].rank + 1);
-    dsu[rhs_leader].leader = lhs_leader;
+void TimeSortDFS(const std::vector<std::vector<Edge>>& data,
+                 std::vector<int>& lookup, std::vector<int>& end_time_ids,
+                 int id) {
+  if (lookup[id]) return;
+  lookup[id] = 1;
+  for (const auto& e : data[id]) {
+    TimeSortDFS(data, lookup, end_time_ids, e.to);
   }
+  end_time_ids.push_back(id);
 }
 
-int64_t GetMSTWeight(std::vector<SortedVector>& graph, std::vector<Node>& dsu) {
-  int64_t result = 0;
-  std::vector<int64_t> delta(graph.size());
-  std::vector<int> used(graph.size());
-  int timer = 0;
-  for (int id = 0; id < graph.size(); ++id) {
-    if (FindLeader(dsu, 0) == FindLeader(dsu, id)) {
-      continue;  // the vertex is already connected to the root
-    }
-    ++timer;
-    std::vector<int> path;
-    path.push_back(id);
-    while (FindLeader(dsu, path.back()) != FindLeader(dsu, 0)) {
-      int curr_id = FindLeader(dsu, path.back());
-      used[curr_id] = timer;
-      ReversedEdge min_edge = graph[curr_id].Top();
-      while (FindLeader(dsu, min_edge.start) == FindLeader(dsu, curr_id)) {
-        graph[curr_id].PopFront();
-        min_edge = graph[curr_id].Top();
-      }
-      int next_id = FindLeader(dsu, min_edge.start);
-      result += min_edge.weight + delta[curr_id];
-      delta[curr_id] -= min_edge.weight + delta[curr_id];
-      if (used[next_id] != timer) {
-        path.push_back(next_id);
-        continue;
-      }
-      // Here we encountered cycle -> delete it
-      while (!path.empty() &&
-             FindLeader(dsu, path.back()) != FindLeader(dsu, next_id)) {
-        Join(dsu, path.back(), next_id);
-        path.pop_back();
-      }
-    }
-    // Connect everything in path with the root
-    while (!path.empty()) {
-      Join(dsu, path.back(), 0);
-      path.pop_back();
+std::vector<std::vector<Edge>> ReverseGraph(
+    const std::vector<std::vector<Edge>>& data) {
+  std::vector<std::vector<Edge>> result(data.size());
+  for (const auto& vec : data) {
+    for (const auto& e : vec) {
+      result[e.to].push_back({e.to, e.from, e.weight});
     }
   }
   return result;
 }
-
-int FindLeader(std::vector<Node>& dsu, int id) {
-  if (id == dsu[id].leader) return id;
-  dsu[id].leader = FindLeader(dsu, dsu[id].leader);
-  return dsu[id].leader;
+void ComponentDFS(const std::vector<std::vector<Edge>>& data,
+                  std::vector<int>& comp_map, int id, int curr_comp) {
+  if (comp_map[id] != kEmptyId) return;
+  comp_map[id] = curr_comp;
+  for (const auto& e : data[id]) {
+    ComponentDFS(data, comp_map, e.to, curr_comp);
+  }
 }
 
-bool CheckIsConnected(const std::vector<std::vector<Edge>>& data) {
-  int count = 0;
+std::vector<int> Condensate(const std::vector<std::vector<Edge>>& data) {
+  std::vector<int> end_time_ids(data.size());
   std::vector<int> lookup(data.size());
-  for (int id = 0; id < data.size(); ++id) {
-    if (lookup[id]) continue;
-    ++count;
-    if (count > 1) return false;
-    DFS(0, data, lookup);
+  for (int i = 0; i < data.size(); ++i) {
+    if (lookup[i]) continue;
+    TimeSortDFS(data, lookup, end_time_ids, i);
   }
-  return true;
+  std::reverse(end_time_ids.begin(), end_time_ids.end());
+  std::vector<std::vector<Edge>> reversed = ReverseGraph(data);
+  std::vector<int> comp_map(data.size());
+  int component_id = 0;
+  for (const auto id : end_time_ids) {
+    if (comp_map[id] != kEmptyId) continue;
+    ComponentDFS(data, comp_map, id, component_id);
+    ++component_id;
+  }
+  return comp_map;
+}
+
+int64_t FindMST(const std::vector<std::vector<Edge>>& data, int root) {
+  // Find minimum income edge for each vertex
+  std::vector<Edge> min_edge_to;
+  min_edge_to.reserve(data.size());
+  for (int i = 0; i < data.size(); ++i) {
+    min_edge_to.push_back(
+        {/*from=*/0, /*to=*/i, /*weight=*/std::numeric_limits<int64_t>::max()});
+  }
+  for (const auto& vec : data) {
+    for (const auto& e : vec) {
+      if (min_edge_to[e.to].weight > e.weight) {
+        min_edge_to[e.to].from = e.from;
+        min_edge_to[e.to].weight = e.weight;
+      }
+    }
+  }
+  // Minimum edges will be in result
+  int64_t res = 0;
+  for (const auto& e : min_edge_to) {
+    if (e.to != root) res += e.weight;
+  }
+  // Prepare graph for check
+  std::vector<std::vector<Edge>> zero_graph(data.size());
+  for (const auto& e : min_edge_to) {
+    zero_graph[e.from].push_back(e);
+  }
+  if (CheckIsConnected(zero_graph, root)) {
+    return res;
+  }
+  // Build condensated graph and start from it
+  std::vector<int> comp_map = Condensate(zero_graph);
+  int comp_count = *std::max_element(comp_map.begin(), comp_map.end()) + 1;
+  std::vector<std::vector<Edge>> new_edges(comp_count);
+  for (const auto& vec : data) {
+    for (const auto& e : vec) {
+      int new_from = comp_map[e.from];
+      int new_to = comp_map[e.to];
+      int64_t new_weight = e.weight - min_edge_to[e.to].weight;
+      new_edges[new_from].push_back({new_from, new_to, new_weight});
+    }
+  }
+  res += FindMST(new_edges, comp_map[root]);
+  return res;
+}
+
+bool CheckIsConnected(const std::vector<std::vector<Edge>>& data, int root) {
+  std::vector<int> lookup(data.size());
+  DFS(root, data, lookup);
+  return std::accumulate(lookup.begin(), lookup.end(), 0) == lookup.size();
 }
 
 void DFS(int id, const std::vector<std::vector<Edge>>& data,
@@ -169,7 +162,7 @@ void DFS(int id, const std::vector<std::vector<Edge>>& data,
   if (lookup[id]) return;
   lookup[id] = 1;
   for (const auto& e : data[id]) {
-    DFS(e.end, data, lookup);
+    DFS(e.to, data, lookup);
   }
 }
 
