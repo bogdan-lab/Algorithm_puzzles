@@ -32,8 +32,8 @@ void DFS(int id, const std::vector<std::vector<Edge>>& data,
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  // RunTests();
-  Solution(std::cin);
+  RunTests();
+  // Solution(std::cin);
   return 0;
 }
 
@@ -186,5 +186,68 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = YES; 6\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(1 0
+)";
+    Solution(ss);
+    std::cout << "expected = YES; 0\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(6 0
+)";
+    Solution(ss);
+    std::cout << "expected = NO\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(2 2
+1 2 50
+2 1 -30)";
+    Solution(ss);
+    std::cout << "expected = YES; 50\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(2 3
+2 2 50
+2 1 -30
+1 1 0
+)";
+    Solution(ss);
+    std::cout << "expected = NO\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(3 4
+1 2 1
+2 1 1
+2 3 2
+3 1 1
+)";
+    Solution(ss);
+    std::cout << "expected = YES; 3\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4 5
+1 2 0
+1 3 3
+1 4 3
+2 3 0
+2 4 0
+)";
+    Solution(ss);
+    std::cout << "expected = YES; 0\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(1 1
+    1 1 1
+)";
+    Solution(ss);
+    std::cout << "expected = YES; 0\n";
   }
 }
