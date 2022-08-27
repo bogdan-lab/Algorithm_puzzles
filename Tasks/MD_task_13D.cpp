@@ -2,26 +2,25 @@
 #include <iostream>
 #include <queue>
 #include <sstream>
+#include <unordered_set>
 #include <vector>
 
 constexpr int kEmptyElement = -1;
 
-struct Edge {
-  int start = kEmptyElement;
-  int end = kEmptyElement;
-  int count = 0;
-};
-
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
-std::vector<int> BFS(const std::vector<std::vector<Edge>>& data, int start,
-                     int end);
+std::vector<int> BFS(const std::vector<std::unordered_set<int>>& data,
+                     int start, int end, std::vector<int> lookup);
 std::vector<int> GetPath(const std::vector<int>& parents, int start, int end);
-void DeletePath(std::vector<std::vector<Edge>>& data,
-                const std::vector<int>& path);
+void AddEdge(std::vector<std::unordered_set<int>>& data, int l, int r,
+             int curr_add_id);
+void CalcFlux(std::vector<std::unordered_set<int>>& data, int start, int end,
+              std::vector<std::unordered_set<int>>& actual_flux);
+std::vector<std::vector<int>> SearchPathes(
+    const std::vector<std::unordered_set<int>>& data, int start, int end);
 
-void AccumulateInplace(std::vector<Edge>& data);
+void PrintPath(const std::vector<int>& path, int max_id);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -36,60 +35,98 @@ void Solution(std::istream& input) {
   input >> vertex_num >> edge_num >> start >> end;
   --start;
   --end;
-  std::vector<std::vector<Edge>> data(vertex_num);
+  std::vector<std::unordered_set<int>> data(vertex_num);
+  int curr_add_id = vertex_num;
   while (edge_num--) {
     int l, r;
     input >> l >> r;
+    if (l == r) continue;
     --l;
     --r;
-    if (l == r) continue;
-    data[l].push_back({l, r, 1});
+    AddEdge(data, l, r, curr_add_id);
+    ++curr_add_id;
   }
-
-  for (auto& el : data) {
-    std::sort(el.begin(), el.end(),
-              [](Edge l, Edge r) { return l.end < r.end; });
-    AccumulateInplace(el);
-  }
-
-  // Find the first path
-  std::vector<int> parents = BFS(data, start, end);
-  if (parents[end] == kEmptyElement) {
+  std::vector<std::unordered_set<int>> actual_flux(data.size());
+  CalcFlux(data, start, end, actual_flux);
+  // Here we try to find path using DFS on actual_flux
+  // If we cannot do that -> there is not chance for two players to reach the
+  // finish on different pathes.
+  std::vector<std::vector<int>> pathes = SearchPathes(actual_flux, start, end);
+  if (pathes.size() < 2) {
     std::cout << "NO\n";
-    return;
+  } else {
+    std::cout << "YES\n";
+    PrintPath(pathes[0], vertex_num);
+    PrintPath(pathes[1], vertex_num);
   }
-  std::vector<int> path_1 = GetPath(parents, start, end);
-  DeletePath(data, path_1);
-  // Find the second path
-  parents = BFS(data, start, end);
-  if (parents[end] == kEmptyElement) {
-    std::cout << "NO\n";
-    return;
-  }
-  std::vector<int> path_2 = GetPath(parents, start, end);
+}
 
-  std::cout << "YES\n";
-  for (const auto& el : path_1) {
-    std::cout << el + 1 << ' ';
-  }
-  std::cout << '\n';
-  for (const auto& el : path_2) {
-    std::cout << el + 1 << ' ';
+void PrintPath(const std::vector<int>& path, int max_id) {
+  for (const auto& el : path) {
+    if (el < max_id) {
+      std::cout << el + 1 << ' ';
+    }
   }
   std::cout << '\n';
 }
 
-void DeletePath(std::vector<std::vector<Edge>>& data,
-                const std::vector<int>& path) {
-  auto f = path.begin();
-  auto e = std::next(f);
+std::vector<std::vector<int>> SearchPathes(
+    const std::vector<std::unordered_set<int>>& data, int start, int end) {
+  std::vector<int> lookup(data.size());
+  std::vector<int> parents = BFS(data, start, end, lookup);
+  if (parents[end] == kEmptyElement) return {};
+  std::vector<int> path_1 = GetPath(parents, start, end);
+  for (size_t i = 1; i < path_1.size() - 1; ++i) {
+    lookup[path_1[i]] = 1;
+  }
+  parents = BFS(data, start, end, lookup);
+  if (parents[end] == kEmptyElement) return {};
+  return {path_1, GetPath(parents, start, end)};
+}
+
+void DFS(const std::vector<std::unordered_set<int>>& data, int id, int end,
+         std::vector<int>& lookup, std::vector<int>& parents) {
+  lookup[id] = 1;
+  if (id == end) return;
+  for (const auto& el : data[id]) {
+    if (lookup[el]) continue;
+    parents[el] = id;
+    DFS(data, el, end, lookup, parents);
+  }
+}
+
+void CalcFlux(std::vector<std::unordered_set<int>>& data, int start, int end,
+              std::vector<std::unordered_set<int>>& actual_flux) {
+  std::vector<int> parents =
+      BFS(data, start, end, std::vector<int>(data.size()));
+  if (parents[end] == kEmptyElement) return;
+  std::vector<int> path = GetPath(parents, start, end);
+  // Now we push flux
+  auto s = path.begin();
+  auto e = std::next(s);
   while (e != path.end()) {
-    auto it = std::lower_bound(data[*f].begin(), data[*f].end(), *e,
-                               [](Edge edge, int id) { return edge.end < id; });
-    it->count -= 1;
-    ++f;
+    // Remove capacity from positive direction
+    data[*s].erase(*e);
+    // Add capacity to negative direction
+    data[*e].insert(*s);
+    // Create actual flux or delete if the opposite exists
+    auto op_it = actual_flux[*e].find(*s);
+    if (op_it == actual_flux[*e].end()) {
+      actual_flux[*s].insert(*e);
+    } else {
+      actual_flux[*e].erase(op_it);
+    }
+    ++s;
     ++e;
   }
+  CalcFlux(data, start, end, actual_flux);
+}
+
+void AddEdge(std::vector<std::unordered_set<int>>& data, int l, int r,
+             int curr_add_id) {
+  data.resize(curr_add_id + 1);
+  data[l].insert(curr_add_id);
+  data[curr_add_id].insert(r);
 }
 
 std::vector<int> GetPath(const std::vector<int>& parents, int start, int end) {
@@ -104,10 +141,9 @@ std::vector<int> GetPath(const std::vector<int>& parents, int start, int end) {
   return res;
 }
 
-std::vector<int> BFS(const std::vector<std::vector<Edge>>& data, int start,
-                     int end) {
+std::vector<int> BFS(const std::vector<std::unordered_set<int>>& data,
+                     int start, int end, std::vector<int> lookup) {
   std::vector<int> parents(data.size(), kEmptyElement);
-  std::vector<int> lookup(data.size());
   std::queue<int> buff;
   buff.push(start);
   lookup[start] = 1;
@@ -116,33 +152,14 @@ std::vector<int> BFS(const std::vector<std::vector<Edge>>& data, int start,
     if (top_id == end) break;
     buff.pop();
     for (const auto& el : data[top_id]) {
-      if (el.count && !lookup[el.end]) {
-        lookup[el.end] = 1;
-        buff.push(el.end);
-        parents[el.end] = top_id;
+      if (!lookup[el]) {
+        lookup[el] = 1;
+        buff.push(el);
+        parents[el] = top_id;
       }
     }
   }
   return parents;
-}
-
-void AccumulateInplace(std::vector<Edge>& data) {
-  if (data.empty()) return;
-  auto f = data.begin();
-  auto c = std::next(f);
-  while (c != data.end()) {
-    if (c->end == f->end) {
-      f->count += c->count;
-      ++c;
-    } else {
-      ++f;
-      if (f != c) {
-        std::swap(*f, *c);
-      }
-      ++c;
-    }
-  }
-  data.erase(++f, data.end());
 }
 
 void RunTests() {
@@ -159,88 +176,88 @@ void RunTests() {
   {
     std::stringstream ss;
     ss << R"(3 4 1 3
-   1 2
-   1 2
-   2 3
-   2 3
-  )";
+     1 2
+     1 2
+     2 3
+     2 3
+    )";
     Solution(ss);
     std::cout << "expected = YES; 1 2 3; 1 2 3\n";
   }
   {
     std::stringstream ss;
     ss << R"(3 7 1 3
-   1 2
-   3 3
-   1 2
-   2 3
-   2 2
-   2 3
-   1 1
-  )";
+     1 2
+     3 3
+     1 2
+     2 3
+     2 2
+     2 3
+     1 1
+    )";
     Solution(ss);
     std::cout << "expected = YES; 1 2 3; 1 2 3\n";
   }
   {
     std::stringstream ss;
     ss << R"(3 2 1 3
-1 2
-2 3
-)";
+   1 2
+   2 3
+  )";
     Solution(ss);
     std::cout << "expected = NO\n";
   }
   {
     std::stringstream ss;
     ss << R"(5 5 1 4
-1 2
-2 3
-3 4
-1 5
-5 3
-)";
+   1 2
+   2 3
+   3 4
+   1 5
+   5 3
+  )";
     Solution(ss);
     std::cout << "expected = NO\n";
   }
   {
     std::stringstream ss;
     ss << R"(8 9 1 4
-1 2
-2 3
-3 4
-1 5
-5 3
-4 6
-6 7
-4 8
-8 7
-)";
+   1 2
+   2 3
+   3 4
+   1 5
+   5 3
+   4 6
+   6 7
+   4 8
+   8 7
+  )";
     Solution(ss);
     std::cout << "expected = NO\n";
   }
   {
     std::stringstream ss;
     ss << R"(2 2 1 2
-1 2
-1 2
-)";
+   1 2
+   1 2
+  )";
     Solution(ss);
     std::cout << "expected = YES; 1 2; 1 2\n";
   }
   {
     std::stringstream ss;
     ss << R"(8 10 1 7
-1 2
-2 3
-3 4
-3 4
-1 5
-5 3
-4 6
-6 7
-4 8
-8 7
-)";
+   1 2
+   2 3
+   3 4
+   3 4
+   1 5
+   5 3
+   4 6
+   6 7
+   4 8
+   8 7
+  )";
     Solution(ss);
     std::cout << "expected = YES; 1 2 3 4 6 7; 1 5 3 4 8 7\n";
   }
