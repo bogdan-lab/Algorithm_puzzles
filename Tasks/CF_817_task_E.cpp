@@ -1,17 +1,11 @@
 #include <algorithm>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <utility>
 #include <vector>
 
-constexpr int kMaxHeight = 100'000;
-
-struct Rec {
-  explicit Rec(int gh) : h(gh), w_acc(1, {-1, 0}) {}
-
-  int h;
-  std::vector<std::pair<int, int64_t>> w_acc;
-};
+constexpr int kMaxHeight = 1000;
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
@@ -24,62 +18,29 @@ int main() {
   return 0;
 }
 
-int64_t CalcArea(const std::vector<Rec>& data, int hs, int ws, int hb, int wb) {
-  int64_t res = 0;
-  auto h_begin =
-      std::upper_bound(data.begin(), data.end(), hs,
-                       [](int h, const auto& rec) { return h < rec.h; });
-  auto h_end =
-      std::lower_bound(data.begin(), data.end(), hb,
-                       [](const auto& rec, int h) { return rec.h < h; });
-
-  for (auto it = h_begin; it != h_end; ++it) {
-    auto it_begin =
-        std::upper_bound(it->w_acc.begin(), it->w_acc.end(), ws,
-                         [](int w, const auto& p) { return w < p.first; });
-    int64_t prefix = std::prev(it_begin)->second;
-    auto it_end =
-        std::lower_bound(it->w_acc.begin(), it->w_acc.end(), wb,
-                         [](const auto& p, int w) { return p.first < w; });
-    res += std::prev(it_end)->second - prefix;
-  }
-  return res;
-}
-
-std::vector<Rec> ExtractFilled(std::vector<Rec>& data) {
-  std::vector<Rec> result;
-  result.reserve(data.size());
-  for (auto& el : data) {
-    if (el.w_acc.size() > 1) {
-      result.push_back(std::move(el));
-    }
-  }
-  return result;
+int64_t CalcArea(const std::vector<std::vector<int64_t>>& data, int hs, int ws,
+                 int hb, int wb) {
+  return data[hb - 1][wb - 1] - data[hs][wb - 1] - data[hb - 1][ws] +
+         data[hs][ws];
 }
 
 void Solution(std::istream& input) {
   int case_num;
   input >> case_num;
   while (case_num--) {
-    std::vector<Rec> total;
-    total.reserve(kMaxHeight + 1);
-    std::generate_n(std::back_inserter(total), kMaxHeight + 1,
-                    [n = 0]() mutable { return Rec(n++); });
-
+    std::vector<std::vector<int64_t>> data(
+        kMaxHeight + 1, std::vector<int64_t>(kMaxHeight + 1));
     int rec_num, requests;
     input >> rec_num >> requests;
     while (rec_num--) {
       int h, w;
       input >> h >> w;
-      total[h].w_acc.push_back({w, 0});
+      data[h][w] += static_cast<int64_t>(h * w);
     }
 
-    std::vector<Rec> data = ExtractFilled(total);
-
-    for (auto& el : data) {
-      std::sort(el.w_acc.begin(), el.w_acc.end());
-      for (int i = 1; i < el.w_acc.size(); ++i) {
-        el.w_acc[i].second += el.w_acc[i - 1].second + el.h * el.w_acc[i].first;
+    for (int i = 1; i < data.size(); ++i) {
+      for (int j = 1; j < data.size(); ++j) {
+        data[i][j] += data[i - 1][j] + data[i][j - 1] - data[i - 1][j - 1];
       }
     }
 
