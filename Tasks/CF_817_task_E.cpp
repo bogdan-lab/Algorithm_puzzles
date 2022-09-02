@@ -4,6 +4,15 @@
 #include <utility>
 #include <vector>
 
+constexpr int kMaxHeight = 100'000;
+
+struct Rec {
+  explicit Rec(int gh) : h(gh), w_acc(1, {-1, 0}) {}
+
+  int h;
+  std::vector<std::pair<int, int64_t>> w_acc;
+};
+
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
@@ -15,54 +24,62 @@ int main() {
   return 0;
 }
 
-int64_t CalcArea(const std::vector<std::vector<std::pair<int, int64_t>>>& data,
-                 int hs, int ws, int hb, int wb) {
+int64_t CalcArea(const std::vector<Rec>& data, int hs, int ws, int hb, int wb) {
   int64_t res = 0;
-  int max_h = std::min<int>(hb, data.size());
-  for (int h = hs + 1; h < max_h; ++h) {
-    if (data[h].empty()) continue;
-    auto it_begin = std::upper_bound(
-        data[h].begin(), data[h].end(), ws,
-        [](int w, const std::pair<int, int64_t>& p) { return w < p.first; });
+  auto h_begin =
+      std::upper_bound(data.begin(), data.end(), hs,
+                       [](int h, const auto& rec) { return h < rec.h; });
+  auto h_end =
+      std::lower_bound(data.begin(), data.end(), hb,
+                       [](const auto& rec, int h) { return rec.h < h; });
+
+  for (auto it = h_begin; it != h_end; ++it) {
+    auto it_begin =
+        std::upper_bound(it->w_acc.begin(), it->w_acc.end(), ws,
+                         [](int w, const auto& p) { return w < p.first; });
     int64_t prefix = std::prev(it_begin)->second;
-    auto it_end = std::lower_bound(
-        data[h].begin(), data[h].end(), wb,
-        [](const std::pair<int, int64_t>& p, int w) { return p.first < w; });
-    int64_t total = std::prev(it_end)->second;
-    res += total - prefix;
+    auto it_end =
+        std::lower_bound(it->w_acc.begin(), it->w_acc.end(), wb,
+                         [](const auto& p, int w) { return p.first < w; });
+    res += std::prev(it_end)->second - prefix;
   }
   return res;
 }
 
-void AddRec(std::vector<std::vector<std::pair<int, int64_t>>>& data, int h,
-            int w) {
-  if (h >= data.size()) {
-    data.resize(h + 1);
+std::vector<Rec> ExtractFilled(std::vector<Rec>& data) {
+  std::vector<Rec> result;
+  result.reserve(data.size());
+  for (auto& el : data) {
+    if (el.w_acc.size() > 1) {
+      result.push_back(std::move(el));
+    }
   }
-  if (data[h].empty()) {
-    data[h].push_back({-1, 0});
-  }
-  data[h].push_back({w, 0});
+  return result;
 }
 
 void Solution(std::istream& input) {
   int case_num;
   input >> case_num;
   while (case_num--) {
+    std::vector<Rec> total;
+    total.reserve(kMaxHeight + 1);
+    std::generate_n(std::back_inserter(total), kMaxHeight + 1,
+                    [n = 0]() mutable { return Rec(n++); });
+
     int rec_num, requests;
     input >> rec_num >> requests;
-    std::vector<std::vector<std::pair<int, int64_t>>> data;
-    data.reserve(rec_num);
     while (rec_num--) {
       int h, w;
       input >> h >> w;
-      AddRec(data, h, w);
+      total[h].w_acc.push_back({w, 0});
     }
 
-    for (int h = 0; h < data.size(); ++h) {
-      std::sort(data[h].begin(), data[h].end());
-      for (int i = 1; i < data[h].size(); ++i) {
-        data[h][i].second += data[h][i - 1].second + h * data[h][i].first;
+    std::vector<Rec> data = ExtractFilled(total);
+
+    for (auto& el : data) {
+      std::sort(el.w_acc.begin(), el.w_acc.end());
+      for (int i = 1; i < el.w_acc.size(); ++i) {
+        el.w_acc[i].second += el.w_acc[i - 1].second + el.h * el.w_acc[i].first;
       }
     }
 
