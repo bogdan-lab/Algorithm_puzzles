@@ -3,23 +3,20 @@
 #include <string>
 #include <vector>
 
-constexpr int64_t kPolCoef = 9931;
-constexpr int64_t kModVal = 1000'000'000'03;
+constexpr uint64_t kPolCoef = 9931;
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
-bool CheckEquality(const std::string& text, const std::vector<int64_t>& prefix,
-                   const std::vector<int64_t>& powers, int lb, int le, int rb,
+bool CheckEquality(const std::string& text, const std::vector<uint64_t>& prefix,
+                   const std::vector<uint64_t>& powers, int lb, int le, int rb,
                    int re);
 
-int64_t GetHash(const std::vector<int64_t>& prefix,
-                const std::vector<int64_t>& powers, int64_t s_char, int s,
-                int e);
 bool DirectCheck(const std::string& text, int lb, int le, int rb, int re);
-std::vector<int64_t> GetCoefPowers(int num);
-int64_t ToInt(char ch);
-std::vector<int64_t> GetPrefix(const std::string& text);
+std::vector<uint64_t> GetCoefPowers(int num);
+uint64_t ToInt(char ch);
+std::vector<uint64_t> GetPrefix(const std::string& text,
+                                const std::vector<uint64_t>& powers);
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -32,8 +29,8 @@ int main() {
 void Solution(std::istream& input) {
   std::string text;
   input >> text;
-  std::vector<int64_t> powers = GetCoefPowers(text.size());
-  std::vector<int64_t> prefix = GetPrefix(text);
+  std::vector<uint64_t> powers = GetCoefPowers(text.size());
+  std::vector<uint64_t> prefix = GetPrefix(text, powers);
   int n;
   input >> n;
   while (n--) {
@@ -48,34 +45,26 @@ void Solution(std::istream& input) {
     }
   }
 }
-std::vector<int64_t> GetPrefix(const std::string& text) {
-  std::vector<int64_t> result(text.size());
+std::vector<uint64_t> GetPrefix(const std::string& text,
+                                const std::vector<uint64_t>& powers) {
+  std::vector<uint64_t> result(text.size());
   result[0] = ToInt(text[0]);
   for (int i = 1; i < result.size(); ++i) {
-    result[i] = (kPolCoef * result[i - 1] % kModVal + ToInt(text[i])) % kModVal;
+    result[i] = result[i - 1] + powers[i] * ToInt(text[i]);
   }
 
   return result;
 }
 
-int64_t ToInt(char ch) { return static_cast<int64_t>(ch); }
+uint64_t ToInt(char ch) { return static_cast<uint64_t>(ch); }
 
-std::vector<int64_t> GetCoefPowers(int num) {
-  std::vector<int64_t> res(num);
+std::vector<uint64_t> GetCoefPowers(int num) {
+  std::vector<uint64_t> res(num);
   res[0] = 1;
   for (int i = 1; i < num; ++i) {
-    res[i] = (res[i - 1] * kPolCoef) % kModVal;
+    res[i] = res[i - 1] * kPolCoef;
   }
   return res;
-}
-
-int64_t GetHash(const std::vector<int64_t>& prefix,
-                const std::vector<int64_t>& powers, int64_t s_char, int s,
-                int e) {
-  if (e == s) return 0;
-  int64_t rhs = (powers[e - s - 1] * (prefix[s] - s_char)) % kModVal;
-  int64_t result = prefix[e - 1] - rhs;
-  return result > 0 ? result : result + kModVal;
 }
 
 bool DirectCheck(const std::string& text, int lb, int le, int rb, int re) {
@@ -87,14 +76,21 @@ bool DirectCheck(const std::string& text, int lb, int le, int rb, int re) {
   return true;
 }
 
-bool CheckEquality(const std::string& text, const std::vector<int64_t>& prefix,
-                   const std::vector<int64_t>& powers, int lb, int le, int rb,
+bool CheckEquality(const std::string& text, const std::vector<uint64_t>& prefix,
+                   const std::vector<uint64_t>& powers, int lb, int le, int rb,
                    int re) {
   if (re - rb != le - lb) {
     return false;
   }
-  if (GetHash(prefix, powers, ToInt(text[lb]), lb, le) !=
-      GetHash(prefix, powers, ToInt(text[rb]), rb, re)) {
+  if (re == 0) {
+    return le == lb;
+  }
+  if (le == 0) {
+    return re == rb;
+  }
+  uint64_t lhs = (prefix[le - 1] - (lb == 0 ? 0 : prefix[lb - 1])) * powers[rb];
+  uint64_t rhs = (prefix[re - 1] - (rb == 0 ? 0 : prefix[rb - 1])) * powers[lb];
+  if (lhs != rhs) {
     return false;
   }
   if (!DirectCheck(text, lb, le, rb, re)) {
