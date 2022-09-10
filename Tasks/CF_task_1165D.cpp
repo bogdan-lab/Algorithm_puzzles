@@ -6,8 +6,6 @@
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
-uint64_t GCD(uint64_t l, uint64_t r);
-
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
@@ -19,47 +17,35 @@ int main() {
 void Solution(std::istream& input) {
   int t;
   input >> t;
+
   int n;
   while (t--) {
     input >> n;
-    std::vector<int> data(n);
+    std::vector<uint64_t> data(n);
     for (auto& el : data) {
       input >> el;
     }
     std::sort(data.begin(), data.end());
-    uint64_t lcm = data.front();
-    for (int i = 1; i < data.size(); ++i) {
-      lcm = (lcm * data[i]) / GCD(lcm, data[i]);
-    }
 
-    if (lcm == data.back()) {
-      lcm *= 2;
-    }
+    uint64_t lcm = data.front() * data.back();
 
-    int idx = 0;
-    for (uint64_t i = 2; i < lcm; ++i) {
+    std::vector<uint64_t> div;
+    for (uint64_t i = 2; i * i <= lcm; ++i) {
       if (lcm % i) continue;
-      if (idx < data.size() && i == data[idx]) {
-        ++idx;
-      } else {
-        std::cout << "-1\n";
-        return;
+      div.push_back(i);
+      if (i != lcm / i) {
+        div.push_back(lcm / i);
       }
     }
 
-    std::cout << lcm << '\n';
-  }
-}
+    std::sort(div.begin(), div.end());
 
-uint64_t GCD(uint64_t l, uint64_t r) {
-  while (l && r) {
-    if (l > r) {
-      l %= r;
+    if (div == data) {
+      std::cout << lcm << '\n';
     } else {
-      r %= l;
+      std::cout << "-1\n";
     }
   }
-  return l ? l : r;
 }
 
 void RunTests() {
