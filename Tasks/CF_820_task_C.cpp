@@ -27,37 +27,49 @@ void Solution(std::istream& input) {
   std::string buff;
   while (t--) {
     input >> buff;
-    std::vector<std::pair<char, int>> c_to_p;
-    c_to_p.reserve(buff.size());
+
+    std::vector<std::vector<int>> data(ToNum('z') + 1);
     for (int i = 0; i < buff.size(); ++i) {
-      c_to_p.push_back({buff[i], i});
+      data[ToNum(buff[i])].push_back(i);
     }
-    std::sort(c_to_p.begin(), c_to_p.end());
-    auto begin = std::find_if(c_to_p.begin(), c_to_p.end(),
-                              [](const auto& p) { return p.second == 0; });
-    auto end = std::find_if(begin, c_to_p.end(), [&](const auto& p) {
-      return p.second == buff.size() - 1;
-    });
-    if (end == c_to_p.end()) {
-      std::reverse(c_to_p.begin(), c_to_p.end());
-      begin = std::find_if(c_to_p.begin(), c_to_p.end(),
-                           [](const auto& p) { return p.second == 0; });
-      end = std::find_if(c_to_p.begin(), c_to_p.end(), [&](const auto& p) {
-        return p.second == buff.size() - 1;
-      });
-    }
-    ++end;
 
     int64_t cost = 0;
-    auto it = begin;
-    while (it != std::prev(end)) {
-      auto next = std::next(it);
-      cost += std::abs(ToNum(it->first) - ToNum(next->first));
-      it = next;
+    int64_t i = ToNum(buff.front());
+    std::vector<int> pos;
+    pos.push_back(i);
+
+    if (i <= ToNum(buff.back())) {
+      while (i < ToNum(buff.back())) {
+        int64_t next = i + 1;
+        while (next < ToNum(buff.back()) && data[next].empty()) {
+          ++next;
+        }
+        cost += next - i;
+        i = next;
+        pos.push_back(i);
+      }
+    } else {
+      while (i > ToNum(buff.back())) {
+        int64_t next = i - 1;
+        while (next > ToNum(buff.back()) && data[next].empty()) {
+          --next;
+        }
+        cost += i - next;
+        i = next;
+        pos.push_back(i);
+      }
     }
-    std::cout << cost << ' ' << (end - begin) << '\n';
-    for (auto jt = begin; jt != end; ++jt) {
-      std::cout << jt->second + 1 << ' ';
+
+    std::vector<int> res;
+    for (const auto& p : pos) {
+      for (const auto& el : data[p]) {
+        res.push_back(el);
+      }
+    }
+
+    std::cout << cost << ' ' << res.size() << '\n';
+    for (const auto& el : res) {
+      std::cout << el + 1 << ' ';
     }
     std::cout << '\n';
   }
