@@ -3,16 +3,14 @@
 #include <sstream>
 #include <vector>
 
-constexpr int kMaxValue = 1'000'000;
-
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -24,29 +22,37 @@ void Solution(std::istream& input) {
     input >> el;
   }
 
+  std::vector<int> lookup(100'002, -1);
   std::vector<int> res(n);
-  res[0] = data[0] == 1 ? 0 : 1;
-  for (int i = 1; i < data.size(); ++i) {
-    if (data[i] == data[i - 1]) {
-      res[i] = i + 1;
-    } else {
-      res[i] = data[i - 1];
-      if (res[data[i] - 1] == data[i]) {
-        res[data[i] - 1] = data[i] + 1;
-      }
-    }
+  int curr_max = 0;
+  if (data[0] == 1) {
+    res[0] = 0;
+    lookup[0] = 0;
+    curr_max = 1;
+  } else {
+    res[0] = 1;
+    lookup[1] = 0;
+    curr_max = 2;
   }
 
-  std::vector<int> lookup(100'000 + 10);
-  lookup[res[0]] = 1;
-  auto it =
-      std::find_if(lookup.begin(), lookup.end(), [](int v) { return v == 0; });
-  for (int i = 1; i < data.size(); ++i) {
-    lookup[res[i]] = 1;
-    it = std::find_if(it, lookup.end(), [](int v) { return v == 0; });
-    if (data[i] != it - lookup.begin()) {
-      std::cout << "-1\n";
-      return;
+  for (int i = 1; i < res.size(); ++i) {
+    if (curr_max == data[i]) {
+      ++curr_max;
+    }
+    if (data[i] > data[i - 1]) {
+      if (lookup[data[i]] != -1) {
+        res[lookup[data[i]]] = curr_max;
+        lookup[curr_max] = lookup[data[i]];
+        lookup[data[i]] = -1;
+        ++curr_max;
+      }
+      res[i] = data[i - 1];
+      lookup[data[i - 1]] = i;
+      curr_max = std::max(curr_max, data[i - 1] + 1);
+    } else {
+      res[i] = curr_max;
+      lookup[curr_max] = i;
+      ++curr_max;
     }
   }
 
