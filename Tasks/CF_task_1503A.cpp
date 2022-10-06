@@ -17,8 +17,8 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -30,46 +30,27 @@ Result BuildSequences(const std::string& data) {
     return res;
   }
   if (data.size() % 2) return res;
-  res.a.front() = '(';
-  res.b.front() = '(';
-  res.a.back() = ')';
-  res.b.back() = ')';
-  int a_bal = 1;  // +1 for open and -1 for closed
-  int b_bal = 1;
-  for (size_t i = 1; i < data.size() - 1; ++i) {
+  size_t one_count = std::count(data.begin(), data.end(), '1');
+  if (one_count % 2) return res;
+  size_t curr_count = 0;
+  char prev_a = ')';
+  char prev_b = '(';
+  for (size_t i = 0; i < data.size(); ++i) {
     if (data[i] == '1') {
-      if (a_bal == 0 || b_bal == 0) {
+      if (curr_count < one_count / 2) {
         res.a[i] = '(';
         res.b[i] = '(';
-        ++a_bal;
-        ++b_bal;
       } else {
         res.a[i] = ')';
         res.b[i] = ')';
-        --a_bal;
-        --b_bal;
       }
+      ++curr_count;
     } else {
-      // Decrease in each
-      if (a_bal == 0 && b_bal == 0) {
-        return res;
-      }
-      if (a_bal > b_bal) {
-        res.a[i] = ')';
-        --a_bal;
-        res.b[i] = '(';
-        ++b_bal;
-      } else {
-        res.a[i] = '(';
-        ++a_bal;
-        res.b[i] = ')';
-        --b_bal;
-      }
+      res.a[i] = std::exchange(prev_a, Opposite(prev_a));
+      res.b[i] = std::exchange(prev_b, Opposite(prev_b));
     }
-    if (a_bal < 0 || b_bal < 0) return res;
   }
-
-  res.is_valid = a_bal == 1 && b_bal == 1;
+  res.is_valid = true;
   return res;
 }
 
