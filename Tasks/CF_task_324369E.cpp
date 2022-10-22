@@ -19,13 +19,6 @@ int main() {
   return 0;
 }
 
-void Apply(std::vector<int64_t>& diff, const Req& req) {
-  diff[req.l] += req.d;
-  if (req.r < diff.size()) {
-    diff[req.r] -= req.d;
-  }
-}
-
 void Solution(std::istream& input) {
   int n, m, k;
   input >> n >> m >> k;
@@ -38,15 +31,35 @@ void Solution(std::istream& input) {
     input >> el.l >> el.r >> el.d;
     --el.l;
   }
-  std::vector<int64_t> diff(data.size());
+  std::vector<int64_t> diff_req(req.size());
   while (k--) {
     int x, y;
     input >> x >> y;
     --x;
-    for (int i = x; i < y; ++i) {
-      Apply(diff, req[i]);
+    ++diff_req[x];
+    if (y < diff_req.size()) {
+      --diff_req[y];
     }
   }
+
+  std::vector<int64_t> prefix_req(req.size() + 1);
+  for (int i = 1; i < prefix_req.size(); ++i) {
+    prefix_req[i] = prefix_req[i - 1] + diff_req[i - 1];
+  }
+
+  for (int i = 0; i < req.size(); ++i) {
+    req[i].d *= prefix_req[i + 1];
+  }
+
+  std::vector<int64_t> diff(data.size());
+
+  for (int i = 0; i < req.size(); ++i) {
+    diff[req[i].l] += req[i].d;
+    if (req[i].r < diff.size()) {
+      diff[req[i].r] -= req[i].d;
+    }
+  }
+
   std::vector<int64_t> prefix(data.size() + 1);
   for (int i = 1; i < prefix.size(); ++i) {
     prefix[i] = prefix[i - 1] + diff[i - 1];
