@@ -3,11 +3,6 @@
 #include <sstream>
 #include <vector>
 
-struct DPStruct {
-  int64_t count = 0;
-  int need_out = 0;
-  int curr_in = 0;
-};
 int64_t GetCount(const std::vector<int>& data);
 
 void Solution(std::istream& input = std::cin);
@@ -16,54 +11,41 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
 int64_t GetCount(const std::vector<int>& data) {
-  std::vector<DPStruct> dp(data.size());
-
+  int64_t count = 0;
+  std::vector<int64_t> dp(data.size());
+  for (int i = 1; i < data.size(); ++i) {
+    for (int j = 0; j < i - 1; ++j) {
+      // add precise
+      dp[i] += (data[j] + j >= i);
+    }
+    // add overflow
+    dp[i] += std::max<int64_t>(dp[i - 1] - data[i - 1] + 1, 0);
+  }
   for (int i = 0; i < data.size(); ++i) {
-    dp[i].need_out = data[i] - 1;
-    if (data[i] + i >= data.size()) {
-      dp[i].count = data[i] - std::max<int>(data.size() - 1 - i, 1);
-    }
+    count += std::max<int64_t>(data[i] - 1 - dp[i], 0);
   }
-
-  if (data.size() == 1) return dp[0].count;
-
-  for (int i = data.size() - 2; i >= 0; --i) {
-    int64_t curr_c = 0;
-    for (int j = 2; j <= data[i] - dp[i].count; ++j) {
-      int s = i + j;
-      if (dp[s].curr_in >= dp[s].need_out) {
-        ++curr_c;
-      } else {
-        ++dp[s].curr_in;
-      }
-    }
-    dp[i].count += dp[i + 1].count + curr_c;
-  }
-  return dp[0].count;
+  return count;
 }
 
 void Solution(std::istream& input) {
   int t;
   input >> t;
-  std::vector<int> data;
 
   while (t--) {
     size_t n;
     input >> n;
-    data.resize(n);
+    std::vector<int> data(n);
     for (auto& el : data) {
       input >> el;
     }
 
-    int64_t res = GetCount(data);
-    std::cout << res << '\n';
-    data.clear();
+    std::cout << GetCount(data) << '\n';
   }
 }
 
