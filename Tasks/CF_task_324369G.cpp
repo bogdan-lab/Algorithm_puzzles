@@ -63,12 +63,12 @@ void Solution(std::istream& input) {
   int64_t max_val = std::numeric_limits<int64_t>::min();
   int start = 0;
   int end = 0;
-  for (int i = 0; i < prefix.size(); ++i) {
-    int curr_val = suffix_max[i].value - prefix_min[i].value;
+  for (int i = 0; i < prefix.size() - 1; ++i) {
+    int curr_val = suffix_max[i + 1].value - prefix_min[i].value;
     if (curr_val > max_val) {
       max_val = curr_val;
       start = prefix_min[i].index;
-      end = suffix_max[i].index;
+      end = suffix_max[i + 1].index;
     }
   }
 
@@ -147,5 +147,13 @@ void RunTests() {
 )";
     Solution(ss);
     std::cout << "expected = 2 2 5\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(3
+-1 -2 -3
+)";
+    Solution(ss);
+    std::cout << "expected = 1 1 -1\n";
   }
 }
