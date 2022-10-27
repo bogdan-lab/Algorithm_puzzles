@@ -3,6 +3,11 @@
 #include <sstream>
 #include <vector>
 
+struct Value {
+  uint64_t v = 0;
+  bool is_pos = true;
+};
+
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
@@ -17,7 +22,7 @@ int main() {
 uint32_t cur = 0;
 uint32_t nextRand(uint32_t a, uint32_t b) {
   cur = cur * a + b;
-  return cur >> 8;
+  return (cur >> 8);
 }
 
 void Solution(std::istream& input) {
@@ -26,26 +31,47 @@ void Solution(std::istream& input) {
   uint32_t a, b;
   input >> a >> b;
 
-  std::vector<int64_t> data((1UL << 24));
+  std::vector<Value> data((1UL << 24));
   while (m--) {
-    int64_t adding = nextRand(a, b);
+    uint32_t adding = nextRand(a, b);
     uint32_t l = nextRand(a, b);
     uint32_t r = nextRand(a, b);
     if (l > r) std::swap(l, r);
     ++r;
 
-    data[l] += adding;
-    data[r] -= adding;
+    if (data[l].is_pos) {
+      data[l].v += adding;
+    } else {
+      if (data[l].v > adding) {
+        data[l].v -= adding;
+      } else {
+        data[l].v = adding - data[l].v;
+        data[l].is_pos = true;
+      }
+    }
+    if (r < data.size()) {
+      if (!data[r].is_pos) {
+        data[r].v += adding;
+      } else {
+        if (data[r].v >= adding) {
+          data[r].v -= adding;
+        } else {
+          data[r].v = adding - data[r].v;
+          data[r].is_pos = false;
+        }
+      }
+    }
   }
 
-  for (int i = 1; i < data.size(); ++i) {
-    data[i] += data[i - 1];
-  }
-
-  data.insert(data.begin(), 0);
-
-  for (int i = 1; i < data.size(); ++i) {
-    data[i] += data[i - 1];
+  for (int j = 0; j < 2; ++j) {
+    for (int i = 1; i < data.size(); ++i) {
+      if (data[i].is_pos) {
+        data[i].v += data[i - 1].v;
+      } else {
+        data[i].v = data[i - 1].v - data[i].v;
+      }
+      data[i].is_pos = true;
+    }
   }
 
   uint32_t res = 0;
@@ -53,8 +79,11 @@ void Solution(std::istream& input) {
     uint32_t l = nextRand(a, b);
     uint32_t r = nextRand(a, b);
     if (l > r) std::swap(l, r);
-    ++r;
-    res += data[r] - data[l];
+    if (l > 0) {
+      res += data[r].v - data[l - 1].v;
+    } else {
+      res += data[r].v;
+    }
   }
   std::cout << res << '\n';
 }
