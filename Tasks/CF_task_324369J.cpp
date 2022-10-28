@@ -44,7 +44,9 @@ void Solution(std::istream& input) {
     int64_t dist = data[i + fill_num - 1] - data[i] + 1;
     if (dist <= ws) {
       int last_val = data[i + fill_num - 1];
-      AddRange(diff, last_val, last_val + 1 + (ws - dist));
+      int corr = std::min(last_val - ws, 0);
+      last_val -= corr;
+      AddRange(diff, last_val, last_val + 1 + ws - dist);
     }
   }
 
@@ -73,5 +75,29 @@ void RunTests() {
     1 2 3 4 5)";
     Solution(ss);
     std::cout << "expected = 1'000'000-3+1\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(3 1 3
+    1 3 5
+    )";
+    Solution(ss);
+    std::cout << "expected = 2\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(3 1 3
+    1 2 4
+    )";
+    Solution(ss);
+    std::cout << "expected = 2\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(3 1 3
+    2 3 4
+    )";
+    Solution(ss);
+    std::cout << "expected = 3\n";
   }
 }
