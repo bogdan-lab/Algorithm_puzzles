@@ -1,28 +1,38 @@
 #include <algorithm>
+#include <stack>
 #include <vector>
 
-int MaxArea(const std::vector<int>& data, int max_h) {
+struct PosHeight {
+  int pos = 0;
+  int height = 0;
+};
+
+int GetMaxArea(const std::vector<int>& data) {
   int max_area = 0;
-  int curr_area = 0;
-  for (const auto& el : data) {
-    if (el < max_h) {
-      max_area = std::max(max_area, curr_area);
-      curr_area = 0;
-    } else {
-      curr_area += max_h;
+  std::stack<PosHeight> buff;
+  for (int i = 0; i < data.size(); ++i) {
+    while (!buff.empty() && data[i] < buff.top().height) {
+      max_area = std::max(max_area, buff.top().height * (i - buff.top().pos));
+      buff.pop();
+    }
+    int prev_h = buff.empty() ? 0 : buff.top().height;
+    for (int h = prev_h + 1; h <= data[i]; ++h) {
+      buff.push({.pos = i, .height = h});
     }
   }
-  return std::max(curr_area, max_area);
+  while (!buff.empty()) {
+    max_area = std::max<int>(
+        max_area, buff.top().height * (data.size() - buff.top().pos));
+    buff.pop();
+  }
+  return max_area;
 }
 
 class Solution {
  public:
   int largestRectangleArea(std::vector<int>& heights) {
-    int max_h = *std::max_element(heights.begin(), heights.end());
-    int max_area = 0;
-    for (int h = 1; h <= max_h; ++h) {
-      max_area = std::max(max_area, MaxArea(heights, h));
-    }
-    return max_area;
+    int max_area = GetMaxArea(heights);
+    std::reverse(heights.begin(), heights.end());
+    return std::max(max_area, GetMaxArea(heights));
   }
 };
