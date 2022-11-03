@@ -7,32 +7,43 @@ struct PosHeight {
   int height = 0;
 };
 
-int GetMaxArea(const std::vector<int>& data) {
-  int max_area = 0;
+std::vector<int> GetClosestSmallerOnTheLeft(const std::vector<int>& data) {
   std::stack<PosHeight> buff;
+  buff.push({.pos = -1, .height = -1});
+  std::vector<int> res(data.size());
   for (int i = 0; i < data.size(); ++i) {
-    while (!buff.empty() && data[i] < buff.top().height) {
-      max_area = std::max(max_area, buff.top().height * (i - buff.top().pos));
+    while (buff.top().height >= data[i]) {
       buff.pop();
     }
-    int prev_h = buff.empty() ? 0 : buff.top().height;
-    for (int h = prev_h + 1; h <= data[i]; ++h) {
-      buff.push({.pos = i, .height = h});
+    res[i] = buff.top().pos;
+    buff.push({.pos = i, .height = data[i]});
+  }
+  return res;
+}
+
+std::vector<int> GetClosestSmallerOnTheRight(const std::vector<int>& data) {
+  std::stack<PosHeight> buff;
+  buff.push({.pos = static_cast<int>(data.size()), .height = -1});
+  std::vector<int> res(data.size());
+  for (int i = data.size() - 1; i >= 0; --i) {
+    while (buff.top().height >= data[i]) {
+      buff.pop();
     }
+    res[i] = buff.top().pos;
+    buff.push({.pos = i, .height = data[i]});
   }
-  while (!buff.empty()) {
-    max_area = std::max<int>(
-        max_area, buff.top().height * (data.size() - buff.top().pos));
-    buff.pop();
-  }
-  return max_area;
+  return res;
 }
 
 class Solution {
  public:
   int largestRectangleArea(std::vector<int>& heights) {
-    int max_area = GetMaxArea(heights);
-    std::reverse(heights.begin(), heights.end());
-    return std::max(max_area, GetMaxArea(heights));
+    std::vector<int> left = GetClosestSmallerOnTheLeft(heights);
+    std::vector<int> right = GetClosestSmallerOnTheRight(heights);
+    int max_area = 0;
+    for (int i = 0; i < heights.size(); ++i) {
+      max_area = std::max(max_area, heights[i] * (right[i] - left[i] - 1));
+    }
+    return max_area;
   }
 };
