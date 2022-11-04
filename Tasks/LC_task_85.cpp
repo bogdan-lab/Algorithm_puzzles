@@ -1,39 +1,59 @@
 #include <algorithm>
-#include <bitset>
+#include <stack>
 #include <vector>
 
-constexpr int kMaxSize = 200;
-
-std::bitset<kMaxSize> ToBitSet(const std::vector<char>& data) {
-  std::bitset<kMaxSize> res;
+std::vector<int> GetLeft(const std::vector<int>& data) {
+  std::vector<int> res(data.size());
+  std::stack<int> buff;
   for (int i = 0; i < data.size(); ++i) {
-    if (data[i] == '1') {
-      res.set(i);
+    while (!buff.empty() && data[buff.top()] >= data[i]) {
+      buff.pop();
     }
+    res[i] = buff.empty() ? -1 : buff.top();
+    buff.push(i);
   }
   return res;
+}
+
+std::vector<int> GetRight(const std::vector<int>& data) {
+  std::vector<int> res(data.size());
+  std::stack<int> buff;
+  for (int i = data.size() - 1; i >= 0; --i) {
+    while (!buff.empty() && data[buff.top()] >= data[i]) {
+      buff.pop();
+    }
+    res[i] = buff.empty() ? static_cast<int>(data.size()) : buff.top();
+    buff.push(i);
+  }
+  return res;
+}
+
+int GetMaxAreaInHist(const std::vector<int>& data) {
+  std::vector<int> left = GetLeft(data);
+  std::vector<int> right = GetRight(data);
+
+  int max_area = 0;
+  for (int i = 0; i < data.size(); ++i) {
+    max_area = std::max(max_area, data[i] * (right[i] - left[i] - 1));
+  }
+  return max_area;
 }
 
 class Solution {
  public:
   int maximalRectangle(std::vector<std::vector<char>>& matrix) {
-    std::vector<std::bitset<kMaxSize>> rows;
-    rows.reserve(matrix.size());
-    for (int i = 0; i < matrix.size(); ++i) {
-      rows.push_back(ToBitSet(matrix[i]));
-    }
-
-    int max_num = 0;
-    for (int w = 0; w < rows.size(); ++w) {
-      for (int i = 0; i < rows.size() - w; ++i) {
-        if (i + w >= rows.size()) break;
-        std::bitset<kMaxSize> curr = rows[i];
-        for (int j = i + 1; j <= i + w; ++j) {
-          curr &= rows[j];
+    std::vector<int> hist(matrix[0].size());
+    int max_area = 0;
+    for (int r = 0; r < matrix.size(); ++r) {
+      for (int i = 0; i < matrix[r].size(); ++i) {
+        if (matrix[r][i] == '1') {
+          ++hist[i];
+        } else {
+          hist[i] = 0;
         }
-        max_num = std::max<int>(max_num, (w + 1) * curr.count());
       }
+      max_area = std::max(max_area, GetMaxAreaInHist(hist));
     }
-    return max_num;
+    return max_area;
   }
 };
