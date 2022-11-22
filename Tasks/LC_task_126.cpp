@@ -153,6 +153,7 @@ class Solution {
 
     std::vector<std::vector<int>> graph(wordList.size());
     BuildGraph(wordList, wordList.size() - 1, graph);
+    if (graph.back().empty()) return {};
 
     std::vector<int> parents = BFS(wordList, wordList.size() - 1, graph);
     std::vector<std::vector<std::string>> shortest_pathes =
@@ -164,10 +165,9 @@ class Solution {
 };
 
 int main() {
-  std::string beginWord = "hit";
-  std::string endWord = "cog";
-  std::vector<std::string> wordList = {"hot", "dot", "dog",
-                                       "lot", "log", "cog"};
+  std::string beginWord = "hot";
+  std::string endWord = "dog";
+  std::vector<std::string> wordList = {"hot", "dog"};
 
   Solution s;
   auto result = s.findLadders(beginWord, endWord, wordList);
