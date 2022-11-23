@@ -7,6 +7,13 @@
 #include <utility>
 #include <vector>
 
+constexpr int kMaxDist = 1000;
+
+struct BFSResult {
+  std::vector<int> parents;
+  std::vector<int> distances;
+};
+
 int GetDiffCount(const std::string& l, const std::string& r) {
   assert(l.size() == r.size());
   int diff_count = 0;
@@ -43,28 +50,33 @@ void BuildGraph(const std::vector<std::vector<uint8_t>>& match_map, int ci,
   }
 }
 
-std::vector<int> BFS(const std::vector<std::string>& data, int root,
-                     const std::vector<std::vector<int>>& graph,
-                     std::vector<int>& levels) {
-  std::vector<int> parents(data.size(), -1);
-  std::vector<int8_t> lookup(data.size());
+BFSResult BFS(const std::vector<std::vector<int>>& graph, int start, int end) {
+  BFSResult r;
+  r.parents.resize(graph.size(), -1);
+  r.distances.resize(graph.size(), kMaxDist);
+  std::vector<int8_t> lookup(graph.size());
   std::queue<int> buff;
-  buff.push(root);
-  lookup[root] = 1;
-  levels[root] = 0;
-  while (!buff.empty()) {
+  buff.push(start);
+  lookup[start] = 1;
+  r.distances[start] = 1;
+  bool found_end = false;
+  while (!buff.empty() && !found_end) {
     int c = buff.front();
     for (const auto& el : graph[c]) {
       if (!lookup[el]) {
         lookup[el] = 1;
         buff.push(el);
-        parents[el] = c;
-        levels[el] = levels[c] + 1;
+        r.parents[el] = c;
+        r.distances[el] = r.distances[c] + 1;
+        if (el == end) {
+          found_end = true;
+          break;
+        }
       }
     }
     buff.pop();
   }
-  return parents;
+  return r;
 }
 
 int GetMinPathLength(const std::vector<int>& parents, int i) {
@@ -141,6 +153,49 @@ std::vector<std::vector<std::string>> GetPathesWithLength(
   return res;
 }
 
+std::vector<int> GetPath(const std::vector<int>& parents, int id) {
+  std::vector<int> res;
+  while (id >= 0) {
+    res.push_back(id);
+    id = parents[id];
+  }
+  return res;
+}
+
+std::vector<int> GluePath(const BFSResult& se, const BFSResult& es,
+                          int mid_id) {
+  std::vector<int> prefix = GetPath(se.parents, mid_id);
+  std::reverse(prefix.begin(), prefix.end());
+  std::vector<int> suffix = GetPath(es.parents, mid_id);
+  prefix.reserve(prefix.size() + suffix.size() - 1);
+  for (int i = 1; i < suffix.size(); ++i) {
+    prefix.push_back(suffix[i]);
+  }
+  return prefix;
+}
+
+bool IsUnique(const std::vector<std::vector<int>>& all_pathes,
+              const std::vector<int>& p) {
+  for (const auto& el : all_pathes) {
+    if (el == p) return false;
+  }
+  return true;
+}
+
+std::vector<std::vector<int>> GluePathes(const BFSResult& se,
+                                         const BFSResult& es, int min_len) {
+  std::vector<std::vector<int>> pathes;
+  for (int i = 0; i < se.distances.size(); ++i) {
+    if (se.distances[i] + es.distances[i] - 1 == min_len) {
+      std::vector<int> cp = GluePath(se, es, i);
+      if (IsUnique(pathes, cp)) {
+        pathes.push_back(cp);
+      }
+    }
+  }
+  return pathes;
+}
+
 class Solution {
  public:
   std::vector<std::vector<std::string>> findLadders(
@@ -155,17 +210,33 @@ class Solution {
       wordList.push_back(beginWord);
       bid = wordList.size() - 1;
     }
+    // Build entire graph
     std::vector<std::vector<uint8_t>> match_map = BuildMatchMap(wordList);
     std::vector<std::vector<int>> graph(wordList.size());
     BuildGraph(match_map, bid, graph);
-    std::vector<int> levels(wordList.size(), -1);
-    std::vector<int> parents = BFS(wordList, bid, graph, levels);
-    if (parents[eid] == -1) return {};
-    int min_path_len = GetMinPathLength(parents, eid);
-    std::vector<int8_t> ach_lookup(wordList.size());
-    AchieveDFS(graph, eid, ach_lookup);
-    PruneGraph(graph, levels, min_path_len, ach_lookup);
-    return GetPathesWithLength(wordList, graph, bid, eid, min_path_len);
+    // BFS results and tree prunning
+    BFSResult se = BFS(graph, bid, eid);
+    if (se.distances[eid] == kMaxDist) return {};
+    BFSResult es = BFS(graph, eid, bid);
+    std::vector<std::vector<int>> pathes =
+        GluePathes(se, es, se.distances[eid]);
+
+    std::vector<std::vector<std::string>> res;
+    res.reserve(pathes.size());
+    std::transform(pathes.begin(), pathes.end(), std::back_inserter(res),
+                   [&](const std::vector<int>& path) {
+                     return TranslatePath(wordList, path);
+                   });
+    return res;
+
+    // std::vector<int> levels(wordList.size(), -1);
+    // std::vector<int> parents = BFS(wordList, bid, graph, levels);
+    // if (parents[eid] == -1) return {};
+    // int min_path_len = GetMinPathLength(parents, eid);
+    // std::vector<int8_t> ach_lookup(wordList.size());
+    // AchieveDFS(graph, eid, ach_lookup);
+    // PruneGraph(graph, levels, min_path_len, ach_lookup);
+    // return GetPathesWithLength(wordList, graph, bid, eid, min_path_len);
   }
 };
 
