@@ -109,22 +109,29 @@ void PruneGraph(std::vector<std::vector<int>>& graph,
   }
 }
 
-void DFS(const std::vector<std::vector<int>>& graph, int cid, int eid,
-         std::vector<int>& path, int min_len, std::vector<uint8_t>& lookup,
+void DFS(const std::vector<std::vector<int>>& graph, int cid, int bid, int eid,
+         std::vector<int>& path, const BFSResult& se, const BFSResult& es,
+         std::vector<uint8_t>& lookup,
          std::vector<std::vector<int>>& all_pathes) {
   if (lookup[cid]) return;
   lookup[cid] = 1;
-  path.push_back(cid);
-  if (path.size() < min_len) {
-    for (const auto& id : graph[cid]) {
-      DFS(graph, id, eid, path, min_len, lookup, all_pathes);
-    }
-  } else if (path.size() == min_len && cid == eid) {
-    all_pathes.push_back(path);
+  if (path.size() + se.distances[cid] > se.distances[eid]) {
+    lookup[cid] = 0;
+    return;
   }
-  // restore before going back up
-  lookup[cid] = 0;
+  path.push_back(cid);
+  if (path.size() == se.distances[eid] && cid == bid) {
+    all_pathes.push_back(path);
+    path.pop_back();
+    lookup[cid] = 0;
+    return;
+  }
+  for (const auto& id : graph[cid]) {
+    if (es.distances[id] <= es.distances[cid]) continue;
+    DFS(graph, id, bid, eid, path, se, es, lookup, all_pathes);
+  }
   path.pop_back();
+  lookup[cid] = 0;
 }
 
 std::vector<std::string> TranslatePath(const std::vector<std::string>& data,
@@ -138,62 +145,23 @@ std::vector<std::string> TranslatePath(const std::vector<std::string>& data,
 
 std::vector<std::vector<std::string>> GetPathesWithLength(
     const std::vector<std::string>& data,
-    const std::vector<std::vector<int>>& graph, int bid, int eid, int min_len) {
+    const std::vector<std::vector<int>>& graph, int bid, int eid,
+    const BFSResult& se, const BFSResult& es) {
   std::vector<uint8_t> lookup(data.size());
   std::vector<std::vector<int>> all_pathes;
   std::vector<int> path;
-  path.reserve(min_len + 1);
-  DFS(graph, bid, eid, path, min_len, lookup, all_pathes);
+  path.reserve(se.distances[eid]);
+  DFS(graph, eid, bid, eid, path, se, es, lookup, all_pathes);
 
+  for (auto& el : all_pathes) {
+    std::reverse(el.begin(), el.end());
+  }
   std::vector<std::vector<std::string>> res;
   res.reserve(all_pathes.size());
   std::transform(
       all_pathes.begin(), all_pathes.end(), std::back_inserter(res),
       [&data](const std::vector<int>& p) { return TranslatePath(data, p); });
   return res;
-}
-
-std::vector<int> GetPath(const std::vector<int>& parents, int id) {
-  std::vector<int> res;
-  while (id >= 0) {
-    res.push_back(id);
-    id = parents[id];
-  }
-  return res;
-}
-
-std::vector<int> GluePath(const BFSResult& se, const BFSResult& es,
-                          int mid_id) {
-  std::vector<int> prefix = GetPath(se.parents, mid_id);
-  std::reverse(prefix.begin(), prefix.end());
-  std::vector<int> suffix = GetPath(es.parents, mid_id);
-  prefix.reserve(prefix.size() + suffix.size() - 1);
-  for (int i = 1; i < suffix.size(); ++i) {
-    prefix.push_back(suffix[i]);
-  }
-  return prefix;
-}
-
-bool IsUnique(const std::vector<std::vector<int>>& all_pathes,
-              const std::vector<int>& p) {
-  for (const auto& el : all_pathes) {
-    if (el == p) return false;
-  }
-  return true;
-}
-
-std::vector<std::vector<int>> GluePathes(const BFSResult& se,
-                                         const BFSResult& es, int min_len) {
-  std::vector<std::vector<int>> pathes;
-  for (int i = 0; i < se.distances.size(); ++i) {
-    if (se.distances[i] + es.distances[i] - 1 == min_len) {
-      std::vector<int> cp = GluePath(se, es, i);
-      if (IsUnique(pathes, cp)) {
-        pathes.push_back(cp);
-      }
-    }
-  }
-  return pathes;
 }
 
 class Solution {
@@ -218,17 +186,6 @@ class Solution {
     BFSResult se = BFS(graph, bid, eid);
     if (se.distances[eid] == kMaxDist) return {};
     BFSResult es = BFS(graph, eid, bid);
-    std::vector<std::vector<int>> pathes =
-        GluePathes(se, es, se.distances[eid]);
-
-    std::vector<std::vector<std::string>> res;
-    res.reserve(pathes.size());
-    std::transform(pathes.begin(), pathes.end(), std::back_inserter(res),
-                   [&](const std::vector<int>& path) {
-                     return TranslatePath(wordList, path);
-                   });
-    return res;
-
     // std::vector<int> levels(wordList.size(), -1);
     // std::vector<int> parents = BFS(wordList, bid, graph, levels);
     // if (parents[eid] == -1) return {};
@@ -236,7 +193,7 @@ class Solution {
     // std::vector<int8_t> ach_lookup(wordList.size());
     // AchieveDFS(graph, eid, ach_lookup);
     // PruneGraph(graph, levels, min_path_len, ach_lookup);
-    // return GetPathesWithLength(wordList, graph, bid, eid, min_path_len);
+    return GetPathesWithLength(wordList, graph, bid, eid, se, es);
   }
 };
 
