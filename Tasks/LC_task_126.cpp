@@ -2,6 +2,7 @@
 #include <cassert>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <queue>
 #include <string>
 #include <utility>
@@ -44,12 +45,14 @@ void BuildGraph(const std::vector<std::vector<uint8_t>>& match_map, int ci,
 }
 
 std::vector<int> BFS(const std::vector<std::string>& data, int root,
-                     const std::vector<std::vector<int>>& graph) {
+                     const std::vector<std::vector<int>>& graph,
+                     std::vector<int>& levels) {
   std::vector<int> parents(data.size(), -1);
   std::vector<int8_t> lookup(data.size());
   std::queue<int> buff;
   buff.push(root);
   lookup[root] = 1;
+  levels[root] = 0;
   while (!buff.empty()) {
     int c = buff.front();
     for (const auto& el : graph[c]) {
@@ -57,6 +60,7 @@ std::vector<int> BFS(const std::vector<std::string>& data, int root,
         lookup[el] = 1;
         buff.push(el);
         parents[el] = c;
+        levels[el] = levels[c] + 1;
       }
     }
     buff.pop();
@@ -71,6 +75,16 @@ int GetMinPathLength(const std::vector<int>& parents, int i) {
     i = parents[i];
   }
   return count;
+}
+
+void PruneGraph(std::vector<std::vector<int>>& graph,
+                const std::vector<int>& levels, int min_len) {
+  for (int i = 0; i < graph.size(); ++i) {
+    auto p_end = std::partition(graph[i].begin(), graph[i].end(), [&](int id) {
+      return levels[i] < levels[id] && levels[id] <= min_len + 1;
+    });
+    graph[i].erase(p_end, graph[i].end());
+  }
 }
 
 void DFS(const std::vector<std::vector<int>>& graph, int cid, int eid,
@@ -134,10 +148,11 @@ class Solution {
     std::vector<std::vector<uint8_t>> match_map = BuildMatchMap(wordList);
     std::vector<std::vector<int>> graph(wordList.size());
     BuildGraph(match_map, bid, graph);
-    std::vector<int> parents = BFS(wordList, bid, graph);
+    std::vector<int> levels(wordList.size(), std::numeric_limits<int>::max());
+    std::vector<int> parents = BFS(wordList, bid, graph, levels);
     if (parents[eid] == -1) return {};
     int min_path_len = GetMinPathLength(parents, eid);
-
+    PruneGraph(graph, levels, min_path_len);
     return GetPathesWithLength(wordList, graph, bid, eid, min_path_len);
   }
 };
