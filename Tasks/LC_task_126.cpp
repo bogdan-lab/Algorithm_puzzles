@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <queue>
 #include <string>
 #include <utility>
@@ -18,8 +19,8 @@ void BuildGraph(const std::vector<std::string>& data, int ci,
                 std::vector<std::vector<int>>& graph) {
   assert(graph.size() == data.size());
   if (!graph[ci].empty()) return;
-  for (int i = ci - 1; i >= 0; --i) {
-    if (GetDiffCount(data[ci], data[i]) == 1) {
+  for (int i = 0; i < data.size(); ++i) {
+    if (ci != i && GetDiffCount(data[ci], data[i]) == 1) {
       graph[ci].push_back(i);
       BuildGraph(data, i, graph);
     }
@@ -28,9 +29,8 @@ void BuildGraph(const std::vector<std::string>& data, int ci,
 
 std::vector<int> BFS(const std::vector<std::string>& data, int root,
                      const std::vector<std::vector<int>>& graph) {
-  std::vector<int> parents(data.size());
+  std::vector<int> parents(data.size(), -1);
   std::vector<int8_t> lookup(data.size());
-  parents[root] = -1;
   std::queue<int> buff;
   buff.push(root);
   lookup[root] = 1;
@@ -48,96 +48,56 @@ std::vector<int> BFS(const std::vector<std::string>& data, int root,
   return parents;
 }
 
-std::vector<std::string> AggregatePath(const std::vector<std::string>& data,
-                                       int i, const std::vector<int>& parents) {
-  std::vector<std::string> path;
+int GetMinPathLength(const std::vector<int>& parents, int i) {
+  int count = 0;
   while (i >= 0) {
-    path.push_back(data[i]);
+    ++count;
     i = parents[i];
   }
-  return path;
+  return count;
 }
 
-std::vector<std::vector<std::string>> BuildShortestPathes(
-    const std::vector<std::string>& data, const std::vector<int>& parents) {
-  std::vector<std::vector<std::string>> pathes;
-  pathes.reserve(data.size());
-  for (int i = 0; i < data.size(); ++i) {
-    pathes.push_back(AggregatePath(data, i, parents));
-  }
-  return pathes;
-}
-
-std::vector<std::vector<int>> RevertGraph(
-    const std::vector<std::vector<int>>& graph) {
-  std::vector<std::vector<int>> res(graph.size());
-  for (int i = 0; i < graph.size(); ++i) {
-    for (const auto& id : graph[i]) {
-      res[id].push_back(i);
+void DFS(const std::vector<std::vector<int>>& graph, int cid, int eid,
+         std::vector<int>& path, int min_len, std::vector<uint8_t>& lookup,
+         std::vector<std::vector<int>>& all_pathes) {
+  if (lookup[cid]) return;
+  lookup[cid] = 1;
+  path.push_back(cid);
+  if (path.size() < min_len) {
+    for (const auto& id : graph[cid]) {
+      DFS(graph, id, eid, path, min_len, lookup, all_pathes);
     }
+  } else if (path.size() == min_len && cid == eid) {
+    all_pathes.push_back(path);
   }
-  return res;
+  // restore before going back up
+  lookup[cid] = 0;
+  path.pop_back();
 }
 
-std::vector<std::string> Merge(const std::vector<std::string>& prefix,
-                               const std::vector<std::string>& suffix) {
+std::vector<std::string> TranslatePath(const std::vector<std::string>& data,
+                                       const std::vector<int>& p) {
   std::vector<std::string> res;
-  res.reserve(prefix.size() + suffix.size());
-  for (const auto& el : prefix) {
-    res.push_back(el);
-  }
-  for (const auto& el : suffix) {
-    res.push_back(el);
-  }
+  res.reserve(p.size());
+  std::transform(p.begin(), p.end(), std::back_inserter(res),
+                 [&data](int id) { return data[id]; });
   return res;
 }
 
-bool IsUnique(const std::vector<std::string>& p,
-              const std::vector<std::vector<std::string>>& data) {
-  for (const auto& el : data) {
-    if (p == el) return false;
-  }
-  return true;
-}
+std::vector<std::vector<std::string>> GetPathesWithLength(
+    const std::vector<std::string>& data,
+    const std::vector<std::vector<int>>& graph, int bid, int eid, int min_len) {
+  std::vector<uint8_t> lookup(data.size());
+  std::vector<std::vector<int>> all_pathes;
+  std::vector<int> path;
+  path.reserve(min_len + 1);
+  DFS(graph, bid, eid, path, min_len, lookup, all_pathes);
 
-void GluePathes(const std::vector<std::vector<int>>& r_graph,
-                const std::vector<std::string>& prefix, int id,
-                const std::vector<std::vector<std::string>>& suf_path,
-                std::vector<std::vector<std::string>>& coll) {
-  for (const auto& n_id : r_graph[id]) {
-    int new_size = prefix.size() + suf_path[n_id].size();
-    if (coll.empty() || coll.back().size() >= new_size) {
-      if (!coll.empty() && coll.back().size() > new_size) {
-        coll.clear();
-      }
-      std::vector<std::string> p = Merge(prefix, suf_path[n_id]);
-      if (IsUnique(p, coll)) {
-        coll.push_back(std::move(p));
-      }
-    }
-    // try deeper branching
-    if (!suf_path[n_id].empty()) {
-      GluePathes(r_graph, Merge(prefix, {suf_path[n_id].front()}), n_id,
-                 suf_path, coll);
-    }
-  }
-}
-
-std::vector<std::vector<std::string>> BuildMinPathes(
-    const std::vector<std::string>& data, const std::string& bw,
-    const std::vector<std::vector<int>>& r_graph,
-    const std::vector<std::vector<std::string>>& suf_path) {
   std::vector<std::vector<std::string>> res;
-
-  for (int i = 0; i < r_graph.size(); ++i) {
-    int diff = GetDiffCount(bw, data[i]);
-    if (diff > 1) continue;
-    std::vector<std::string> cp;
-    if (diff == 1) cp.push_back(bw);
-    cp.push_back(data[i]);
-    GluePathes(r_graph, cp, i, suf_path, res);
-  }
-
+  res.reserve(all_pathes.size());
+  std::transform(
+      all_pathes.begin(), all_pathes.end(), std::back_inserter(res),
+      [&data](const std::vector<int>& p) { return TranslatePath(data, p); });
   return res;
 }
 
@@ -146,21 +106,23 @@ class Solution {
   std::vector<std::vector<std::string>> findLadders(
       std::string beginWord, std::string endWord,
       std::vector<std::string>& wordList) {
-    auto it = std::find(wordList.begin(), wordList.end(), endWord);
-    if (it == wordList.end()) return {};
-    wordList.erase(std::next(it), wordList.end());
-    if (wordList.empty()) return {};
+    int eid =
+        std::find(wordList.begin(), wordList.end(), endWord) - wordList.begin();
+    if (eid == wordList.size()) return {};
+    int bid = std::find(wordList.begin(), wordList.end(), beginWord) -
+              wordList.begin();
+    if (bid == wordList.size()) {
+      wordList.push_back(beginWord);
+      bid = wordList.size() - 1;
+    }
 
     std::vector<std::vector<int>> graph(wordList.size());
-    BuildGraph(wordList, wordList.size() - 1, graph);
-    if (graph.back().empty()) return {};
+    BuildGraph(wordList, bid, graph);
+    std::vector<int> parents = BFS(wordList, bid, graph);
+    if (parents[eid] == -1) return {};
+    int min_path_len = GetMinPathLength(parents, eid);
 
-    std::vector<int> parents = BFS(wordList, wordList.size() - 1, graph);
-    std::vector<std::vector<std::string>> shortest_pathes =
-        BuildShortestPathes(wordList, parents);
-
-    std::vector<std::vector<int>> reverted = RevertGraph(graph);
-    return BuildMinPathes(wordList, beginWord, reverted, shortest_pathes);
+    return GetPathesWithLength(wordList, graph, bid, eid, min_path_len);
   }
 };
 
