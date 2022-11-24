@@ -7,46 +7,34 @@
 #include <utility>
 #include <vector>
 
-constexpr int kMaxDist = 1000;
+using ID = int16_t;
 
-int GetDiffCount(const std::string& l, const std::string& r) {
+constexpr ID kMaxDist = 1000;
+
+bool CanBeConnected(const std::string& l, const std::string& r) {
   assert(l.size() == r.size());
-  int diff_count = 0;
+  int8_t diff_count = 0;
   for (int i = 0; i < l.size(); ++i) {
     diff_count += (l[i] != r[i]);
   }
-  return diff_count;
+  return diff_count == 1;
 }
 
-std::vector<std::vector<uint8_t>> BuildMatchMap(
-    const std::vector<std::string>& data) {
-  std::vector<std::vector<uint8_t>> res(data.size(),
-                                        std::vector<uint8_t>(data.size()));
-  for (int i = 0; i < data.size(); ++i) {
-    for (int j = i + 1; j < data.size(); ++j) {
-      if (GetDiffCount(data[i], data[j]) == 1) {
-        res[i][j] = 1;
-        res[j][i] = 1;
+std::vector<std::vector<ID>> BuildGraph(const std::vector<std::string>& data) {
+  std::vector<std::vector<ID>> res(data.size());
+  for (ID i = 0; i < data.size(); ++i) {
+    for (ID j = i + 1; j < data.size(); ++j) {
+      if (CanBeConnected(data[i], data[j])) {
+        res[i].push_back(j);
+        res[j].push_back(i);
       }
     }
   }
   return res;
 }
 
-void BuildGraph(const std::vector<std::vector<uint8_t>>& match_map, int ci,
-                std::vector<std::vector<int>>& graph) {
-  assert(graph.size() == match_map.size());
-  if (!graph[ci].empty()) return;
-  for (int i = 0; i < match_map.size(); ++i) {
-    if (match_map[ci][i]) {
-      graph[ci].push_back(i);
-      BuildGraph(match_map, i, graph);
-    }
-  }
-}
-
-bool SaveLayer(const std::vector<int>& children, int p, int stop_id,
-               std::queue<int>& buff, std::vector<int>& distances,
+bool SaveLayer(const std::vector<ID>& children, ID p, ID stop_id,
+               std::queue<ID>& buff, std::vector<ID>& distances,
                std::vector<int8_t>& lookup) {
   for (const auto& el : children) {
     if (lookup[el]) continue;
@@ -58,16 +46,16 @@ bool SaveLayer(const std::vector<int>& children, int p, int stop_id,
   return false;
 }
 
-std::vector<int> BFS(const std::vector<std::vector<int>>& graph, int start,
-                     int end) {
-  std::vector<int> distances(graph.size(), kMaxDist);
+std::vector<ID> BFS(const std::vector<std::vector<ID>>& graph, ID start,
+                    ID end) {
+  std::vector<ID> distances(graph.size(), kMaxDist);
   std::vector<int8_t> lookup(graph.size());
-  std::queue<int> buff;
+  std::queue<ID> buff;
   buff.push(start);
   lookup[start] = 1;
   distances[start] = 1;
   while (!buff.empty()) {
-    int c = buff.front();
+    ID c = buff.front();
     buff.pop();
     if (SaveLayer(graph[c], c, end, buff, distances, lookup)) {
       break;
@@ -76,10 +64,10 @@ std::vector<int> BFS(const std::vector<std::vector<int>>& graph, int start,
   return distances;
 }
 
-void DFS(const std::vector<std::vector<int>>& graph, int cid, int bid, int eid,
-         std::vector<int>& path, const std::vector<int>& se,
-         const std::vector<int>& es, std::vector<uint8_t>& lookup,
-         std::vector<std::vector<int>>& all_pathes) {
+void DFS(const std::vector<std::vector<ID>>& graph, ID cid, ID bid, ID eid,
+         std::vector<ID>& path, const std::vector<ID>& se,
+         const std::vector<ID>& es, std::vector<uint8_t>& lookup,
+         std::vector<std::vector<ID>>& all_pathes) {
   if (lookup[cid]) return;
   lookup[cid] = 1;
   if (path.size() + se[cid] > se[eid]) {
@@ -102,21 +90,21 @@ void DFS(const std::vector<std::vector<int>>& graph, int cid, int bid, int eid,
 }
 
 std::vector<std::string> TranslatePath(const std::vector<std::string>& data,
-                                       const std::vector<int>& p) {
+                                       const std::vector<ID>& p) {
   std::vector<std::string> res;
   res.reserve(p.size());
   std::transform(p.begin(), p.end(), std::back_inserter(res),
-                 [&data](int id) { return data[id]; });
+                 [&data](ID id) { return data[id]; });
   return res;
 }
 
 std::vector<std::vector<std::string>> GetPathesWithLength(
     const std::vector<std::string>& data,
-    const std::vector<std::vector<int>>& graph, int bid, int eid,
-    const std::vector<int>& se, const std::vector<int>& es) {
+    const std::vector<std::vector<ID>>& graph, ID bid, ID eid,
+    const std::vector<ID>& se, const std::vector<ID>& es) {
   std::vector<uint8_t> lookup(data.size());
-  std::vector<std::vector<int>> all_pathes;
-  std::vector<int> path;
+  std::vector<std::vector<ID>> all_pathes;
+  std::vector<ID> path;
   path.reserve(se[eid]);
   DFS(graph, eid, bid, eid, path, se, es, lookup, all_pathes);
 
@@ -127,7 +115,7 @@ std::vector<std::vector<std::string>> GetPathesWithLength(
   res.reserve(all_pathes.size());
   std::transform(
       all_pathes.begin(), all_pathes.end(), std::back_inserter(res),
-      [&data](const std::vector<int>& p) { return TranslatePath(data, p); });
+      [&data](const std::vector<ID>& p) { return TranslatePath(data, p); });
   return res;
 }
 
@@ -136,23 +124,19 @@ class Solution {
   std::vector<std::vector<std::string>> findLadders(
       std::string beginWord, std::string endWord,
       std::vector<std::string>& wordList) {
-    int eid =
+    ID eid =
         std::find(wordList.begin(), wordList.end(), endWord) - wordList.begin();
     if (eid == wordList.size()) return {};
-    int bid = std::find(wordList.begin(), wordList.end(), beginWord) -
-              wordList.begin();
+    ID bid = std::find(wordList.begin(), wordList.end(), beginWord) -
+             wordList.begin();
     if (bid == wordList.size()) {
       wordList.push_back(beginWord);
       bid = wordList.size() - 1;
     }
-    // Build entire graph
-    std::vector<std::vector<uint8_t>> match_map = BuildMatchMap(wordList);
-    std::vector<std::vector<int>> graph(wordList.size());
-    BuildGraph(match_map, bid, graph);
-    // BFS results and tree prunning
-    std::vector<int> se = BFS(graph, bid, eid);
+    std::vector<std::vector<ID>> graph = BuildGraph(wordList);
+    std::vector<ID> se = BFS(graph, bid, eid);
     if (se[eid] == kMaxDist) return {};
-    std::vector<int> es = BFS(graph, eid, bid);
+    std::vector<ID> es = BFS(graph, eid, bid);
     return GetPathesWithLength(wordList, graph, bid, eid, se, es);
   }
 };
