@@ -70,19 +70,19 @@ void DFS(const std::vector<std::vector<ID>>& graph, ID cid, ID bid, ID eid,
          std::vector<std::vector<ID>>& all_pathes) {
   if (lookup[cid]) return;
   lookup[cid] = 1;
-  if (path.size() + se[cid] > se[eid]) {
+  if (path.size() + es[cid] > se[eid]) {
     lookup[cid] = 0;
     return;
   }
   path.push_back(cid);
-  if (path.size() == se[eid] && cid == bid) {
+  if (path.size() == se[eid] && cid == eid) {
     all_pathes.push_back(path);
     path.pop_back();
     lookup[cid] = 0;
     return;
   }
   for (const auto& id : graph[cid]) {
-    if (es[id] <= es[cid]) continue;
+    if (se[id] <= se[cid]) continue;
     DFS(graph, id, bid, eid, path, se, es, lookup, all_pathes);
   }
   path.pop_back();
@@ -106,11 +106,8 @@ std::vector<std::vector<std::string>> GetPathesWithLength(
   std::vector<std::vector<ID>> all_pathes;
   std::vector<ID> path;
   path.reserve(se[eid]);
-  DFS(graph, eid, bid, eid, path, se, es, lookup, all_pathes);
+  DFS(graph, bid, bid, eid, path, se, es, lookup, all_pathes);
 
-  for (auto& el : all_pathes) {
-    std::reverse(el.begin(), el.end());
-  }
   std::vector<std::vector<std::string>> res;
   res.reserve(all_pathes.size());
   std::transform(
