@@ -9,11 +9,6 @@
 
 constexpr int kMaxDist = 1000;
 
-struct BFSResult {
-  std::vector<int> parents;
-  std::vector<int> distances;
-};
-
 int GetDiffCount(const std::string& l, const std::string& r) {
   assert(l.size() == r.size());
   int diff_count = 0;
@@ -50,84 +45,56 @@ void BuildGraph(const std::vector<std::vector<uint8_t>>& match_map, int ci,
   }
 }
 
-BFSResult BFS(const std::vector<std::vector<int>>& graph, int start, int end) {
-  BFSResult r;
-  r.parents.resize(graph.size(), -1);
-  r.distances.resize(graph.size(), kMaxDist);
+bool SaveLayer(const std::vector<int>& children, int p, int stop_id,
+               std::queue<int>& buff, std::vector<int>& distances,
+               std::vector<int8_t>& lookup) {
+  for (const auto& el : children) {
+    if (lookup[el]) continue;
+    lookup[el] = 1;
+    buff.push(el);
+    distances[el] = distances[p] + 1;
+    if (el == stop_id) return true;
+  }
+  return false;
+}
+
+std::vector<int> BFS(const std::vector<std::vector<int>>& graph, int start,
+                     int end) {
+  std::vector<int> distances(graph.size(), kMaxDist);
   std::vector<int8_t> lookup(graph.size());
   std::queue<int> buff;
   buff.push(start);
   lookup[start] = 1;
-  r.distances[start] = 1;
-  bool found_end = false;
-  while (!buff.empty() && !found_end) {
+  distances[start] = 1;
+  while (!buff.empty()) {
     int c = buff.front();
-    for (const auto& el : graph[c]) {
-      if (!lookup[el]) {
-        lookup[el] = 1;
-        buff.push(el);
-        r.parents[el] = c;
-        r.distances[el] = r.distances[c] + 1;
-        if (el == end) {
-          found_end = true;
-          break;
-        }
-      }
-    }
     buff.pop();
+    if (SaveLayer(graph[c], c, end, buff, distances, lookup)) {
+      break;
+    }
   }
-  return r;
-}
-
-int GetMinPathLength(const std::vector<int>& parents, int i) {
-  int count = 0;
-  while (i >= 0) {
-    ++count;
-    i = parents[i];
-  }
-  return count;
-}
-
-void AchieveDFS(const std::vector<std::vector<int>>& graph, int id,
-                std::vector<int8_t>& ach_lookup) {
-  if (ach_lookup[id]) return;
-  ach_lookup[id] = 1;
-  for (const auto& nid : graph[id]) {
-    AchieveDFS(graph, nid, ach_lookup);
-  }
-}
-
-void PruneGraph(std::vector<std::vector<int>>& graph,
-                const std::vector<int>& levels, int min_len,
-                const std::vector<int8_t>& ach_lookup) {
-  for (int i = 0; i < graph.size(); ++i) {
-    auto p_end = std::partition(graph[i].begin(), graph[i].end(), [&](int id) {
-      return levels[i] < levels[id] && levels[id] <= min_len + 1 &&
-             ach_lookup[id];
-    });
-    graph[i].erase(p_end, graph[i].end());
-  }
+  return distances;
 }
 
 void DFS(const std::vector<std::vector<int>>& graph, int cid, int bid, int eid,
-         std::vector<int>& path, const BFSResult& se, const BFSResult& es,
-         std::vector<uint8_t>& lookup,
+         std::vector<int>& path, const std::vector<int>& se,
+         const std::vector<int>& es, std::vector<uint8_t>& lookup,
          std::vector<std::vector<int>>& all_pathes) {
   if (lookup[cid]) return;
   lookup[cid] = 1;
-  if (path.size() + se.distances[cid] > se.distances[eid]) {
+  if (path.size() + se[cid] > se[eid]) {
     lookup[cid] = 0;
     return;
   }
   path.push_back(cid);
-  if (path.size() == se.distances[eid] && cid == bid) {
+  if (path.size() == se[eid] && cid == bid) {
     all_pathes.push_back(path);
     path.pop_back();
     lookup[cid] = 0;
     return;
   }
   for (const auto& id : graph[cid]) {
-    if (es.distances[id] <= es.distances[cid]) continue;
+    if (es[id] <= es[cid]) continue;
     DFS(graph, id, bid, eid, path, se, es, lookup, all_pathes);
   }
   path.pop_back();
@@ -146,11 +113,11 @@ std::vector<std::string> TranslatePath(const std::vector<std::string>& data,
 std::vector<std::vector<std::string>> GetPathesWithLength(
     const std::vector<std::string>& data,
     const std::vector<std::vector<int>>& graph, int bid, int eid,
-    const BFSResult& se, const BFSResult& es) {
+    const std::vector<int>& se, const std::vector<int>& es) {
   std::vector<uint8_t> lookup(data.size());
   std::vector<std::vector<int>> all_pathes;
   std::vector<int> path;
-  path.reserve(se.distances[eid]);
+  path.reserve(se[eid]);
   DFS(graph, eid, bid, eid, path, se, es, lookup, all_pathes);
 
   for (auto& el : all_pathes) {
@@ -183,16 +150,9 @@ class Solution {
     std::vector<std::vector<int>> graph(wordList.size());
     BuildGraph(match_map, bid, graph);
     // BFS results and tree prunning
-    BFSResult se = BFS(graph, bid, eid);
-    if (se.distances[eid] == kMaxDist) return {};
-    BFSResult es = BFS(graph, eid, bid);
-    // std::vector<int> levels(wordList.size(), -1);
-    // std::vector<int> parents = BFS(wordList, bid, graph, levels);
-    // if (parents[eid] == -1) return {};
-    // int min_path_len = GetMinPathLength(parents, eid);
-    // std::vector<int8_t> ach_lookup(wordList.size());
-    // AchieveDFS(graph, eid, ach_lookup);
-    // PruneGraph(graph, levels, min_path_len, ach_lookup);
+    std::vector<int> se = BFS(graph, bid, eid);
+    if (se[eid] == kMaxDist) return {};
+    std::vector<int> es = BFS(graph, eid, bid);
     return GetPathesWithLength(wordList, graph, bid, eid, se, es);
   }
 };
