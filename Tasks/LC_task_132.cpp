@@ -1,78 +1,48 @@
 #include <algorithm>
 #include <iostream>
-#include <limits>
+#include <queue>
 #include <string>
-#include <string_view>
 #include <vector>
 
-void CheckRowFor(std::string_view str, int i,
-                 std::vector<std::vector<uint8_t>>& res) {
-  int j = i;
-  res[i][j] = 1;
+void CheckRowFor(const std::string& str, int16_t i,
+                 std::vector<std::vector<int16_t>>& res) {
+  int16_t j = i;
+  res[i].push_back(j + 1);
   bool prev_even = true;
   bool prev_odd = true;
   while (true) {
     --i;
     if (i < 0) break;
     if (str[i] == str[j] && prev_even) {
-      res[i][j] = 1;
+      res[i].push_back(j + 1);
     } else {
       prev_even = false;
     }
     ++j;
     if (j == res.size()) break;
     if (str[i] == str[j] && prev_odd) {
-      res[i][j] = 1;
+      res[i].push_back(j + 1);
     } else {
       prev_odd = false;
     }
   }
 }
 
-std::vector<std::vector<uint8_t>> BuildMap(std::string_view str) {
-  std::vector<std::vector<uint8_t>> res(str.size(),
-                                        std::vector<uint8_t>(str.size()));
-  for (int i = 0; i < str.size(); ++i) {
+std::vector<std::vector<int16_t>> BuildGraph(const std::string& str) {
+  std::vector<std::vector<int16_t>> res(str.size() + 1);
+  for (int16_t i = 0; i < str.size(); ++i) {
     CheckRowFor(str, i, res);
   }
   return res;
 }
 
-std::vector<std::vector<int>> BuildGraph(
-    const std::vector<std::vector<uint8_t>>& data) {
-  std::vector<std::vector<int>> res(data.size() + 1);
-  for (int i = 0; i < data.size(); ++i) {
-    for (int j = i; j < data[i].size(); ++j) {
-      if (data[i][j]) {
-        res[i].push_back(j + 1);
-      }
-    }
-  }
-  return res;
-}
-
-void GetMinSplits(const std::vector<std::vector<uint8_t>>& data, int idx,
-                  int curr_count, int& min_count) {
-  if (idx >= data.size()) {
-    min_count = std::min(min_count, curr_count - 1);
-    return;
-  }
-
-  if (curr_count - 1 >= min_count) return;
-
-  for (int i = data.size() - 1; i >= idx; --i) {
-    if (data[idx][i]) {
-      GetMinSplits(data, i + 1, curr_count + 1, min_count);
-    }
-  }
-}
-
-int BFS(const std::vector<std::vector<int>>& data) {
+int BFS(const std::vector<std::vector<int16_t>>& data) {
   std::vector<uint8_t> lookup(data.size());
-  std::queue<int> buff;
+  std::queue<int16_t> buff;
   buff.push(0);
   lookup[0] = 1;
-  std::vector<int> dist(data.size());
+  std::vector<int16_t> dist(data.size());
+  bool found_end = false;
   while (!buff.empty()) {
     int c = buff.front();
     buff.pop();
@@ -81,18 +51,16 @@ int BFS(const std::vector<std::vector<int>>& data) {
       lookup[el] = 1;
       dist[el] = dist[c] + 1;
       buff.push(el);
+      found_end = el == data.size() - 1;
     }
+    if (found_end) break;
   }
   return dist.back() - 1;
 }
 
 class Solution {
  public:
-  int minCut(std::string s) {
-    std::vector<std::vector<uint8_t>> data = BuildMap(s);
-    std::vector<std::vector<int>> graph = BuildGraph(data);
-    return BFS(graph);
-  }
+  int minCut(std::string s) { return BFS(BuildGraph(s)); }
 };
 
 int main() {
