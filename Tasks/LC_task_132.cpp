@@ -1,27 +1,39 @@
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <string>
 #include <string_view>
 #include <vector>
 
-bool IsPalindrome(std::string_view str) {
-  for (int i = 0; i < str.size() / 2; ++i) {
-    if (str[i] != str[str.size() - i - 1]) {
-      return false;
+void CheckRowFor(std::string_view str, int i,
+                 std::vector<std::vector<uint8_t>>& res) {
+  int j = i;
+  res[i][j] = 1;
+  bool prev_even = true;
+  bool prev_odd = true;
+  while (true) {
+    --i;
+    if (i < 0) break;
+    if (str[i] == str[j] && prev_even) {
+      res[i][j] = 1;
+    } else {
+      prev_even = false;
+    }
+    ++j;
+    if (j == res.size()) break;
+    if (str[i] == str[j] && prev_odd) {
+      res[i][j] = 1;
+    } else {
+      prev_odd = false;
     }
   }
-  return true;
 }
 
 std::vector<std::vector<uint8_t>> BuildMap(std::string_view str) {
   std::vector<std::vector<uint8_t>> res(str.size(),
                                         std::vector<uint8_t>(str.size()));
   for (int i = 0; i < str.size(); ++i) {
-    for (int j = i; j < str.size(); ++j) {
-      if (IsPalindrome(str.substr(i, j - i + 1))) {
-        res[i][j] = 1;
-      }
-    }
+    CheckRowFor(str, i, res);
   }
   return res;
 }
@@ -49,3 +61,10 @@ class Solution {
     return min_count;
   }
 };
+
+int main() {
+  Solution s;
+  int res = s.minCut("ababababababababababababcbabababababababababababa");
+  std::cout << res << '\n';
+  return 0;
+}
