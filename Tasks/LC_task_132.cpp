@@ -38,6 +38,19 @@ std::vector<std::vector<uint8_t>> BuildMap(std::string_view str) {
   return res;
 }
 
+std::vector<std::vector<int>> BuildGraph(
+    const std::vector<std::vector<uint8_t>>& data) {
+  std::vector<std::vector<int>> res(data.size() + 1);
+  for (int i = 0; i < data.size(); ++i) {
+    for (int j = i; j < data[i].size(); ++j) {
+      if (data[i][j]) {
+        res[i].push_back(j + 1);
+      }
+    }
+  }
+  return res;
+}
+
 void GetMinSplits(const std::vector<std::vector<uint8_t>>& data, int idx,
                   int curr_count, int& min_count) {
   if (idx >= data.size()) {
@@ -45,20 +58,40 @@ void GetMinSplits(const std::vector<std::vector<uint8_t>>& data, int idx,
     return;
   }
 
-  for (int i = idx; i < data.size(); ++i) {
+  if (curr_count - 1 >= min_count) return;
+
+  for (int i = data.size() - 1; i >= idx; --i) {
     if (data[idx][i]) {
       GetMinSplits(data, i + 1, curr_count + 1, min_count);
     }
   }
 }
 
+int BFS(const std::vector<std::vector<int>>& data) {
+  std::vector<uint8_t> lookup(data.size());
+  std::queue<int> buff;
+  buff.push(0);
+  lookup[0] = 1;
+  std::vector<int> dist(data.size());
+  while (!buff.empty()) {
+    int c = buff.front();
+    buff.pop();
+    for (const auto& el : data[c]) {
+      if (lookup[el]) continue;
+      lookup[el] = 1;
+      dist[el] = dist[c] + 1;
+      buff.push(el);
+    }
+  }
+  return dist.back() - 1;
+}
+
 class Solution {
  public:
   int minCut(std::string s) {
     std::vector<std::vector<uint8_t>> data = BuildMap(s);
-    int min_count = std::numeric_limits<int>::max();
-    GetMinSplits(data, 0, 0, min_count);
-    return min_count;
+    std::vector<std::vector<int>> graph = BuildGraph(data);
+    return BFS(graph);
   }
 };
 
