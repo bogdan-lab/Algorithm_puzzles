@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <cassert>
 #include <limits>
-#include <stack>
 #include <vector>
 
 class Solution {
@@ -9,7 +8,6 @@ class Solution {
   int candy(std::vector<int>& ratings) {
     std::vector<int> candies(ratings.size());
     int i = 0;
-    std::stack<int> buff;
     while (true) {
       // process increase
       while (i < ratings.size() - 1 && ratings[i] < ratings[i + 1]) {
@@ -27,16 +25,17 @@ class Solution {
         break;
       }
       // process decrease
+      int decrease_start = i;
       while (i < ratings.size() - 1 && ratings[i] > ratings[i + 1]) {
-        buff.push(i);
         ++i;
       }
-      int prev = i;
-      while (!buff.empty()) {
-        int j = buff.top();
-        buff.pop();
-        candies[j] = std::max(candies[j], candies[prev] + 1);
-        prev = j;
+      int decrease_end = i;
+      if (decrease_start < decrease_end) {
+        int j = decrease_end - 1;
+        while (decrease_start <= j) {
+          candies[j] = std::max(candies[j], candies[j + 1] + 1);
+          --j;
+        }
       }
     }
 
