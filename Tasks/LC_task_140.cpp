@@ -3,10 +3,10 @@
 #include <string_view>
 #include <vector>
 
+int ToInt(char c) { return static_cast<int>(c) - static_cast<int>('a'); }
+
 struct Node {
-  Node() = default;
-  explicit Node(char gc) : c(gc) {}
-  char c = '\0';
+  Node() : children(ToInt('z') + 1, nullptr) {}
   bool is_word_end = false;
   std::vector<Node*> children;
 };
@@ -16,13 +16,11 @@ Node* BuildTrie(const std::vector<std::string>& wordDict) {
   for (const auto& word : wordDict) {
     Node* curr = root;
     for (const auto& c : word) {
-      auto it = std::find_if(curr->children.begin(), curr->children.end(),
-                             [&](const Node* n) { return c == n->c; });
-      if (it == curr->children.end()) {
-        curr->children.push_back(new Node(c));
-        it = std::prev(curr->children.end());
+      int index = ToInt(c);
+      if (!curr->children[index]) {
+        curr->children[index] = new Node();
       }
-      curr = *it;
+      curr = curr->children[index];
     }
     curr->is_word_end = true;
   }
@@ -30,10 +28,14 @@ Node* BuildTrie(const std::vector<std::string>& wordDict) {
 }
 
 std::string AddToPrefix(const std::string& prefix, std::string_view word) {
+  std::string res;
   if (prefix.empty()) {
-    return prefix + std::string(word);
+    res = std::string(word);
+  } else {
+    res.reserve(prefix.size() + word.size() + 1);
+    res = prefix + " " + std::string(word);
   }
-  return prefix + " " + std::string(word);
+  return res;
 }
 
 std::vector<std::string> BuildSentences(std::string prefix,
@@ -41,12 +43,11 @@ std::vector<std::string> BuildSentences(std::string prefix,
   std::vector<std::string> res;
   Node* par = root;
   for (int i = 0; i < suffix.size(); ++i) {
-    auto it = std::find_if(par->children.begin(), par->children.end(),
-                           [&](const Node* n) { return n->c == suffix[i]; });
-    if (it == par->children.end()) {
+    int index = ToInt(suffix[i]);
+    if (!par->children[index]) {
       break;
     } else {
-      par = *it;
+      par = par->children[index];
       if (par->is_word_end && i + 1 < suffix.size()) {
         std::vector<std::string> sub_res =
             BuildSentences(AddToPrefix(prefix, suffix.substr(0, i + 1)),
@@ -64,7 +65,6 @@ class Solution {
  public:
   std::vector<std::string> wordBreak(std::string s,
                                      std::vector<std::string>& wordDict) {
-    Node* root = BuildTrie(wordDict);
-    return BuildSentences("", s, root);
+    return BuildSentences("", s, BuildTrie(wordDict));
   }
 };
