@@ -14,12 +14,10 @@ struct Line {
 };
 
 int GetGCD(int lhs, int rhs) {
-  while (lhs != rhs) {
-    if (lhs > rhs) {
-      lhs -= rhs;
-    } else {
-      rhs -= lhs;
-    }
+  if (lhs < rhs) std::swap(lhs, rhs);
+  while (rhs) {
+    lhs %= rhs;
+    std::swap(lhs, rhs);
   }
   return lhs;
 }
@@ -61,18 +59,6 @@ bool IsOnLine(std::vector<int> p0, const Line& l) {
   return steps * l.step_up + p0[1] == cp[1];
 }
 
-bool IsLineUnique(const std::vector<Line>& all_lines, const Line& line) {
-  for (const auto l : all_lines) {
-    if (l.x_vertical == line.x_vertical &&
-        l.y_horizontal == line.y_horizontal &&
-        l.step_right == line.step_right && l.step_up == line.step_up &&
-        IsOnLine(line.p0, l)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 class Solution {
  public:
   int maxPoints(std::vector<std::vector<int>>& points) {
@@ -80,10 +66,7 @@ class Solution {
     std::vector<Line> all_lines;
     for (int i = 0; i < points.size(); ++i) {
       for (int j = i + 1; j < points.size(); ++j) {
-        Line l = GetLine(points[i], points[j]);
-        if (IsLineUnique(all_lines, l)) {
-          all_lines.push_back(l);
-        }
+        all_lines.push_back(GetLine(points[i], points[j]));
       }
     }
 
