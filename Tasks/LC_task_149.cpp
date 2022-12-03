@@ -1,42 +1,50 @@
 #include <algorithm>
 #include <limits>
+#include <map>
 #include <vector>
 
-struct Line {
-  Line(std::vector<int> l, std::vector<int> r)
-      : p1(std::move(l)), p2(std::move(r)) {}
-  std::vector<int> p1;
-  std::vector<int> p2;
-};
-
-int Cross(const std::vector<int>& v1, const std::vector<int>& v2) {
-  return v1[0] * v2[1] - v1[1] * v2[0];
+int GetGCD(int lhs, int rhs) {
+  if (lhs > rhs) std::swap(lhs, rhs);
+  while (rhs) {
+    lhs %= rhs;
+    std::swap(lhs, rhs);
+  }
+  return lhs;
 }
 
-bool IsOnLine(const Line& l, const std::vector<int>& p) {
-  return Cross({p[0] - l.p1[0], p[1] - l.p1[1]},
-               {p[0] - l.p2[0], p[1] - l.p2[1]}) == 0;
+std::pair<int, int> GetXY(std::vector<int> l, std::vector<int> r) {
+  if (l[0] > r[0]) std::swap(l, r);
+  std::pair<int, int> res;
+  res.first = r[0] - l[0];
+  res.second = r[1] - l[1];
+  int gcd = GetGCD(res.first, std::abs(res.second));
+  res.first /= gcd;
+  res.second /= gcd;
+  return res;
 }
 
 class Solution {
  public:
   int maxPoints(std::vector<std::vector<int>>& points) {
     if (points.size() <= 1) return 1;
-    std::vector<Line> all_lines;
+    int ans = 0;
     for (int i = 0; i < points.size(); ++i) {
+      std::map<std::pair<int, int>, int> dp;
+      int same_x = 0;
+      int same_y = 0;
       for (int j = i + 1; j < points.size(); ++j) {
-        all_lines.push_back(Line(points[i], points[j]));
-      }
-    }
-
-    std::vector<int> count(all_lines.size());
-    for (const auto& p : points) {
-      for (int i = 0; i < all_lines.size(); ++i) {
-        if (IsOnLine(all_lines[i], p)) {
-          ++count[i];
+        if (points[i][0] == points[j][0]) {
+          ++same_x;
+        } else if (points[i][1] == points[j][1]) {
+          ++same_y;
+        } else {
+          int& count = dp[GetXY(points[i], points[j])];
+          ++count;
+          ans = std::max(ans, count);
         }
       }
+      ans = std::max({ans, same_x, same_y});
     }
-    return *std::max_element(count.begin(), count.end());
+    return ans + 1;
   }
 };
