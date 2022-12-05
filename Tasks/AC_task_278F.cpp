@@ -1,9 +1,8 @@
 #include <algorithm>
 #include <iostream>
-#include <limits>
-#include <queue>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 void Solution(std::istream& input = std::cin);
@@ -17,99 +16,37 @@ int main() {
   return 0;
 }
 
-bool IsConnected(const std::string& l, const std::string& r) {
-  return l.back() == r.front();
-}
-
-std::vector<std::vector<int>> BuildGraph(
-    const std::vector<std::string>& str_data) {
-  std::vector<std::vector<int>> res(str_data.size());
-  for (int i = 0; i < str_data.size(); ++i) {
-    for (int j = 0; j < str_data.size(); ++j) {
-      if (IsConnected(str_data[i], str_data[j])) {
-        res[i].push_back(j);
-      }
-    }
-  }
-  return res;
-}
-
-std::vector<int> GetDistances(const std::vector<std::vector<int>>& graph,
-                              int root) {
-  std::vector<uint8_t> lookup(graph.size());
-  std::queue<int> buff;
-  buff.push(root);
-  lookup[root] = 1;
-  std::vector<int> d(graph.size(), std::numeric_limits<int>::max());
-  d[root] = 1;
-  while (!buff.empty()) {
-    int c = buff.front();
-    buff.pop();
-    for (const auto& id : graph[c]) {
-      if (lookup[id]) continue;
-      lookup[id] = 1;
-      d[id] = d[c] + 1;
-      buff.push(id);
-    }
-  }
-  return d;
-}
-
-void DFS(const std::vector<std::vector<int>>& graph, int par,
-         std::vector<int>& lookup, std::vector<int>& dist,
-         std::vector<int>& is_leaf) {
-  bool has_child = false;
-  for (const auto& id : graph[par]) {
-    if (lookup[id]) continue;
-    lookup[id] = 1;
-    has_child = true;
-    dist[id] = dist[par] + 1;
-    DFS(graph, id, lookup, dist, is_leaf);
-    lookup[id] = 0;
-  }
-  if (!has_child) {
-    is_leaf[par] = 1;
-  }
-}
-
-int GetDFSDistance(const std::vector<std::vector<int>>& graph, int root) {
-  std::vector<int> is_leaf(graph.size());
-  std::vector<int> dist(graph.size(), std::numeric_limits<int>::max());
-  std::vector<int> lookup(graph.size());
-  lookup[root] = 1;
-  dist[root] = 1;
-
-  DFS(graph, root, lookup, dist, is_leaf);
-
-  int min_len = std::numeric_limits<int>::max();
-  for (int i = 0; i < dist.size(); ++i) {
-    if (is_leaf[i]) {
-      min_len = std::min(min_len, dist[i]);
-    }
-  }
-  return min_len;
+uint32_t ToInt(char c) {
+  return static_cast<uint32_t>(c) - static_cast<uint32_t>('a');
 }
 
 void Solution(std::istream& input) {
-  int n;
+  uint32_t n;
   input >> n;
-  std::vector<std::string> str_data(n);
+  std::vector<std::pair<uint32_t, uint32_t>> str_data(n);
+  std::string str;
   for (auto& el : str_data) {
-    input >> el;
+    input >> str;
+    el.first = ToInt(str.front());
+    el.second = ToInt(str.back());
   }
+  std::vector<uint32_t> dp(1UL << n);
+  for (uint32_t S = 1; S < dp.size(); ++S) {
+    for (uint32_t c = 0; c < n; ++c) {
+      if (S & (1 << c)) {
+        // Here element c is inside set S
 
-  std::vector<std::vector<int>> graph = BuildGraph(str_data);
-
-  int min_len = std::numeric_limits<int>::max();
-  for (int i = 0; i < graph.size(); ++i) {
-    min_len = std::min(min_len, GetDFSDistance(graph, i));
+        uint32_t excluded_c = S ^ 1UL << c;
+        uint32_t x = ~dp[excluded_c];
+        // y == 1 if one cannot win after I use word c
+        // y == 0 otherwise
+        uint32_t y = 1UL & (~dp[excluded_c] >> str_data[c].second);
+        // Here we set 1 if I can win by using word c
+        dp[S] |= y << str_data[c].first;
+      }
+    }
   }
-
-  if (min_len % 2) {
-    std::cout << "First\n";
-  } else {
-    std::cout << "Second\n";
-  }
+  std::cout << (dp.back() ? "First" : "Second") << '\n';
 }
 
 void RunTests() {
