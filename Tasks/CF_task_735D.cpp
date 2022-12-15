@@ -1,12 +1,6 @@
 #include <algorithm>
-#include <bitset>
-#include <cassert>
 #include <iostream>
-#include <memory>
 #include <sstream>
-#include <vector>
-
-constexpr size_t kMaxVal = 2 * 1000'000'000 + 1;
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
@@ -19,44 +13,25 @@ int main() {
   return 0;
 }
 
-std::vector<int> BuildLookup(int n) {
-  auto res = std::make_unique<std::bitset<kMaxVal>>();
-  res->set();
-  res->reset(0);
-  res->reset(1);
-  std::vector<int> coll;
-  for (int i = 2; i <= n; ++i) {
-    if (!res->test(i)) continue;
-    coll.push_back(i);
-    int64_t j = 2 * i;
-    while (j <= n) {
-      res->reset(j);
-      j += i;
+bool IsPrime(int n) {
+  for (int i = 2; i * i <= n; ++i) {
+    if (!(n % i)) {
+      return false;
     }
   }
-
-  return coll;
-}
-
-int CalcTax(const std::vector<int>& primes, int val) {
-  auto bnd_it = std::lower_bound(primes.begin(), primes.end(), val);
-  if (bnd_it != primes.end() && *bnd_it == val) {
-    return 1;
-  }
-  assert(bnd_it != primes.begin());
-  --bnd_it;
-  // here bnd_it is first on the left from val
-  if (*bnd_it == val - 1) {
-    --bnd_it;
-  }
-  return 1 + CalcTax(primes, val - *bnd_it);
+  return true;
 }
 
 void Solution(std::istream& input) {
   int n;
   input >> n;
-  std::vector<int> primes = BuildLookup(n);
-  std::cout << CalcTax(primes, n) << '\n';
+  if (IsPrime(n)) {
+    std::cout << 1 << '\n';
+  } else if (!(n % 2) || IsPrime(n - 2)) {
+    std::cout << 2 << '\n';
+  } else {
+    std::cout << 3 << '\n';
+  }
 }
 
 void RunTests() {
