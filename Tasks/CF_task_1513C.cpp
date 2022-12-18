@@ -12,8 +12,8 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -22,22 +22,17 @@ void Solution(std::istream& input) {
   input >> n;
   // building dp
   std::vector<int> dp(kMaxM + 1 + 10);
-  dp[0] = 1;
-  std::vector<int> curr_val(1);
-  std::vector<int> buff;
-  for (int i = 1; i < dp.size(); ++i) {
-    for (int v = 0; v < curr_val.size(); ++v) {
-      ++curr_val[v];
-      if (curr_val[v] < 10) {
-        buff.push_back(curr_val[v]);
-      } else {
-        buff.push_back(1);
-        buff.push_back(0);
-      }
-    }
-    curr_val.clear();
-    std::swap(curr_val, buff);
-    dp[i] = curr_val.size();
+  for (int i = 0; i < 10; ++i) {
+    dp[i] = 1;
+  }
+  for (int i = 10; i < 19; ++i) {
+    dp[i] = 2;
+  }
+  dp[19] = 3;
+
+  for (int i = 20; i < dp.size(); ++i) {
+    dp[i] = dp[i - 9] + dp[i - 10];
+    dp[i] %= kMod;
   }
 
   while (n--) {
