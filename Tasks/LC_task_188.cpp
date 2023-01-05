@@ -4,29 +4,32 @@
 
 constexpr int kEmpty = -1001;
 
-int Solve(const std::vector<int>& prices, int start, int k,
-          std::vector<std::vector<int>>& profit) {
-  if (k <= 0 || start >= prices.size() - 1) return 0;
-  if (profit[start][k] == kEmpty) {
-    for (int i = start + 1; i < prices.size(); ++i) {
-      int curr_prof = prices[i] - prices[start];
-      profit[start][k] = std::max(
-          {profit[start][k], Solve(prices, i + 1, k - 1, profit) + curr_prof,
-           Solve(prices, i, k, profit)});
+int Solve(const std::vector<int>& prices, int pos, int k,
+          std::vector<std::vector<std::vector<int>>>& profit,
+          int bought) {  // profit[bought][k][pos]
+  if (k <= 0 || pos >= prices.size()) return 0;
+  if (profit[bought][k][pos] == kEmpty) {
+    profit[bought][k][pos] = Solve(prices, pos + 1, k, profit, bought);
+    if (bought) {
+      profit[bought][k][pos] =
+          std::max(profit[bought][k][pos],
+                   Solve(prices, pos + 1, k - 1, profit, 0) + prices[pos]);
+    } else {
+      profit[bought][k][pos] =
+          std::max(profit[bought][k][pos],
+                   Solve(prices, pos + 1, k, profit, 1) - prices[pos]);
     }
   }
-  return profit[start][k];
+  return profit[bought][k][pos];
 }
 
 class Solution {
  public:
   int maxProfit(int k, std::vector<int>& prices) {
-    std::vector<std::vector<int>> profit(prices.size(),
-                                         std::vector<int>(k + 1, kEmpty));
-
-    int res = Solve(prices, 0, k, profit);
-
-    return res;
+    std::vector<std::vector<std::vector<int>>> profit(
+        2, std::vector<std::vector<int>>(
+               k + 1, std::vector<int>(prices.size(), kEmpty)));
+    return Solve(prices, 0, k, profit, 0);
   }
 };
 
