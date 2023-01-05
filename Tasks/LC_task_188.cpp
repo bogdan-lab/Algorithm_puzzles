@@ -1,35 +1,30 @@
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 #include <vector>
-
-constexpr int kEmpty = -1001;
-
-int Solve(const std::vector<int>& prices, int pos, int k,
-          std::vector<std::vector<std::vector<int>>>& profit,
-          int bought) {  // profit[bought][k][pos]
-  if (k <= 0 || pos >= prices.size()) return 0;
-  if (profit[bought][k][pos] == kEmpty) {
-    profit[bought][k][pos] = Solve(prices, pos + 1, k, profit, bought);
-    if (bought) {
-      profit[bought][k][pos] =
-          std::max(profit[bought][k][pos],
-                   Solve(prices, pos + 1, k - 1, profit, 0) + prices[pos]);
-    } else {
-      profit[bought][k][pos] =
-          std::max(profit[bought][k][pos],
-                   Solve(prices, pos + 1, k, profit, 1) - prices[pos]);
-    }
-  }
-  return profit[bought][k][pos];
-}
 
 class Solution {
  public:
   int maxProfit(int k, std::vector<int>& prices) {
+    int pn = prices.size();
+    // profit[bought][start][k]
     std::vector<std::vector<std::vector<int>>> profit(
-        2, std::vector<std::vector<int>>(
-               k + 1, std::vector<int>(prices.size(), kEmpty)));
-    return Solve(prices, 0, k, profit, 0);
+        2, std::vector<std::vector<int>>(pn, std::vector<int>(k + 1)));
+    for (int i = 1; i <= k; ++i) {
+      profit[0][pn - 1][i] = 0;
+      profit[1][pn - 1][i] = prices.back();
+    }
+
+    for (int i = 1; i <= k; ++i) {
+      for (int p = pn - 2; p >= 0; --p) {
+        profit[1][p][i] =
+            std::max(profit[1][p + 1][i], profit[0][p + 1][i - 1] + prices[p]);
+        profit[0][p][i] =
+            std::max(profit[0][p + 1][i], profit[1][p + 1][i] - prices[p]);
+      }
+    }
+
+    return profit[0][0][k];
   }
 };
 
