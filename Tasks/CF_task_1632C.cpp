@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <iostream>
+#include <limits>
 #include <sstream>
 
 void Solution(std::istream& input = std::cin);
@@ -8,47 +9,37 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
-uint32_t FindNextNonZeroBit(uint32_t val, uint32_t curr_bit) {
-  while (curr_bit && !(curr_bit & val)) {
-    curr_bit >>= 1;
+uint32_t GetBs(uint32_t as, uint32_t b) {
+  uint32_t bs = 0;
+  for (int i = 31; i >= 0; --i) {
+    uint32_t test = 1U << static_cast<uint32_t>(i);
+    if (as & test) {
+      bs |= test;
+      if (!(b & test)) {
+        return bs;
+      }
+    } else {
+      bs |= (b & test);
+    }
   }
-  return curr_bit;
-}
-
-int64_t Count(uint32_t a, uint32_t b, uint32_t curr_bit) {
-  if (curr_bit == 0) return 0;
-  uint32_t next_bit = curr_bit >> 1;
-  uint32_t a_bit = a & curr_bit;
-  uint32_t b_bit = b & curr_bit;
-  if (a_bit == b_bit) {
-    return Count(a % curr_bit, b % curr_bit, next_bit);
-  }
-
-  if (a_bit && !b_bit) {
-    // shift b;
-    uint32_t next = FindNextNonZeroBit(b, curr_bit);
-    uint32_t diff = curr_bit - next;
-    b += diff;
-    return diff + Count(a % curr_bit, b % curr_bit, next_bit);
-  } else {
-    // do | or shift a
-    uint32_t next = FindNextNonZeroBit(a, curr_bit);
-    uint32_t diff = curr_bit - next;
-    return std::min(diff + Count((a + diff) % curr_bit, b % curr_bit, next_bit),
-                    1 + Count((a | b) % curr_bit, b % curr_bit, next_bit));
-  }
+  return bs;
 }
 
 void SolveOne(std::istream& input) {
   uint32_t a, b;
   input >> a >> b;
 
-  std::cout << Count(a, b, 1U << 31U) << '\n';
+  uint32_t min_v = std::numeric_limits<uint32_t>::max();
+  for (uint32_t as = a; as <= b; ++as) {
+    uint32_t bs = GetBs(as, b);
+    min_v = std::min(min_v, as + (as | bs) + 1 - a - b);
+  }
+  std::cout << std::min(min_v, b - a) << '\n';
 }
 
 void Solution(std::istream& input) {
