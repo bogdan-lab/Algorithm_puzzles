@@ -6,8 +6,6 @@
 #include <utility>
 #include <vector>
 
-constexpr int kMax = 1'000'000;
-
 void Solution(std::istream& input = std::cin);
 void RunTests();
 
@@ -42,8 +40,9 @@ std::vector<int> BuildZArray(const std::string& w) {
       if (z[ppos] < r - i) {
         z[i] = z[ppos];
       } else {
-        eqc = CountEqual(w, z[ppos], r);
-        z[i] = z[ppos] + eqc;
+        int known_cnt = r - i;
+        eqc = CountEqual(w, known_cnt, r);
+        z[i] = known_cnt + eqc;
         l = i;
         r = l + z[i];
       }
@@ -60,9 +59,9 @@ std::vector<int> BuildZArray(const std::string& w) {
 }
 
 std::vector<int> CountZArray(const std::vector<int>& z) {
-  std::vector<int> count(kMax + 1);
+  std::vector<int> count(z.size() + 1);
   for (int i = 1; i < z.size(); ++i) {
-    if (z[i] == z.size() - i) {
+    if (z[i] == static_cast<int>(z.size()) - i) {
       count[z[i]] = 1;
     }
   }
@@ -103,8 +102,16 @@ void Solution(std::istream& input) {
 void RunTests() {
   {
     std::stringstream ss;
+    ss << R"(24
+bbabbabbdbba
+)";
+    Solution(ss);
+    std::cout << "expected = abc; 2\n";
+  }
+  {
+    std::stringstream ss;
     ss << R"(3
-abcbac
+aaaaaa
 )";
     Solution(ss);
     std::cout << "expected = abc; 2\n";
