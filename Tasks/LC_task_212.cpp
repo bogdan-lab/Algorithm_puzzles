@@ -1,64 +1,99 @@
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 int ToInt(char c) { return static_cast<int>(c) - static_cast<int>('a'); }
 
-bool DFS(const std::vector<std::vector<char>>& board, const std::string& word,
-         int wi, int i, int j, std::vector<std::vector<int>>& lookup) {
-  if (wi >= word.size()) return true;
-  if (i < 0 || i >= board.size() || j < 0 || j >= board[i].size()) return false;
-  if (lookup[i][j] || word[wi] != board[i][j]) return false;
+struct Node {
+  explicit Node(char gc) : c(gc), children(ToInt('z') + 1) {}
+  char c;
+  bool is_word_end = false;
+  std::vector<Node*> children;
+};
+
+Node* BuildTrie(const std::vector<std::string>& words) {
+  Node* root = new Node('\0');
+  for (const auto& word : words) {
+    Node* curr = root;
+    for (const auto& c : word) {
+      int cv = ToInt(c);
+      if (!curr->children[cv]) {
+        curr->children[cv] = new Node(c);
+      }
+      curr = curr->children[cv];
+    }
+    curr->is_word_end = true;
+  }
+  return root;
+}
+
+void DeleteTrie(Node* node) {
+  if (!node) return;
+  for (int i = 0; i < node->children.size(); ++i) {
+    DeleteTrie(node->children[i]);
+  }
+  delete node;
+}
+
+void DFS(const std::vector<std::vector<char>>& board, const Node* node, int i,
+         int j, std::unordered_set<std::string>& acc,
+         std::vector<std::vector<int>>& lookup, std::string& curr_word) {
+  if (!node) return;
+  if (i < 0 || i >= board.size() || j < 0 || j >= board[0].size()) return;
+  if (lookup[i][j]) return;
+  if (board[i][j] != node->c) return;
 
   lookup[i][j] = 1;
 
-  ++wi;
-  if (DFS(board, word, wi, i - 1, j, lookup)) {
-    return true;
+  curr_word.push_back(node->c);
+  if (node->is_word_end) {
+    acc.insert(curr_word);
   }
-  if (DFS(board, word, wi, i, j + 1, lookup)) {
-    return true;
+
+  if (i > 0) {
+    char top = board[i - 1][j];
+    DFS(board, node->children[ToInt(top)], i - 1, j, acc, lookup, curr_word);
   }
-  if (DFS(board, word, wi, i + 1, j, lookup)) {
-    return true;
+  if (j > 0) {
+    char left = board[i][j - 1];
+    DFS(board, node->children[ToInt(left)], i, j - 1, acc, lookup, curr_word);
   }
-  if (DFS(board, word, wi, i, j - 1, lookup)) {
-    return true;
+  if (i + 1 < board.size()) {
+    char bot = board[i + 1][j];
+    DFS(board, node->children[ToInt(bot)], i + 1, j, acc, lookup, curr_word);
   }
+  if (j + 1 < board[0].size()) {
+    char right = board[i][j + 1];
+    DFS(board, node->children[ToInt(right)], i, j + 1, acc, lookup, curr_word);
+  }
+
   lookup[i][j] = 0;
-  return false;
+  curr_word.pop_back();
 }
 
-bool IsIn(const std::vector<std::vector<char>>& board, const std::string& w,
-          int i, int j) {
-  int n = board.size();
-  int m = board[0].size();
-  std::vector<std::vector<int>> lookup(n, std::vector<int>(m));
-  return DFS(board, w, 0, i, j, lookup);
+void AccumulateWords(const std::vector<std::vector<char>>& board,
+                     const Node* root, int i, int j,
+                     std::unordered_set<std::string>& acc) {
+  std::vector<std::vector<int>> lookup(board.size(),
+                                       std::vector<int>(board[0].size()));
+  std::string curr_word;
+  DFS(board, root->children[ToInt(board[i][j])], i, j, acc, lookup, curr_word);
 }
 
 class Solution {
  public:
   std::vector<std::string> findWords(std::vector<std::vector<char>>& board,
                                      std::vector<std::string>& words) {
-    std::vector<std::vector<std::pair<int, int>>> mp(ToInt('z') + 1);
+    Node* trie = BuildTrie(words);
+    std::unordered_set<std::string> acc;
     for (int i = 0; i < board.size(); ++i) {
-      for (int j = 0; j < board[i].size(); ++j) {
-        mp[ToInt(board[i][j])].push_back({i, j});
+      for (int j = 0; j > board[0].size(); ++j) {
+        AccumulateWords(board, trie, i, j, acc);
       }
     }
 
-    std::vector<std::string> res;
-
-    for (const auto& w : words) {
-      for (const auto& [i, j] : mp[ToInt(w.front())]) {
-        if (IsIn(board, w, i, j)) {
-          res.push_back(w);
-          break;
-        }
-      }
-    }
-
-    return res;
+    DeleteTrie(trie);
+    return std::vector<std::string>(acc.begin(), acc.end());
   }
 };
