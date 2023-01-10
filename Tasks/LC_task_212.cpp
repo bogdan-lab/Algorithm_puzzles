@@ -1,3 +1,4 @@
+#include <iostream>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -88,7 +89,7 @@ class Solution {
     Node* trie = BuildTrie(words);
     std::unordered_set<std::string> acc;
     for (int i = 0; i < board.size(); ++i) {
-      for (int j = 0; j > board[0].size(); ++j) {
+      for (int j = 0; j < board[0].size(); ++j) {
         AccumulateWords(board, trie, i, j, acc);
       }
     }
@@ -97,3 +98,29 @@ class Solution {
     return std::vector<std::string>(acc.begin(), acc.end());
   }
 };
+
+void PrintWords(const std::vector<std::string>& data) {
+  for (const auto& el : data) {
+    std::cout << el << ' ';
+  }
+  std::cout << '\n';
+}
+
+int main() {
+  Solution s;
+  {
+    std::cout << "NEW CASE\n";
+    std::vector<std::vector<char>> board{{'a'}};
+    std::vector<std::string> words{"a"};
+    PrintWords(s.findWords(board, words));
+  }
+  {
+    std::cout << "NEW CASE\n";
+    std::vector<std::vector<char>> board{{'o', 'a', 'a', 'n'},
+                                         {'e', 't', 'a', 'e'},
+                                         {'i', 'h', 'k', 'r'},
+                                         {'i', 'f', 'l', 'v'}};
+    std::vector<std::string> words{"oath", "pea", "eat", "rain"};
+    PrintWords(s.findWords(board, words));
+  }
+}
