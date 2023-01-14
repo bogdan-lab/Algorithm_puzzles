@@ -4,20 +4,47 @@
 #include <unordered_set>
 #include <vector>
 
-bool Check(const std::vector<int>& levels, int w_size) {
+bool Check(const std::vector<std::pair<int, int>>& levels, int w_size) {
   std::unordered_set<int> count;
-  for (int i = 0; i < w_size; ++i) {
-    auto it = count.insert(levels[i]);
+  int i = 0;
+  while (i < levels.size() && levels[i].first < w_size) {
+    auto it = count.insert(levels[i].second);
     if (!it.second) return true;
+    ++i;
   }
 
-  for (int i = count.size(); i < levels.size(); ++i) {
-    int prev_lvl = levels[i - w_size];
-    count.erase(prev_lvl);
-    auto it = count.insert(levels[i]);
+  int j = 0;
+  while (i < levels.size()) {
+    // remove tail
+    while (levels[j].first <= levels[i].first - w_size) {
+      count.erase(levels[j].second);
+      ++j;
+    }
+    auto it = count.insert(levels[i].second);
     if (!it.second) return true;
+    ++i;
   }
   return false;
+}
+
+std::vector<std::pair<int, int>> GetLevels(const std::vector<int>& nums,
+                                           int diff) {
+  std::vector<std::pair<int, int>> levels;
+  levels.reserve(2 * nums.size());
+  for (int i = 0; i < nums.size(); ++i) {
+    if (diff == 0) {
+      levels.push_back({i, nums[i]});
+    } else {
+      int val = nums[i] / diff;
+      if (!(nums[i] % diff)) {
+        levels.push_back({i, val - 1});
+        levels.push_back({i, val});
+      } else {
+        levels.push_back({i, val});
+      }
+    }
+  }
+  return levels;
 }
 
 class Solution {
@@ -27,20 +54,16 @@ class Solution {
     assert(!nums.empty());
     int min_val = *std::min_element(nums.begin(), nums.end());
 
+    if (valueDiff > 0) {
+      int tmp = (std::abs(min_val) + valueDiff - 1) / valueDiff;
+      min_val = tmp * valueDiff;
+    }
+
     for (auto& el : nums) {
-      el -= min_val;
+      el += min_val;
     }
 
-    std::vector<int> levels1(nums.size());
-    std::vector<int> levels2(nums.size());
-    for (int i = 0; i < nums.size(); ++i) {
-      levels1[i] = nums[i] / (valueDiff + 1);
-      levels2[i] =
-          (static_cast<int64_t>(nums[i]) + static_cast<int64_t>(valueDiff)) /
-          static_cast<int64_t>(valueDiff + 1);
-    }
-
-    int w_size = std::min<int>(indexDiff + 1, nums.size());
-    return Check(levels1, w_size) || Check(levels2, w_size);
+    std::vector<std::pair<int, int>> levels = GetLevels(nums, valueDiff);
+    return Check(levels, std::min<int>(indexDiff + 1, nums.size()));
   }
 };
