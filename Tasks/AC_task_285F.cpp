@@ -13,7 +13,14 @@ constexpr char kMaxValue = 'z' + 1;
 struct Node {
   Node() = default;
 
-  Node(char c) : mp(ToInt(kMaxValue) + 1), r(c), l(c), cnt_l(1), cnt_r(1) {
+  Node(char c, int pos)
+      : mp(ToInt(kMaxValue) + 1),
+        r(c),
+        l(c),
+        cnt_l(1),
+        cnt_r(1),
+        start(pos),
+        end(pos + 1) {
     mp[ToInt(c)] = 1;
   }
 
@@ -82,9 +89,7 @@ std::vector<Node> BuildTree(const std::string& data) {
   std::vector<Node> res(total_size);
   for (int i = last_lvl_size - 1; i < res.size(); ++i) {
     int j = i - last_lvl_size + 1;
-    res[i] = j < data.size() ? Node{data[j]} : Node{kMaxValue};
-    res[i].start = j;
-    res[i].end = j + 1;
+    res[i] = j < data.size() ? Node{data[j], j} : Node{kMaxValue, j};
   }
 
   for (int i = last_lvl_size - 2; i >= 0; --i) {
@@ -97,9 +102,7 @@ std::vector<Node> BuildTree(const std::string& data) {
 void SetChar(std::vector<Node>& tree, int i, char new_char) {
   int tree_index = (tree.size() + 1) / 2 + i - 1;
 
-  tree[tree_index] = Node{new_char};
-  tree[tree_index].start = i;
-  tree[tree_index].end = i + 1;
+  tree[tree_index] = Node{new_char, i};
 
   while (tree_index != 0) {
     int pi = Parent(tree_index);
@@ -134,24 +137,12 @@ bool IsSubstring(const std::vector<Node>& data,
 
   int start = ToInt(nd.l);
   int last = ToInt(nd.r);
-  for (int i = start; i <= last; ++i) {
-    if (i == start) {
-      if (nd.mp[i] == 0) return false;
-    } else if (i == last) {
-      if (nd.mp[i] == 0) return false;
-    } else {
-      if (word_mp[i] != nd.mp[i]) return false;
-    }
+  assert(nd.mp[start] > 0);
+  assert(nd.mp[last] > 0);
+  for (int i = start + 1; i <= last - 1; ++i) {
+    if (word_mp[i] != nd.mp[i]) return false;
   }
   return true;
-}
-
-std::vector<int> BuildWordMp(const std::string& s) {
-  std::vector<int> res(ToInt(kMaxValue) + 1);
-  for (const auto& el : s) {
-    ++res[ToInt(el)];
-  }
-  return res;
 }
 
 void Solution(std::istream& input) {
@@ -161,7 +152,6 @@ void Solution(std::istream& input) {
   input >> s;
 
   std::vector<Node> tree = BuildTree(s);
-  std::vector<int> word_mp = BuildWordMp(s);
 
   int q = 0;
   input >> q;
@@ -173,9 +163,6 @@ void Solution(std::istream& input) {
       char new_char;
       input >> x >> new_char;
       --x;
-      char old_char = s[x];
-      --word_mp[ToInt(old_char)];
-      ++word_mp[ToInt(new_char)];
       SetChar(tree, x, new_char);
     } else {
       int l, r;
@@ -183,7 +170,7 @@ void Solution(std::istream& input) {
       --l;
       std::vector<Node> rngs;
       AccumulateRanges(tree, 0, l, r, rngs);
-      if (IsSubstring(rngs, word_mp)) {
+      if (IsSubstring(rngs, tree[0].mp)) {
         std::cout << "Yes\n";
       } else {
         std::cout << "No\n";
@@ -193,6 +180,38 @@ void Solution(std::istream& input) {
 }
 
 void RunTests() {
+  {
+    std::stringstream ss;
+    ss << R"(2
+ab
+9
+2 1 2
+1 1 b
+2 1 2
+1 1 c
+2 1 2
+1 2 c
+2 1 2
+1 2 d
+2 1 2
+)";
+    Solution(ss);
+    std::cout << "expected = Yes; Yes; No; Yes; Yes\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(8
+bbbabbbc
+5
+2 2 6
+1 4 b
+2 2 6
+1 6 c
+2 2 6
+)";
+    Solution(ss);
+    std::cout << "expected = No; Yes; Yes\n";
+  }
   {
     std::stringstream ss;
     ss << R"(5
