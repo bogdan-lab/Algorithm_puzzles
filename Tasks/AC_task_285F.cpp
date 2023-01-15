@@ -23,8 +23,8 @@ void RunTests();
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cin.tie(nullptr);
-  RunTests();
-  // Solution(std::cin);
+  // RunTests();
+  Solution(std::cin);
   return 0;
 }
 
@@ -35,6 +35,8 @@ int GetPower2(int val) {
   }
   return res;
 }
+
+int ToInt(char c) { return static_cast<int>(c) - static_cast<int>('a'); }
 
 Node Merge(const Node& l, const Node& r) {
   Node res;
@@ -105,13 +107,37 @@ void AccumulateRanges(const std::vector<Node>& tree, int ci, int l, int r,
   AccumulateRanges(tree, ri, std::max(tree[ri].start, l), r, rng);
 }
 
-bool IsSorted(const std::vector<Node>& data) {
+bool IsSorted(const Node& node) { return node.end - node.start == node.cnt_l; }
+
+bool IsSubstring(const std::vector<Node>& data,
+                 const std::vector<int>& word_mp) {
   assert(!data.empty());
   Node nd = data.front();
   for (int i = 1; i < data.size(); ++i) {
     nd = Merge(nd, data[i]);
   }
-  return nd.end - nd.start == nd.cnt_l;
+  if (!IsSorted(nd)) return false;
+
+  if (nd.l == nd.r) {
+    return true;
+  }
+
+  int necc_count = 0;
+  for (int i = ToInt(nd.l) + 1; i <= ToInt(nd.r) - 1; ++i) {
+    necc_count += word_mp[i];
+  }
+
+  // the string has to have at least 1 of left char and 1 of right char
+  // but it can have any OTHER number of edge characters
+  return nd.cnt_l >= necc_count + 2;
+}
+
+std::vector<int> BuildWordMp(const std::string& s) {
+  std::vector<int> res(ToInt('z') + 1);
+  for (const auto& el : s) {
+    ++res[ToInt(el)];
+  }
+  return res;
 }
 
 void Solution(std::istream& input) {
@@ -121,6 +147,7 @@ void Solution(std::istream& input) {
   input >> s;
 
   std::vector<Node> tree = BuildTree(s);
+  std::vector<int> word_mp = BuildWordMp(s);
 
   int q = 0;
   input >> q;
@@ -129,16 +156,20 @@ void Solution(std::istream& input) {
     input >> code;
     if (code == 1) {
       int x;
-      char c;
-      input >> x >> c;
-      SetChar(tree, x - 1, c);
+      char new_char;
+      input >> x >> new_char;
+      --x;
+      char old_char = s[x];
+      --word_mp[ToInt(old_char)];
+      ++word_mp[ToInt(new_char)];
+      SetChar(tree, x, new_char);
     } else {
       int l, r;
       input >> l >> r;
       --l;
       std::vector<Node> rngs;
       AccumulateRanges(tree, 0, l, r, rngs);
-      if (IsSorted(rngs)) {
+      if (IsSubstring(rngs, word_mp)) {
         std::cout << "Yes\n";
       } else {
         std::cout << "No\n";
@@ -148,6 +179,19 @@ void Solution(std::istream& input) {
 }
 
 void RunTests() {
+  {
+    std::stringstream ss;
+    ss << R"(6
+abcdcf
+4
+2 1 3
+2 2 6
+1 5 e
+2 2 6
+)";
+    Solution(ss);
+    std::cout << "expected = 0\n";
+  }
   {
     std::stringstream ss;
     ss << R"(6
