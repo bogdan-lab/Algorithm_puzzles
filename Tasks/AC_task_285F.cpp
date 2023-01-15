@@ -4,11 +4,50 @@
 #include <sstream>
 #include <vector>
 
+constexpr int ToInt(char c) {
+  return static_cast<int>(c) - static_cast<int>('a');
+}
+
+constexpr char kMaxValue = 'z' + 1;
+
 struct Node {
+  Node() = default;
+
+  Node(char c) : mp(ToInt(kMaxValue) + 1), r(c), l(c), cnt_l(1), cnt_r(1) {
+    mp[ToInt(c)] = 1;
+  }
+
+  Node(const Node& lhs, const Node& rhs) : mp(lhs.mp.size()) {
+    assert(lhs.end == rhs.start);
+    assert(lhs.mp.size() == rhs.mp.size());
+    l = lhs.l;
+    cnt_l = lhs.cnt_l;
+    if (lhs.IsSorted() && lhs.r <= rhs.l) {
+      cnt_l += rhs.cnt_l;
+    }
+
+    r = rhs.r;
+    cnt_r = rhs.cnt_r;
+    if (rhs.IsSorted() && rhs.l >= lhs.r) {
+      cnt_r += lhs.cnt_r;
+    }
+
+    for (int i = 0; i < lhs.mp.size(); ++i) {
+      mp[i] = lhs.mp[i] + rhs.mp[i];
+    }
+
+    start = lhs.start;
+    end = rhs.end;
+  }
+
+  bool IsSorted() const { return end - start == std::min(cnt_l, cnt_r); }
+
   char r = '\0';
   int cnt_r = 1;
   char l = '\0';
   int cnt_l = 1;
+  std::vector<int> mp = std::vector<int>(ToInt(kMaxValue) + 1);
+
   int start = 0;
   int end = 0;
 };
@@ -36,27 +75,6 @@ int GetPower2(int val) {
   return res;
 }
 
-int ToInt(char c) { return static_cast<int>(c) - static_cast<int>('a'); }
-
-Node Merge(const Node& l, const Node& r) {
-  Node res;
-  res.l = l.l;
-  res.cnt_l = l.cnt_l;
-  if (l.end - l.start == l.cnt_l && l.r <= r.l) {
-    res.cnt_l += r.cnt_l;
-  }
-
-  res.r = r.r;
-  res.cnt_r = r.cnt_r;
-  if (r.cnt_r == r.end - r.start && r.l >= l.r) {
-    res.cnt_r += l.cnt_r;
-  }
-
-  res.start = l.start;
-  res.end = r.end;
-  return res;
-}
-
 std::vector<Node> BuildTree(const std::string& data) {
   int last_lvl_size = GetPower2(data.size());
   int total_size = 2 * last_lvl_size - 1;
@@ -64,16 +82,13 @@ std::vector<Node> BuildTree(const std::string& data) {
   std::vector<Node> res(total_size);
   for (int i = last_lvl_size - 1; i < res.size(); ++i) {
     int j = i - last_lvl_size + 1;
-    if (j < data.size()) {
-      res[i].l = res[i].r = data[j];
-    }
-    res[i].cnt_l = res[i].cnt_r = 1;
+    res[i] = j < data.size() ? Node{data[j]} : Node{kMaxValue};
     res[i].start = j;
-    res[i].end = res[i].start + 1;
+    res[i].end = j + 1;
   }
 
   for (int i = last_lvl_size - 2; i >= 0; --i) {
-    res[i] = Merge(res[Left(i)], res[Right(i)]);
+    res[i] = Node{res[Left(i)], res[Right(i)]};
   }
 
   return res;
@@ -82,12 +97,13 @@ std::vector<Node> BuildTree(const std::string& data) {
 void SetChar(std::vector<Node>& tree, int i, char new_char) {
   int tree_index = (tree.size() + 1) / 2 + i - 1;
 
-  tree[tree_index].l = new_char;
-  tree[tree_index].r = new_char;
+  tree[tree_index] = Node{new_char};
+  tree[tree_index].start = i;
+  tree[tree_index].end = i + 1;
 
   while (tree_index != 0) {
     int pi = Parent(tree_index);
-    tree[pi] = Merge(tree[Left(pi)], tree[Right(pi)]);
+    tree[pi] = Node{tree[Left(pi)], tree[Right(pi)]};
     tree_index = pi;
   }
 }
@@ -107,33 +123,31 @@ void AccumulateRanges(const std::vector<Node>& tree, int ci, int l, int r,
   AccumulateRanges(tree, ri, std::max(tree[ri].start, l), r, rng);
 }
 
-bool IsSorted(const Node& node) { return node.end - node.start == node.cnt_l; }
-
 bool IsSubstring(const std::vector<Node>& data,
                  const std::vector<int>& word_mp) {
   assert(!data.empty());
   Node nd = data.front();
   for (int i = 1; i < data.size(); ++i) {
-    nd = Merge(nd, data[i]);
+    nd = Node{nd, data[i]};
   }
-  if (!IsSorted(nd)) return false;
+  if (!nd.IsSorted()) return false;
 
-  if (nd.l == nd.r) {
-    return true;
+  int start = ToInt(nd.l);
+  int last = ToInt(nd.r);
+  for (int i = start; i <= last; ++i) {
+    if (i == start) {
+      if (nd.mp[i] == 0) return false;
+    } else if (i == last) {
+      if (nd.mp[i] == 0) return false;
+    } else {
+      if (word_mp[i] != nd.mp[i]) return false;
+    }
   }
-
-  int necc_count = 0;
-  for (int i = ToInt(nd.l) + 1; i <= ToInt(nd.r) - 1; ++i) {
-    necc_count += word_mp[i];
-  }
-
-  // the string has to have at least 1 of left char and 1 of right char
-  // but it can have any OTHER number of edge characters
-  return nd.cnt_l >= necc_count + 2;
+  return true;
 }
 
 std::vector<int> BuildWordMp(const std::string& s) {
-  std::vector<int> res(ToInt('z') + 1);
+  std::vector<int> res(ToInt(kMaxValue) + 1);
   for (const auto& el : s) {
     ++res[ToInt(el)];
   }
@@ -181,6 +195,51 @@ void Solution(std::istream& input) {
 void RunTests() {
   {
     std::stringstream ss;
+    ss << R"(5
+abbac
+1
+2 1 5
+)";
+    Solution(ss);
+    std::cout << "expected =  No\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(1
+a
+3
+2 1 1
+1 1 c
+2 1 1
+)";
+    Solution(ss);
+    std::cout << "expected = Yes; Yes\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(4
+aaaa
+4
+2 1 3
+2 1 2
+1 2 b
+2 1 3
+)";
+    Solution(ss);
+    std::cout << "expected = Yes; Yes; No\n";
+  }
+  {
+    std::stringstream ss;
+    ss << R"(8
+aaabcccb
+1
+2 1 7
+)";
+    Solution(ss);
+    std::cout << "expected = No\n";
+  }
+  {
+    std::stringstream ss;
     ss << R"(6
 abcdcf
 4
@@ -190,125 +249,6 @@ abcdcf
 2 2 6
 )";
     Solution(ss);
-    std::cout << "expected = 0\n";
-  }
-  {
-    std::stringstream ss;
-    ss << R"(6
-abcdef
-21
-2 1 1
-2 2 2
-2 3 3 
-2 4 4
-2 5 5
-2 6 6
-2 1 2
-2 1 3
-2 1 4
-2 1 5
-2 1 6
-2 2 3
-2 2 4
-2 2 5
-2 2 6
-2 3 4
-2 3 5
-2 3 6
-2 4 5
-2 4 6
-2 5 6
-)";
-    Solution(ss);
-    std::cout << "expected = 0\n";
-  }
-  {
-    std::stringstream ss;
-    ss << R"(6
-fedcba
-21
-2 1 1
-2 2 2
-2 3 3 
-2 4 4
-2 5 5
-2 6 6
-2 1 2
-2 1 3
-2 1 4
-2 1 5
-2 1 6
-2 2 3
-2 2 4
-2 2 5
-2 2 6
-2 3 4
-2 3 5
-2 3 6
-2 4 5
-2 4 6
-2 5 6
-)";
-    Solution(ss);
-    std::cout << "expected = 0\n";
-  }
-  {
-    std::stringstream ss;
-    ss << R"(6
-fedcba
-48
-2 1 1
-2 2 2
-2 3 3 
-2 4 4
-2 5 5
-2 6 6
-2 1 2
-2 1 3
-2 1 4
-2 1 5
-2 1 6
-2 2 3
-2 2 4
-2 2 5
-2 2 6
-2 3 4
-2 3 5
-2 3 6
-2 4 5
-2 4 6
-2 5 6
-
-1 1 a
-1 2 b
-1 3 c
-1 4 d
-1 5 e
-1 6 f
-
-2 1 1
-2 2 2
-2 3 3 
-2 4 4
-2 5 5
-2 6 6
-2 1 2
-2 1 3
-2 1 4
-2 1 5
-2 1 6
-2 2 3
-2 2 4
-2 2 5
-2 2 6
-2 3 4
-2 3 5
-2 3 6
-2 4 5
-2 4 6
-2 5 6
-)";
-    Solution(ss);
-    std::cout << "expected = 0\n";
+    std::cout << "expected = Yes; No; Yes\n";
   }
 }
