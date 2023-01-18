@@ -1,5 +1,5 @@
 #include <algorithm>
-#include <set>
+#include <queue>
 #include <vector>
 
 class Solution {
@@ -8,15 +8,17 @@ class Solution {
     std::vector<int> res;
     res.reserve(nums.size() - k + 1);
 
-    std::set<std::pair<int, int>> data;
+    std::priority_queue<std::pair<int, int>> data;
     for (int i = 0; i < k; ++i) {
-      data.insert({nums[i], i});
+      data.push({nums[i], i});
     }
-    res.push_back(std::prev(data.end())->first);
+    res.push_back(data.top().first);
     for (int i = k; i < nums.size(); ++i) {
-      data.erase({nums[i - k], i - k});
-      data.insert({nums[i], i});
-      res.push_back(std::prev(data.end())->first);
+      while (!data.empty() && data.top().second <= i - k) {
+        data.pop();
+      }
+      data.push({nums[i], i});
+      res.push_back(data.top().first);
     }
 
     return res;
