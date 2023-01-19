@@ -95,7 +95,6 @@ class interval_map {
     auto change_in_left_edge = [&](const K& b, const K& e, const V& v) {
       assert(!m_map.empty());
       if (v == m_valBegin) return;
-      m_map.emplace_hint(m_map.begin(), e, m_valBegin);
       m_map.emplace_hint(m_map.begin(), b, v);
     };
 
@@ -140,17 +139,17 @@ class interval_map {
                                     const V& v) {
       if (right_edge == m_map.begin()) {
         if (eqv(right_edge->first, e)) {
-          change_right_part(m_valBegin, right_edge, b, val);
+          change_right_part(m_valBegin, right_edge, b, v);
         } else {
-          change_in_left_edge(b, e, val);
+          change_in_left_edge(b, e, v);
         }
       } else {
         auto next = right_edge;
         --right_edge;
         if (right_edge == m_map.begin()) {
-          set_small(m_valBegin, right_edge, next, b, e, val);
+          set_small(m_valBegin, right_edge, next, b, e, v);
         } else {
-          set_small(std::prev(right_edge)->second, right_edge, next, b, e, val);
+          set_small(std::prev(right_edge)->second, right_edge, next, b, e, v);
         }
       }
     };
@@ -393,10 +392,10 @@ int main() {
     interval_map<int, char> data('A');
     data.assign(0, 2, 'B');
     data.assign(-3, -1, 'C');
-    assert(data.size() == 3);
+    assert(data.size() == 2);
     assert(Equal(
         data,
-        {{-4, 'A'}, {-3, 'C'}, {-2, 'C'}, {-1, 'A'}, {0, 'B'}, {2, 'B'}}));
+        {{-4, 'A'}, {-3, 'C'}, {-2, 'C'}, {-1, 'C'}, {0, 'B'}, {2, 'B'}}));
   }
   {  // Before the first with the gap and begin_val
     interval_map<int, char> data('A');
