@@ -1,6 +1,7 @@
 #include <cassert>
 #include <map>
 #include <utility>
+#include <vector>
 
 template <typename K, typename V>
 class interval_map {
@@ -56,10 +57,14 @@ class interval_map {
       assert(it != m_map.end());
       if (it->second == v) return;
       auto next = std::next(it);
-      auto node = m_map.extract(it);
-      node.key() = e;
-      next = m_map.insert(next, std::move(node));
-      if (!vb == v) {
+      if (next == m_map.end()) {
+        m_map.erase(it);
+      } else {
+        auto node = m_map.extract(it);
+        node.key() = e;
+        next = m_map.insert(next, std::move(node));
+      }
+      if (vb != v) {
         m_map.emplace_hint(next, b, v);
       }
     };
@@ -67,8 +72,8 @@ class interval_map {
     auto change_right_part = [&](const V& vc, auto next, const K& b,
                                  const V& v) {
       assert(next != m_map.end());
-      if (eqv(vc, v)) return;
-      if (eqv(v, next->second)) {
+      if (vc == v) return;
+      if (v == next->second) {
         auto next_after = std::next(next);
         auto node = m_map.extract(next);
         node.key() = b;
@@ -82,20 +87,20 @@ class interval_map {
                              const V& v) {
       assert(it != m_map.end());
       assert(next != m_map.end());
-      if (eqv(v, it->second)) return;
+      if (v == it->second) return;
       m_map.emplace_hint(next, b, v);
       m_map.emplace_hint(next, e, it->second);
     };
 
     auto change_in_left_edge = [&](const K& b, const K& e, const V& v) {
       assert(!m_map.empty());
-      if (eqv(v, m_valBegin)) return;
+      if (v == m_valBegin) return;
       m_map.emplace_hint(m_map.begin(), e, m_valBegin);
       m_map.emplace_hint(m_map.begin(), b, v);
     };
 
     auto change_in_right_edge = [&](const V& vc, const K& b, const V& v) {
-      if (eqv(vc, v)) return;
+      if (vc == v) return;
       m_map.emplace_hint(m_map.end(), b, v);
     };
 
@@ -128,25 +133,24 @@ class interval_map {
     };
 
     auto is_in_range = [](const K& test, const K& b, const K& e) {
-      return !(test < b) && !(e < test);
+      return !(test < b) && test < e;
     };
 
     auto set_small_right_edge = [&](auto right_edge, const K& b, const K& e,
                                     const V& v) {
       if (right_edge == m_map.begin()) {
-        if (eqv(right_edge->first, keyEnd)) {
-          change_right_part(m_valBegin, right_edge, keyBegin, val);
+        if (eqv(right_edge->first, e)) {
+          change_right_part(m_valBegin, right_edge, b, val);
         } else {
-          change_in_left_edge(keyBegin, keyEnd, val);
+          change_in_left_edge(b, e, val);
         }
       } else {
         auto next = right_edge;
         --right_edge;
         if (right_edge == m_map.begin()) {
-          set_small(m_valBegin, right_edge, next, keyBegin, keyEnd, val);
+          set_small(m_valBegin, right_edge, next, b, e, val);
         } else {
-          set_small(std::prev(right_edge)->second, right_edge, next, keyBegin,
-                    keyEnd, val);
+          set_small(std::prev(right_edge)->second, right_edge, next, b, e, val);
         }
       }
     };
@@ -160,7 +164,7 @@ class interval_map {
             is_in_range(std::next(it)->first, keyBegin, keyEnd))) {
       auto prev = it;
       it = std::next(it);
-      m_map.erase(it);
+      m_map.erase(prev);
     }
 
     if (m_map.empty()) {
@@ -172,7 +176,7 @@ class interval_map {
     // Or the incoming interval corsses two intervals from the tree
     if (it != m_map.end() && it->first < keyEnd) {
       // we cross two intervals
-      Key split = it->first;
+      K split = it->first;
       auto next = std::next(it);
       set_small_right_edge(it, keyBegin, split, val);
       set_small_right_edge(next, split, keyEnd, val);
@@ -273,7 +277,7 @@ int main() {
     assert(data.size() == 1);
     assert(Equal(data, {{-1, 'A'}, {0, 'B'}, {3, 'B'}}));
   }
-  {  // Have one interval reassing right part of it
+  {  // Have one interval reassign right part of it
     interval_map<int, char> data('A');
     data.assign(0, 3, 'B');
     data.assign(1, 3, 'C');
@@ -307,31 +311,31 @@ int main() {
     interval_map<int, char> data('A');
     data.assign(0, 3, 'B');
     data.assign(0, 2, 'C');
-    assert(data.size() == 2);
-    assert(Equal(data, {{-1, 'A'}, {0, 'C'}, {1, 'C'}, {2, 'B'}, {3, 'B'}}));
+    assert(data.size() == 1);
+    assert(Equal(data, {{-1, 'A'}, {0, 'C'}, {1, 'C'}, {2, 'C'}, {3, 'C'}}));
   }
   {  // reassign left part to the initial value
     interval_map<int, char> data('A');
     data.assign(0, 3, 'B');
     data.assign(0, 2, 'A');
-    assert(data.size() == 1);
-    assert(Equal(data, {{-1, 'A'}, {0, 'A'}, {1, 'A'}, {2, 'B'}, {3, 'B'}}));
+    assert(data.size() == 0);
+    assert(Equal(data, {{-1, 'A'}, {0, 'A'}, {1, 'A'}, {2, 'A'}, {3, 'A'}}));
   }
   {  // Assign interval before the first one with crossection
     interval_map<int, char> data('A');
     data.assign(0, 3, 'B');
     data.assign(-2, 2, 'C');
-    assert(data.size() == 2);
+    assert(data.size() == 1);
     assert(Equal(
-        data, {{-3, 'A'}, {-2, 'C'}, {0, 'C'}, {1, 'C'}, {2, 'B'}, {3, 'B'}}));
+        data, {{-3, 'A'}, {-2, 'C'}, {0, 'C'}, {1, 'C'}, {2, 'C'}, {3, 'C'}}));
   }
   {  // Before the first one with crossection to the initial
     interval_map<int, char> data('A');
     data.assign(0, 3, 'B');
     data.assign(-2, 2, 'A');
-    assert(data.size() == 1);
+    assert(data.size() == 0);
     assert(Equal(
-        data, {{-3, 'A'}, {-2, 'A'}, {0, 'A'}, {1, 'A'}, {2, 'B'}, {3, 'B'}}));
+        data, {{-3, 'A'}, {-2, 'A'}, {0, 'A'}, {1, 'A'}, {2, 'A'}, {3, 'A'}}));
   }
   {  // Assign interval before the first one when borders touch each other
     interval_map<int, char> data('A');
@@ -421,6 +425,532 @@ int main() {
   }
 
   // TOW INTERVAL CASES
+  {  // Reassign the first itnerval
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 5, 'C');
+    data.assign(0, 3, 'D');
+    assert(data.size() == 2);
+    assert(Equal(data, {{-1, 'A'}, {0, 'D'}, {2, 'D'}, {3, 'C'}, {5, 'C'}}));
+  }
+  {  // Reassign the first itnerval same value
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 5, 'C');
+    data.assign(0, 3, 'B');
+    assert(data.size() == 2);
+    assert(Equal(data, {{-1, 'A'}, {0, 'B'}, {2, 'B'}, {3, 'C'}, {5, 'C'}}));
+  }
+  {  // Reassign the first itnerval to begin_val
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 5, 'C');
+    data.assign(0, 3, 'A');
+    assert(data.size() == 1);
+    assert(Equal(data, {{-1, 'A'}, {0, 'A'}, {2, 'A'}, {3, 'C'}, {5, 'C'}}));
+  }
+  {  // Reassign the second interval
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 5, 'C');
+    data.assign(3, 5, 'D');
+    assert(data.size() == 2);
+    assert(Equal(data, {{-1, 'A'}, {0, 'B'}, {2, 'B'}, {3, 'D'}, {5, 'D'}}));
+  }
+  {  // Reassign the second interval same value
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 5, 'C');
+    data.assign(3, 5, 'C');
+    assert(data.size() == 2);
+    assert(Equal(data, {{-1, 'A'}, {0, 'B'}, {2, 'B'}, {3, 'C'}, {5, 'C'}}));
+  }
+  {  // Reassign the second interval prev val
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 5, 'C');
+    data.assign(3, 5, 'B');
+    assert(data.size() == 1);
+    assert(Equal(data, {{-1, 'A'}, {0, 'B'}, {2, 'B'}, {3, 'B'}, {5, 'B'}}));
+  }
+  {  // Reassign left part of the first one
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 5, 'C');
+    data.assign(0, 2, 'D');
+    assert(data.size() == 3);
+    assert(Equal(
+        data, {{-1, 'A'}, {0, 'D'}, {1, 'D'}, {2, 'B'}, {3, 'C'}, {5, 'C'}}));
+  }
 
+  {  // Reassign the right part of the first one
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 5, 'C');
+    data.assign(1, 3, 'D');
+    assert(data.size() == 3);
+    assert(Equal(data, {{-1, 'A'}, {0, 'B'}, {2, 'D'}, {3, 'C'}, {5, 'C'}}));
+  }
+
+  {  // Reassign the middle of the first one
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 5, 'C');
+    data.assign(1, 2, 'D');
+    assert(data.size() == 4);
+    assert(Equal(
+        data, {{-1, 'A'}, {0, 'B'}, {1, 'D'}, {2, 'B'}, {3, 'C'}, {5, 'C'}}));
+  }
+
+  {  // Reassign the left part of the second one
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 5, 'C');
+    data.assign(3, 4, 'D');
+    assert(data.size() == 2);
+    assert(Equal(data, {{-1, 'A'}, {0, 'B'}, {2, 'B'}, {3, 'D'}, {5, 'D'}}));
+  }
+
+  {  // Reassign the right part of the second one
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 5, 'C');
+    data.assign(4, 5, 'D');
+    assert(data.size() == 3);
+    assert(Equal(data, {{-1, 'A'}, {0, 'B'}, {2, 'B'}, {3, 'C'}, {5, 'D'}}));
+  }
+
+  {  // Reassign the middle of the second one
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(4, 5, 'D');
+    assert(data.size() == 3);
+    assert(Equal(
+        data, {{-1, 'A'}, {0, 'B'}, {2, 'B'}, {3, 'C'}, {5, 'D'}, {6, 'D'}}));
+  }
+
+  {  // Reassign crossing both
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(2, 4, 'D');
+    assert(data.size() == 2);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {1, 'B'},
+                        {2, 'D'},
+                        {3, 'D'},
+                        {4, 'D'},
+                        {6, 'D'}}));
+  }
+
+  {  // Reassign surrounding both
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(0, 4, 'D');
+    assert(data.size() == 1);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'D'},
+                        {1, 'D'},
+                        {2, 'D'},
+                        {3, 'D'},
+                        {4, 'D'},
+                        {6, 'D'}}));
+  }
+  {  // Reassign surrounding both begin val
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(0, 4, 'A');
+    assert(data.size() == 0);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'A'},
+                        {1, 'A'},
+                        {2, 'A'},
+                        {3, 'A'},
+                        {4, 'A'},
+                        {6, 'A'}}));
+  }
+  {  // Reassign surrounding both 2
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(-1, 4, 'D');
+    assert(data.size() == 1);
+    assert(Equal(data, {{-2, 'A'},
+                        {-1, 'D'},
+                        {1, 'D'},
+                        {2, 'D'},
+                        {3, 'D'},
+                        {4, 'D'},
+                        {6, 'D'}}));
+  }
+
+  {  // Reassign Surrounding second overlaping with first
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(1, 7, 'D');
+    assert(data.size() == 2);
+    assert(Equal(data, {{-1, 'A'}, {0, 'B'}, {1, 'D'}, {7, 'D'}}));
+  }
+
+  {  // Reassign surrounding first one overlapping with the second
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(0, 4, 'D');
+    assert(data.size() == 1);
+    assert(Equal(data, {{-1, 'A'}, {0, 'D'}, {3, 'D'}, {4, 'D'}, {7, 'D'}}));
+  }
+
+  {  // Reassign surrounding first one overlapping with the second 2
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(-1, 4, 'D');
+    assert(data.size() == 1);
+    assert(Equal(data, {{-2, 'A'}, {-1, 'D'}, {3, 'D'}, {4, 'D'}, {7, 'D'}}));
+  }
+
+  // THREE INTERVALS CHANGE THE MIDDLE ONE modify middle
+  {  // Reassign middle
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(3, 6, 'E');
+    assert(data.size() == 3);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {2, 'B'},
+                        {3, 'E'},
+                        {5, 'E'},
+                        {6, 'D'},
+                        {9, 'D'}}));
+  }
+  {  // Reassign middle GATES
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'B');
+    data.assign(3, 6, 'B');
+    assert(data.size() == 1);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {2, 'B'},
+                        {3, 'B'},
+                        {5, 'B'},
+                        {6, 'B'},
+                        {9, 'B'}}));
+  }
+  {  // Reassign middle PREV
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(3, 6, 'B');
+    assert(data.size() == 2);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {2, 'B'},
+                        {3, 'B'},
+                        {5, 'B'},
+                        {6, 'D'},
+                        {9, 'D'}}));
+  }
+  {  // Reassign middle NEXT
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(3, 6, 'D');
+    assert(data.size() == 2);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {2, 'B'},
+                        {3, 'D'},
+                        {5, 'D'},
+                        {6, 'D'},
+                        {9, 'D'}}));
+  }
+  {  // Middle overlapping
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(2, 7, 'E');
+    assert(data.size() == 2);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {1, 'B'},
+                        {2, 'E'},
+                        {3, 'E'},
+                        {5, 'E'},
+                        {6, 'E'},
+                        {7, 'E'},
+                        {9, 'E'}}));
+  }
+  {  // Middle overlapping bridge
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'B');
+    data.assign(2, 7, 'B');
+    assert(data.size() == 1);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {1, 'B'},
+                        {2, 'B'},
+                        {3, 'B'},
+                        {5, 'B'},
+                        {6, 'B'},
+                        {7, 'B'},
+                        {9, 'B'}}));
+  }
+  {  // Left part of middle
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(3, 5, 'E');
+    assert(data.size() == 4);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {2, 'B'},
+                        {3, 'E'},
+                        {4, 'E'},
+                        {5, 'C'},
+                        {6, 'D'},
+                        {9, 'D'}}));
+  }
+  {  // Left part of middle PREV
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(3, 5, 'B');
+    assert(data.size() == 3);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {2, 'B'},
+                        {3, 'B'},
+                        {4, 'B'},
+                        {5, 'C'},
+                        {6, 'D'},
+                        {9, 'D'}}));
+  }
+  {  // Left part of middle with overlapping
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(2, 5, 'E');
+    assert(data.size() == 4);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {1, 'B'},
+                        {2, 'E'},
+                        {3, 'E'},
+                        {4, 'E'},
+                        {5, 'C'},
+                        {6, 'D'},
+                        {9, 'D'}}));
+  }
+  {  // Right part
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(4, 6, 'E');
+    assert(data.size() == 4);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {1, 'B'},
+                        {2, 'B'},
+                        {3, 'C'},
+                        {4, 'E'},
+                        {5, 'E'},
+                        {6, 'D'},
+                        {9, 'D'}}));
+  }
+  {  // Right part NEXT val
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(4, 6, 'D');
+    assert(data.size() == 3);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {1, 'B'},
+                        {2, 'B'},
+                        {3, 'C'},
+                        {4, 'D'},
+                        {5, 'D'},
+                        {6, 'D'},
+                        {9, 'D'}}));
+  }
+  {  // Right part NEXT val 2
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(3, 6, 'D');
+    assert(data.size() == 2);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {1, 'B'},
+                        {2, 'B'},
+                        {3, 'D'},
+                        {4, 'D'},
+                        {5, 'D'},
+                        {6, 'D'},
+                        {9, 'D'}}));
+  }
+  {  // Right part overlap
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(4, 7, 'E');
+    assert(data.size() == 3);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {1, 'B'},
+                        {2, 'B'},
+                        {3, 'C'},
+                        {4, 'E'},
+                        {5, 'E'},
+                        {6, 'E'},
+                        {9, 'E'}}));
+  }
+  {  // Middle in the middle
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(4, 5, 'E');
+    assert(data.size() == 5);
+    assert(Equal(data, {{-1, 'A'},
+                        {0, 'B'},
+                        {1, 'B'},
+                        {2, 'B'},
+                        {3, 'C'},
+                        {4, 'E'},
+                        {5, 'C'},
+                        {6, 'D'},
+                        {9, 'D'}}));
+  }
+  {  // Overlap all
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(0, 10, 'E');
+    assert(data.size() == 1);
+    assert(Equal(data, {{-1, 'A'}, {0, 'E'}, {10, 'E'}}));
+  }
+  {  // Overlap all 2
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(-1, 7, 'E');
+    assert(data.size() == 1);
+    assert(Equal(data, {{-2, 'A'}, {-1, 'E'}, {10, 'E'}}));
+  }
+  {  // Overlap all begin val
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(0, 10, 'A');
+    assert(data.size() == 0);
+    assert(Equal(data, {{-1, 'A'}, {0, 'A'}, {10, 'A'}}));
+  }
+  {  // Overlap all prev val
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(0, 10, 'B');
+    assert(data.size() == 1);
+    assert(Equal(data, {{-1, 'A'}, {0, 'B'}, {10, 'B'}}));
+  }
+  {  // Overlap all Next val
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(-1, 7, 'D');
+    assert(data.size() == 1);
+    assert(Equal(data, {{-2, 'A'}, {1, 'D'}, {10, 'D'}}));
+  }
+  {  // Cover last two
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(2, 7, 'E');
+    assert(data.size() == 2);
+    assert(Equal(data, {{-1, 'A'}, {0, 'B'}, {1, 'B'}, {2, 'E'}, {7, 'E'}}));
+  }
+  {  // Cover last two NEXT
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(2, 7, 'D');
+    assert(data.size() == 2);
+    assert(Equal(data, {{-1, 'A'}, {0, 'B'}, {1, 'B'}, {2, 'D'}, {7, 'D'}}));
+  }
+  {  // Cover last two Prev
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(2, 7, 'B');
+    assert(data.size() == 1);
+    assert(Equal(data, {{-1, 'A'}, {0, 'B'}, {1, 'B'}, {2, 'B'}, {7, 'B'}}));
+  }
+  {  // Cover first two
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(0, 6, 'E');
+    assert(data.size() == 2);
+    assert(Equal(data, {{{-1, 'A'}, {0, 'E'}, {6, 'D'}, {7, 'D'}}}));
+  }
+  {  // Cover first two 2
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(-1, 6, 'E');
+    assert(data.size() == 2);
+    assert(Equal(data, {{{-2, 'A'}, {-1, 'E'}, {6, 'D'}, {7, 'D'}}}));
+  }
+  {  // Cover first two PREV
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'D');
+    data.assign(-1, 6, 'A');
+    assert(data.size() == 1);
+    assert(Equal(data, {{{-2, 'A'}, {-1, 'A'}, {6, 'D'}, {7, 'D'}}}));
+  }
+  {  // Cover first two PREV 2
+    interval_map<int, char> data('A');
+    data.assign(0, 3, 'B');
+    data.assign(3, 6, 'C');
+    data.assign(6, 9, 'A');
+    data.assign(-1, 6, 'A');
+    assert(data.size() == 0);
+    assert(Equal(data, {{{-2, 'A'}, {-1, 'A'}, {6, 'A'}, {7, 'A'}}}));
+  }
   return 0;
 }
