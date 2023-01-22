@@ -1,23 +1,8 @@
 #include <algorithm>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <vector>
-
-int64_t Apply(int64_t l, int64_t r, char op);
-void TrySingleVal(char op, const std::string& str, int i, int64_t curr_val,
-                  int64_t target, std::string& curr_path,
-                  std::vector<std::string>& res);
-void TryMultiplied(char op, const std::string& str, int i, int64_t curr_val,
-                   int64_t target, std::string& curr_path,
-                   std::vector<std::string>& res);
-void TryMultiDigit(char op, const std::string& str, int i, int64_t curr_val,
-                   int64_t target, std::string& curr_path,
-                   std::vector<std::string>& res);
-void TryOperation(char op, const std::string& str, int i, int64_t curr_val,
-                  int64_t target, std::string& curr_path,
-                  std::vector<std::string>& res);
-void BuildPath(const std::string& str, int i, int64_t curr_val, int64_t target,
-               std::string& curr_path, std::vector<std::string>& res);
 
 int64_t ToInt(char c) { return static_cast<int>(c) - static_cast<int>('0'); }
 
@@ -26,76 +11,47 @@ int64_t Apply(int64_t l, int64_t r, char op) {
   return l - r;
 }
 
-void TrySingleVal(char op, const std::string& str, int i, int64_t curr_val,
-                  int64_t target, std::string& curr_path,
-                  std::vector<std::string>& res) {
-  curr_path.push_back(str[i]);
-  BuildPath(str, i + 1, Apply(curr_val, ToInt(str[i]), op), target, curr_path,
-            res);
-  curr_path.pop_back();
-}
-
-void TryMultiplied(char op, const std::string& str, int i, int64_t curr_val,
-                   int64_t target, std::string& curr_path,
-                   std::vector<std::string>& res) {
-  if (i + 1 >= str.size()) return;
-
-  int initial_size = curr_path.size();
-  curr_path.push_back(str[i]);
-  int64_t mult_val = ToInt(str[i]);
-  for (int j = i + 1; j < str.size(); ++j) {
-    curr_path.push_back('*');
-    curr_path.push_back(str[j]);
-    mult_val *= ToInt(str[j]);
-    BuildPath(str, j + 1, Apply(curr_val, mult_val, op), target, curr_path,
-              res);
-  }
-
-  while (initial_size < curr_path.size()) {
-    curr_path.pop_back();
-  }
-}
-
-void TryMultiDigit(char op, const std::string& str, int i, int64_t curr_val,
-                   int64_t target, std::string& curr_path,
-                   std::vector<std::string>& res) {
-  if (i + 1 >= str.size() || str[i] == '0') return;
-
-  int initial_size = curr_path.size();
-  curr_path.push_back(str[i]);
-  int64_t md_val = ToInt(str[i]);
-  for (int j = i + 1; j < str.size(); ++j) {
-    curr_path.push_back(str[j]);
-    md_val = 10 * md_val + ToInt(str[j]);
-    BuildPath(str, j + 1, Apply(curr_val, md_val, op), target, curr_path, res);
-  }
-
-  while (curr_path.size() > initial_size) {
-    curr_path.pop_back();
-  }
-}
-
-void TryOperation(char op, const std::string& str, int i, int64_t curr_val,
-                  int64_t target, std::string& curr_path,
-                  std::vector<std::string>& res) {
-  curr_path.push_back(op);
-  TrySingleVal(op, str, i, curr_val, target, curr_path, res);
-  TryMultiplied(op, str, i, curr_val, target, curr_path, res);
-  TryMultiDigit(op, str, i, curr_val, target, curr_path, res);
-  curr_path.pop_back();
-}
-
-void BuildPath(const std::string& str, int i, int64_t curr_val, int64_t target,
-               std::string& curr_path, std::vector<std::string>& res) {
-  std::cout << curr_path << " = " << curr_val << '\n';
-  if (i == str.size()) {
-    if (curr_val == target) {
-      res.push_back(curr_path.substr(1));
+std::pair<int64_t, std::string_view> ParseValue(std::string_view str) {
+  int64_t curr_val = ToInt(str.front());
+  int64_t res = 1;
+  int i = 1;
+  while (i < str.size()) {
+    if (str[i] == '*') {
+      res *= curr_val;
+      ++i;
+      curr_val = ToInt(str[i]);
+      ++i;
+    } else if (str[i] == '-' || str[i] == '+') {
+      break;
+    } else {
+      curr_val = 10 * curr_val + ToInt(str[i]);
+      ++i;
     }
-    return;
   }
-  TryOperation('+', str, i, curr_val, target, curr_path, res);
-  TryOperation('-', str, i, curr_val, target, curr_path, res);
+  return {res * curr_val, str.substr(i)};
+}
+
+int64_t Calc(std::string_view str) {
+  std::pair<int64_t, std::string_view> lhs = ParseValue(str);
+  str = lhs.second;
+  int64_t res = lhs.first;
+  while (!str.empty()) {
+    char sign = str.front();
+    std::pair<int64_t, std::string_view> rhs = ParseValue(str.substr(1));
+    res = Apply(res, rhs.first, sign);
+    str = rhs.second;
+  }
+  return res;
+}
+
+void Merge(const std::string& num, const std::string& signs, std::string& out) {
+  out.push_back(num.front());
+  for (int i = 1; i < num.size(); ++i) {
+    if (signs[i - 1] != 'X') {
+      out.push_back(signs[i - 1]);
+    }
+    out.push_back(num[i]);
+  }
 }
 
 class Solution {
@@ -103,8 +59,32 @@ class Solution {
   std::vector<std::string> addOperators(std::string num, int target) {
     std::vector<std::string> res;
     std::string curr_path;
-    curr_path.reserve(2 * num.size());
-    TryOperation('+', num, 0, 0, target, curr_path, res);
+    curr_path.reserve(2 * num.size() - 1);
+    std::string signs;
+    signs.reserve(num.size() - 1);
+    for (int pluses = 0; pluses < num.size(); ++pluses) {
+      for (int minuses = 0; minuses < num.size(); ++minuses) {
+        for (int empty = 0; empty < num.size(); ++empty) {
+          for (int mult = 0; mult < num.size(); ++mult) {
+            if (mult + empty + pluses + minuses != num.size() - 1) {
+              continue;
+            }
+            signs = std::string(mult, '*') + std::string(pluses, '+') +
+                    std::string(minuses, '-') + std::string(empty, 'X');
+            do {
+              Merge(num, signs, curr_path);
+              int64_t cp = Calc(curr_path);
+              if (cp == target) {
+                res.push_back(curr_path);
+              }
+              curr_path.clear();
+            } while (std::next_permutation(signs.begin(), signs.end()));
+            signs.clear();
+          }
+        }
+      }
+    }
+
     return res;
   }
 };
