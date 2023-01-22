@@ -1,67 +1,110 @@
 #include <algorithm>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <vector>
 
-int ToInt(char c) { return static_cast<int>(c) - static_cast<int>('0'); }
+void BuildPathes(std::string_view str, int64_t target, std::string& curr_path,
+                 std::vector<std::string>& res);
+void TryPlusMinus(int64_t curr_val, int64_t target, std::string_view next_str,
+                  std::string& curr_path, std::vector<std::string>& res);
+void TrySingleValue(std::string_view str, int64_t target,
+                    std::string& curr_path, std::vector<std::string>& res);
+void TryMultiplication(std::string_view str, int64_t target,
+                       std::string& curr_path, std::vector<std::string>& res);
+void TryManyDigits(std::string_view str, int64_t target, std::string& curr_path,
+                   std::vector<std::string>& res);
 
-void SetSignBefore(std::string& data, int i, char s) { data[2 * i - 1] = s; }
+int64_t ToInt(char c) { return static_cast<int>(c) - static_cast<int>('0'); }
 
-int64_t FillMultiplications(const std::string& str,
-                            const std::vector<int>& mult, int& i,
-                            std::string& curr_path) {
-  int64_t val = ToInt(str[i]);
-  while (i < str.size() - 1 && mult[i]) {
-    val *= ToInt(str[i + 1]);
-    SetSignBefore(curr_path, i + 1, '*');
-    ++i;
-  }
-  return val;
+void TryPlusMinus(int64_t curr_val, int64_t target, std::string_view next_str,
+                  std::string& curr_path, std::vector<std::string>& res) {
+  // Try this value with +
+  curr_path.push_back('+');
+  BuildPathes(next_str, target - curr_val, curr_path, res);
+  curr_path.pop_back();
+  // Try this value with -
+  curr_path.push_back('-');
+  BuildPathes(next_str, target + curr_val, curr_path, res);
+  curr_path.pop_back();
 }
 
-void DFS(const std::string& str, int i, const std::vector<int>& mult,
-         int64_t curr_val, int64_t target, std::string& curr_path,
-         std::vector<std::string>& res) {
-  if (i == str.size()) {
+void TrySingleValue(std::string_view str, int64_t target,
+                    std::string& curr_path, std::vector<std::string>& res) {
+  curr_path.push_back(str.front());
+  int64_t curr_val = ToInt(str.front());
+  if (str.size() == 1) {
     if (curr_val == target) {
       res.push_back(curr_path);
     }
-    return;
+  } else {
+    TryPlusMinus(curr_val, target, str.substr(1), curr_path, res);
+  }
+  curr_path.pop_back();
+}
+
+void TryMultiplication(std::string_view str, int64_t target,
+                       std::string& curr_path, std::vector<std::string>& res) {
+  if (str.size() < 2) return;
+  int initial_size = curr_path.size();
+  curr_path.push_back(str.front());
+  int64_t curr_val = ToInt(str.front());
+  for (int i = 1; i < str.size() - 1; ++i) {
+    curr_path.push_back('*');
+    curr_path.push_back(str[i]);
+    curr_val *= ToInt(str[i]);
+    TryPlusMinus(curr_val, target, str.substr(i + 1), curr_path, res);
+  }
+  // the last value is treated separately
+  curr_path.push_back('*');
+  curr_path.push_back(str.back());
+  curr_val *= ToInt(str.back());
+  if (target == curr_val) {
+    res.push_back(curr_path);
+  }
+  while (curr_path.size() > initial_size) {
+    curr_path.pop_back();
+  }
+}
+
+void TryManyDigits(std::string_view str, int64_t target, std::string& curr_path,
+                   std::vector<std::string>& res) {
+  if (str.size() < 2 || str.front() == '0') return;
+  int initial_size = curr_path.size();
+
+  int64_t curr_val = ToInt(str.front());
+  curr_path.push_back(str.front());
+  for (int i = 1; i < str.size() - 1; ++i) {
+    curr_path.push_back(str[i]);
+    curr_val = 10 * curr_val + ToInt(str[i]);
+    TryPlusMinus(curr_val, target, str.substr(i + 1), curr_path, res);
+  }
+  // The last case separately
+  curr_path.push_back(str.back());
+  curr_val = 10 * curr_val + ToInt(str.back());
+  if (curr_val == target) {
+    res.push_back(curr_path);
   }
 
-  int init = i;
-  int64_t val = FillMultiplications(str, mult, i, curr_path);
+  while (curr_path.size() > initial_size) {
+    curr_path.pop_back();
+  }
+}
 
-  // Try to add
-  SetSignBefore(curr_path, init, '+');
-  DFS(str, i + 1, mult, curr_val + val, target, curr_path, res);
-  SetSignBefore(curr_path, init, ' ');
-  // Try to subtract
-  SetSignBefore(curr_path, init, '-');
-  DFS(str, i + 1, mult, curr_val - val, target, curr_path, res);
-  SetSignBefore(curr_path, init, ' ');
+void BuildPathes(std::string_view str, int64_t target, std::string& curr_path,
+                 std::vector<std::string>& res) {
+  TrySingleValue(str, target, curr_path, res);
+  TryMultiplication(str, target, curr_path, res);
+  TryManyDigits(str, target, curr_path, res);
 }
 
 class Solution {
  public:
   std::vector<std::string> addOperators(std::string num, int target) {
     std::vector<std::string> res;
-    std::string curr_path(2 * num.size() - 1, ' ');
-    for (int i = 0; i < num.size(); ++i) {
-      curr_path[2 * i] = num[i];
-    }
-    for (int count = 0; count < num.size(); ++count) {
-      std::vector<int> mult(num.size() - 1);
-      for (int i = mult.size() - count; i < mult.size(); ++i) {
-        mult[i] = 1;
-      }
-      do {
-        int i = 0;
-        int64_t val = FillMultiplications(num, mult, i, curr_path);
-        DFS(num, i + 1, mult, val, target, curr_path, res);
-      } while (std::next_permutation(mult.begin(), mult.end()));
-    }
-
+    std::string curr_path;
+    curr_path.reserve(2 * num.size() - 1);
+    BuildPathes(num, target, curr_path, res);
     return res;
   }
 };
