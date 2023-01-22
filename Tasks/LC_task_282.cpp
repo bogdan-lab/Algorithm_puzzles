@@ -12,43 +12,40 @@ int64_t Apply(int64_t l, int64_t r, char op) {
   return l - r;
 }
 
-std::pair<int64_t, std::string_view> ParseValue(std::string_view str) {
-  int64_t curr_val = ToInt(str.front());
-  int64_t res = 1;
-  int i = 1;
-  while (i < str.size()) {
-    if (str[i] == '*') {
-      res *= curr_val;
-      ++i;
-      curr_val = ToInt(str[i]);
-      ++i;
-    } else if (str[i] == '-' || str[i] == '+') {
-      break;
-    } else {
-      curr_val = 10 * curr_val + ToInt(str[i]);
-      ++i;
-    }
-  }
-  return {res * curr_val, str.substr(i)};
+struct Node {
+  int64_t res = 0;
+  char op = '+';
+  int64_t m = 1;
+  int64_t c = 0;
+};
+
+int64_t Eval(const Node& n) { return Apply(n.res, n.m * n.c, n.op); }
+
+Node SetOperation(const Node& n, char new_op, int val) {
+  Node r;
+  r.res = Eval(n);
+  r.op = new_op;
+  r.c = val;
+  return r;
 }
 
-int64_t Calc(std::string_view str) {
-  std::pair<int64_t, std::string_view> lhs = ParseValue(str);
-  str = lhs.second;
-  int64_t res = lhs.first;
-  while (!str.empty()) {
-    char sign = str.front();
-    std::pair<int64_t, std::string_view> rhs = ParseValue(str.substr(1));
-    res = Apply(res, rhs.first, sign);
-    str = rhs.second;
-  }
-  return res;
+Node UpdateMultiply(const Node& n, int val) {
+  Node r = n;
+  r.m *= r.c;
+  r.c = val;
+  return r;
 }
 
-void DFS(const std::string& str, int i, int64_t target, std::string& expr,
-         std::vector<std::string>& res) {
+Node UpdateMultiDigit(const Node& n, int val) {
+  Node r = n;
+  r.c = 10 * r.c + val;
+  return r;
+}
+
+void DFS(const Node& curr_node, const std::string& str, int i, int64_t target,
+         std::string& expr, std::vector<std::string>& res) {
   if (i == str.size() - 1) {
-    if (target == Calc(expr)) {
+    if (target == Eval(curr_node)) {
       res.push_back(expr);
     }
     return;
@@ -57,7 +54,12 @@ void DFS(const std::string& str, int i, int64_t target, std::string& expr,
   for (const auto& el : {'*', '+', '-'}) {
     expr.push_back(el);
     expr.push_back(str[i + 1]);
-    DFS(str, i + 1, target, expr, res);
+    int val = ToInt(str[i + 1]);
+    if (el == '*') {
+      DFS(UpdateMultiply(curr_node, val), str, i + 1, target, expr, res);
+    } else {
+      DFS(SetOperation(curr_node, el, val), str, i + 1, target, expr, res);
+    }
     expr.pop_back();
     expr.pop_back();
   }
@@ -66,7 +68,8 @@ void DFS(const std::string& str, int i, int64_t target, std::string& expr,
   bool curr_allow = expr.back() != '0';
   if (prev_empty || curr_allow) {
     expr.push_back(str[i + 1]);
-    DFS(str, i + 1, target, expr, res);
+    DFS(UpdateMultiDigit(curr_node, ToInt(str[i + 1])), str, i + 1, target,
+        expr, res);
     expr.pop_back();
   }
 }
@@ -78,7 +81,9 @@ class Solution {
     std::string expression;
     expression.reserve(2 * num.size() - 1);
     expression.push_back(num.front());
-    DFS(num, 0, target, expression, res);
+    Node node;
+    node.c = ToInt(num.front());
+    DFS(node, num, 0, target, expression, res);
 
     return res;
   }
