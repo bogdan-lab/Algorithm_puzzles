@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <string>
 #include <string_view>
@@ -44,42 +45,29 @@ int64_t Calc(std::string_view str) {
   return res;
 }
 
-std::string Merge(const std::string& num, const std::string& signs) {
-  std::string out;
-  out.reserve(2 * num.size() - 1);
-  out.push_back(num.front());
-  for (int i = 1; i < num.size(); ++i) {
-    if (signs[i - 1] != 'X') {
-      out.push_back(signs[i - 1]);
-    }
-    out.push_back(num[i]);
-  }
-  return out;
-}
-
-void DFS(const std::string& str, int i, int64_t target, std::string& curr_signs,
+void DFS(const std::string& str, int i, int64_t target, std::string& expr,
          std::vector<std::string>& res) {
   if (i == str.size() - 1) {
-    std::string exp = Merge(str, curr_signs);
-    if (target == Calc(exp)) {
-      res.push_back(exp);
+    if (target == Calc(expr)) {
+      res.push_back(expr);
     }
     return;
   }
 
   for (const auto& el : {'*', '+', '-'}) {
-    curr_signs.push_back(el);
-    DFS(str, i + 1, target, curr_signs, res);
-    curr_signs.pop_back();
+    expr.push_back(el);
+    expr.push_back(str[i + 1]);
+    DFS(str, i + 1, target, expr, res);
+    expr.pop_back();
+    expr.pop_back();
   }
 
-  bool prev_empty = !curr_signs.empty() && curr_signs.back() == 'X';
-  bool curr_allow =
-      (curr_signs.empty() || curr_signs.back() != 'X') && str[i] != '0';
+  bool prev_empty = expr.size() >= 2 && std::isdigit(expr[expr.size() - 2]);
+  bool curr_allow = expr.back() != '0';
   if (prev_empty || curr_allow) {
-    curr_signs.push_back('X');
-    DFS(str, i + 1, target, curr_signs, res);
-    curr_signs.pop_back();
+    expr.push_back(str[i + 1]);
+    DFS(str, i + 1, target, expr, res);
+    expr.pop_back();
   }
 }
 
@@ -87,9 +75,10 @@ class Solution {
  public:
   std::vector<std::string> addOperators(std::string num, int target) {
     std::vector<std::string> res;
-    std::string signs;
-    signs.reserve(num.size() - 1);
-    DFS(num, 0, target, signs, res);
+    std::string expression;
+    expression.reserve(2 * num.size() - 1);
+    expression.push_back(num.front());
+    DFS(num, 0, target, expression, res);
 
     return res;
   }
