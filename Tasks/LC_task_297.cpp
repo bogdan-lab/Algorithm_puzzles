@@ -51,29 +51,22 @@ std::pair<StringRep, std::string_view> ParseNext(std::string_view data) {
   return {FromString(data.substr(0, pos)), data.substr(pos + 1)};
 }
 
-std::vector<StringRep> ParseString(std::string_view data) {
-  std::vector<StringRep> res;
+TreeNode* ParseString(std::string_view data) {
+  std::vector<TreeNode*> res;
+  std::pair<StringRep, std::string_view> root = ParseNext(data);
+  res.push_back(new TreeNode(root.first.val));
+  data = root.second;
   while (!data.empty()) {
     std::pair<StringRep, std::string_view> tmp = ParseNext(data);
-    res.push_back(tmp.first);
-    data = tmp.second;
-  }
-  return res;
-}
-
-TreeNode* BuildTree(const std::vector<StringRep>& data) {
-  std::vector<TreeNode*> res;
-  res.reserve(data.size());
-  res.push_back(new TreeNode(data.front().val));
-  for (int i = 1; i < data.size(); ++i) {
-    TreeNode* parent = res[data[i].parent];
-    if (data[i].tag == 'l') {
-      parent->left = new TreeNode(data[i].val);
+    TreeNode* parent = res[tmp.first.parent];
+    if (tmp.first.tag == 'l') {
+      parent->left = new TreeNode(tmp.first.val);
       res.push_back(parent->left);
     } else {
-      parent->right = new TreeNode(data[i].val);
+      parent->right = new TreeNode(tmp.first.val);
       res.push_back(parent->right);
     }
+    data = tmp.second;
   }
   return res.front();
 }
@@ -116,7 +109,7 @@ class Codec {
   // Decodes your encoded data to tree.
   TreeNode* deserialize(std::string data) {
     if (data.empty()) return nullptr;
-    return BuildTree(ParseString(data));
+    return ParseString(data);
   }
 };
 
