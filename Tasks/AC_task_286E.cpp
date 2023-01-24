@@ -41,30 +41,31 @@ void Solution(std::istream& input) {
     input >> el;
   }
 
-  std::vector<std::vector<std::vector<Weight>>> d(
-      n + 1, std::vector<std::vector<Weight>>(n, std::vector<Weight>(n)));
+  std::vector<std::vector<Weight>> curr(n, std::vector<Weight>(n));
 
   std::string buff;
   for (int i = 0; i < n; ++i) {
     input >> buff;
     for (int j = 0; j < buff.size(); ++j) {
       if (buff[j] == 'Y') {
-        d[0][i][j].sp = prices[j];
-        d[0][i][j].accessibale = true;
+        curr[i][j].sp = prices[j];
+        curr[i][j].accessibale = true;
       }
     }
   }
 
+  std::vector<std::vector<Weight>> next = curr;
   for (int k = 0; k < n; ++k) {
     for (int i = 0; i < n; ++i) {
       for (int j = 0; j < n; ++j) {
-        if (GetWeight(d[k][i][j]) <= GetWeight(Add(d[k][i][k], d[k][k][j]))) {
-          d[k + 1][i][j] = d[k][i][j];
+        if (GetWeight(curr[i][j]) <= GetWeight(Add(curr[i][k], curr[k][j]))) {
+          next[i][j] = curr[i][j];
         } else {
-          d[k + 1][i][j] = Add(d[k][i][k], d[k][k][j]);
+          next[i][j] = Add(curr[i][k], curr[k][j]);
         }
       }
     }
+    std::swap(curr, next);
   }
 
   int q;
@@ -74,11 +75,11 @@ void Solution(std::istream& input) {
     input >> start >> end;
     --start;
     --end;
-    if (!d[n][start][end].accessibale) {
+    if (!curr[start][end].accessibale) {
       std::cout << "Impossible\n";
     } else {
-      std::cout << d[n][start][end].fp / kFlightPrice << ' '
-                << d[n][start][end].sp + prices[start] << '\n';
+      std::cout << curr[start][end].fp / kFlightPrice << ' '
+                << curr[start][end].sp + prices[start] << '\n';
     }
   }
 }
