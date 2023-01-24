@@ -1,8 +1,13 @@
 #include <iostream>
+#include <limits>
 #include <queue>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <vector>
+
+constexpr int64_t kFlightPrice = 10'000'000'000'000;
+constexpr int64_t kInfinity = std::numeric_limits<int64_t>::max();
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
@@ -15,55 +20,16 @@ int main() {
   return 0;
 }
 
-std::vector<int> GetLevels(const std::vector<std::vector<int>>& graph,
-                           int start, int end) {
-  std::vector<int> lookup(graph.size());
-  std::queue<int> buff;
-  buff.push(start);
-  lookup[start] = 1;
-  std::vector<int> levels(graph.size());
-  while (!buff.empty()) {
-    int top = buff.front();
-    buff.pop();
-    for (int i : graph[top]) {
-      if (lookup[i]) continue;
-      lookup[i] = 1;
-      levels[i] = levels[top] + 1;
-      buff.push(i);
-    }
-    if (top == end) break;
-  }
-  return levels;
-}
+struct Weight {
+  int64_t fp = kFlightPrice;
+  int64_t sp = 0;
+  bool accessibale = false;
+};
 
-int64_t DFS(const std::vector<std::vector<int>>& graph, int id, int end,
-            int depth, std::vector<int>& lookup,
-            const std::vector<int64_t>& prices,
-            const std::vector<int>& levels) {
-  if (depth > levels[end]) return 0;
-  if (lookup[id]) return 0;
+int64_t GetWeight(Weight w) { return w.accessibale ? w.fp - w.sp : kInfinity; }
 
-  lookup[id] = 1;
-  int64_t max_price = 0;
-  if (depth == levels[end] && id == end) {
-    max_price = prices[id];
-  } else if (depth < levels[end]) {
-    for (const auto& i : graph[id]) {
-      if (levels[i] <= levels[id]) continue;
-      max_price = std::max(max_price, prices[id] + DFS(graph, i, end, depth + 1,
-                                                       lookup, prices, levels));
-    }
-  }
-
-  lookup[id] = 0;
-  return max_price;
-}
-
-int64_t GetMaxPrice(const std::vector<std::vector<int>>& graph, int start,
-                    int end, const std::vector<int64_t>& prices,
-                    const std::vector<int>& levels) {
-  std::vector<int> lookup(graph.size());
-  return DFS(graph, start, end, 0, lookup, prices, levels);
+Weight Add(Weight l, Weight r) {
+  return {l.fp + r.fp, l.sp + r.sp, l.accessibale && r.accessibale};
 }
 
 void Solution(std::istream& input) {
@@ -75,14 +41,28 @@ void Solution(std::istream& input) {
     input >> el;
   }
 
-  std::vector<std::vector<int>> graph(n);
+  std::vector<std::vector<std::vector<Weight>>> d(
+      n + 1, std::vector<std::vector<Weight>>(n, std::vector<Weight>(n)));
 
   std::string buff;
   for (int i = 0; i < n; ++i) {
     input >> buff;
     for (int j = 0; j < buff.size(); ++j) {
       if (buff[j] == 'Y') {
-        graph[i].push_back(j);
+        d[0][i][j].sp = prices[j];
+        d[0][i][j].accessibale = true;
+      }
+    }
+  }
+
+  for (int k = 0; k < n; ++k) {
+    for (int i = 0; i < n; ++i) {
+      for (int j = 0; j < n; ++j) {
+        if (GetWeight(d[k][i][j]) <= GetWeight(Add(d[k][i][k], d[k][k][j]))) {
+          d[k + 1][i][j] = d[k][i][j];
+        } else {
+          d[k + 1][i][j] = Add(d[k][i][k], d[k][k][j]);
+        }
       }
     }
   }
@@ -94,12 +74,11 @@ void Solution(std::istream& input) {
     input >> start >> end;
     --start;
     --end;
-    std::vector<int> levels = GetLevels(graph, start, end);
-    int64_t max_price = GetMaxPrice(graph, start, end, prices, levels);
-    if (max_price) {
-      std::cout << levels[end] << ' ' << max_price << '\n';
-    } else {
+    if (!d[n][start][end].accessibale) {
       std::cout << "Impossible\n";
+    } else {
+      std::cout << d[n][start][end].fp / kFlightPrice << ' '
+                << d[n][start][end].sp + prices[start] << '\n';
     }
   }
 }
