@@ -35,6 +35,20 @@ struct NodeSmaller {
 
 using MaxQueue = std::priority_queue<Node, std::vector<Node>, NodeSmaller>;
 
+int FindPrevious(const std::vector<int>& lookup, int d) {
+  while (lookup[d]) {
+    --d;
+  }
+  return d;
+}
+
+int FindNext(const std::vector<int>& lookup, int d) {
+  while (lookup[d]) {
+    ++d;
+  }
+  return d;
+}
+
 class Solution {
  public:
   int maxCoins(vector<int>& nums) {
@@ -56,15 +70,17 @@ class Solution {
       }
       res += Calc(buff.top());
       int d = buff.top().indexes[1];
-      if (d - 2 >= 0) {
-        buff.push(
-            {{nums[d - 2], nums[d - 1], nums[d + 1]}, {d - 2, d - 1, d + 1}});
-      }
-      if (d + 2 < nums.size()) {
-        buff.push(
-            {{nums[d - 1], nums[d + 1], nums[d + 2]}, {d - 1, d + 1, d + 2}});
-      }
       lookup[d] = 1;
+      int prev = FindPrevious(lookup, d);
+      int next = FindNext(lookup, d);
+      if (prev - 1 >= 0) {
+        buff.push(
+            {{nums[prev - 1], nums[prev], nums[next]}, {prev - 1, prev, next}});
+      }
+      if (next + 1 < nums.size()) {
+        buff.push(
+            {{nums[prev], nums[next], nums[next + 1]}, {prev, next, next + 1}});
+      }
       --count;
     }
     return res;
