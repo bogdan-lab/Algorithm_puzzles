@@ -1,88 +1,36 @@
 #include <algorithm>
-#include <array>
-#include <queue>
-#include <tuple>
-#include <utility>
 #include <vector>
 
-struct Node {
-  std::array<int, 3> vals;
-  std::array<int, 3> indexes;
-};
-
-int Calc(const Node& x) { return x.vals[0] * x.vals[1] * x.vals[2]; }
-
-int CalcRem(const Node& x) {
-  int l = x.vals[0];
-  int r = x.vals[2];
-  if (l > r) std::swap(l, r);
-  return (l + 1) * r;
+int GetVal(const std::vector<int>& nums, int i) {
+  if (i < 0 || i >= nums.size()) return 1;
+  return nums[i];
 }
 
-bool HasInvalidIndex(const Node& n, const std::vector<int>& lookup) {
-  return lookup[n.indexes[0]] || lookup[n.indexes[1]] || lookup[n.indexes[2]];
-}
-
-struct NodeSmaller {
-  bool operator()(const Node& l, const Node& r) const {
-    int cl = Calc(l);
-    int cr = Calc(r);
-    int rem_l = CalcRem(l);
-    int rem_r = CalcRem(r);
-    return std::tie(cl, rem_l) < std::tie(cr, rem_r);
+int CalcMaxPoints(const std::vector<int>& nums, int start, int end,
+                  const std::vector<std::vector<int>>& dp) {
+  int res = 0;
+  for (int k = start; k < end; ++k) {
+    int last_tick =
+        GetVal(nums, start - 1) * GetVal(nums, k) * GetVal(nums, end);
+    res = std::max(res, last_tick + dp[start][k] + dp[k + 1][end]);
   }
-};
-
-using MaxQueue = std::priority_queue<Node, std::vector<Node>, NodeSmaller>;
-
-int FindPrevious(const std::vector<int>& lookup, int d) {
-  while (lookup[d]) {
-    --d;
-  }
-  return d;
-}
-
-int FindNext(const std::vector<int>& lookup, int d) {
-  while (lookup[d]) {
-    ++d;
-  }
-  return d;
+  return res;
 }
 
 class Solution {
  public:
-  int maxCoins(vector<int>& nums) {
-    nums.push_back(1);
-    std::rotate(nums.begin(), std::prev(nums.end()), nums.end());
-    nums.push_back(1);
+  int maxCoins(std::vector<int>& nums) {
+    // dp[start][end]
+    std::vector<std::vector<int>> dp(nums.size() + 1,
+                                     std::vector<int>(nums.size() + 1));
 
-    MaxQueue buff;
-    for (int i = 1; i < nums.size() - 1; ++i) {
-      buff.push({{nums[i - 1], nums[i], nums[i + 1]}, {i - 1, i, i + 1}});
+    for (int w = 1; w <= nums.size(); ++w) {
+      for (int start = 0; start + w <= nums.size(); ++start) {
+        int end = start + w;
+        dp[start][end] = CalcMaxPoints(nums, start, end, dp);
+      }
     }
 
-    int count = nums.size() - 2;
-    std::vector<int> lookup(nums.size());
-    int res = 0;
-    while (count) {
-      while (HasInvalidIndex(buff.top(), lookup)) {
-        buff.pop();
-      }
-      res += Calc(buff.top());
-      int d = buff.top().indexes[1];
-      lookup[d] = 1;
-      int prev = FindPrevious(lookup, d);
-      int next = FindNext(lookup, d);
-      if (prev - 1 >= 0) {
-        buff.push(
-            {{nums[prev - 1], nums[prev], nums[next]}, {prev - 1, prev, next}});
-      }
-      if (next + 1 < nums.size()) {
-        buff.push(
-            {{nums[prev], nums[next], nums[next + 1]}, {prev, next, next + 1}});
-      }
-      --count;
-    }
-    return res;
+    return dp[0][nums.size()];
   }
 };
