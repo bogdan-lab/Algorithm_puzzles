@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <iostream>
+#include <numeric>
 #include <sstream>
 #include <vector>
 
@@ -22,13 +23,26 @@ void SolveOne(std::istream& input) {
     input >> el;
   }
 
-  std::vector<int> dp(data.size());
-  dp[0] = data[0];
-  dp[1] = std::max(data[0] + data[1], -data[0] - data[1]);
-  for (int i = 2; i < data.size(); ++i) {
-    dp[i] = std::max(dp[i - 1] + data[i], dp[i - 2] - data[i - 1] - data[i]);
+  for (int i = 0; i < data.size() - 1; ++i) {
+    if (data[i] < 0) {
+      data[i] = -data[i];
+      data[i + 1] = -data[i + 1];
+    }
   }
-  std::cout << dp.back() << '\n';
+
+  if (data.back() < 0) {
+    auto it = std::min_element(data.begin(), data.end() - 1);
+    if (*it < -data.back()) {
+      *it = -(*it);
+      data.back() = -data.back();
+    }
+  }
+
+  int64_t res = 0;
+  for (const auto& el : data) {
+    res += el;
+  }
+  std::cout << res << '\n';
 }
 
 void Solution(std::istream& input) {
