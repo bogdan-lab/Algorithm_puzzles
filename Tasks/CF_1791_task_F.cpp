@@ -27,10 +27,12 @@ int Parent(int v) { return (v - 1) / 2; }
 
 struct Node {
   int val = 0;
-  bool apply = false;
+  int apply = 0;
   int begin = 0;
   int end = 0;
 };
+
+bool IsLeaf(const Node& n) { return n.end == n.begin + 1; }
 
 Node Merge(const Node& l, const Node& r) {
   Node res;
@@ -70,24 +72,17 @@ int CalcSum(int val) {
 
 void Push(std::vector<Node>& tree, int ci) {
   if (!tree[ci].apply) return;
-  tree[ci].val = CalcSum(tree[ci].val);
-  tree[ci].apply = false;
-
-  int li = Left(ci);
-  int ri = Right(ci);
-
-  if (li < tree.size()) {
-    if (tree[li].apply) {
-      tree[li].val = CalcSum(tree[li].val);
+  if (IsLeaf(tree[ci])) {
+    while (tree[ci].apply) {
+      tree[ci].val = CalcSum(tree[ci].val);
+      --tree[ci].apply;
     }
-    tree[li].apply = true;
-  }
-
-  if (ri < tree.size()) {
-    if (tree[ri].apply) {
-      tree[ri].val = CalcSum(tree[ri].val);
-    }
-    tree[ri].apply = true;
+  } else {
+    int li = Left(ci);
+    int ri = Right(ci);
+    tree[li].apply += tree[ci].apply;
+    tree[ri].apply += tree[ci].apply;
+    tree[ci].apply = 0;
   }
 }
 
@@ -96,7 +91,7 @@ void Apply(std::vector<Node>& tree, int ci, int begin, int end) {
   if (end <= tree[ci].begin || begin >= tree[ci].end) return;
   Push(tree, ci);
   if (tree[ci].begin == begin && tree[ci].end == end) {
-    tree[ci].apply = true;
+    ++tree[ci].apply;
     return;
   }
 
