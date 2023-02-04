@@ -28,6 +28,7 @@ int Parent(int v) { return (v - 1) / 2; }
 struct Node {
   int val = 0;
   int apply = 0;
+  int history = 0;
   int begin = 0;
   int end = 0;
 };
@@ -73,9 +74,10 @@ int CalcSum(int val) {
 void Push(std::vector<Node>& tree, int ci) {
   if (!tree[ci].apply) return;
   if (IsLeaf(tree[ci])) {
-    while (tree[ci].apply) {
+    while (tree[ci].apply && tree[ci].history <= 3) {
       tree[ci].val = CalcSum(tree[ci].val);
       --tree[ci].apply;
+      ++tree[ci].history;
     }
   } else {
     int li = Left(ci);
