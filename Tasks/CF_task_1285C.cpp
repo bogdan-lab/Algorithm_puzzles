@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <functional>
 #include <iostream>
 #include <sstream>
 #include <utility>
@@ -25,8 +27,8 @@ std::vector<int64_t> Factorize(int64_t x) {
         res.push_back(1);
       }
       res.back() *= p;
-    } else {
       prev = p;
+    } else {
       ++p;
     }
   }
@@ -43,13 +45,29 @@ bool PairIsSmaller(std::pair<int64_t, int64_t> l,
   return std::max(l.first, l.second) < std::max(r.first, r.second);
 }
 
-std::pair<int64_t, int64_t> FindPair(const std::vector<int64_t>& data) {
-  std::pair<int64_t, int64_t> res{1, 1};
+uint64_t CalcTotal(const std::vector<int64_t>& data) {
+  uint64_t res = 1;
   for (const auto& el : data) {
-    if (res.first > res.second) {
-      res.second *= el;
-    } else {
-      res.first *= el;
+    res *= el;
+  }
+  return res;
+}
+
+std::pair<uint64_t, uint64_t> FindPair(const std::vector<int64_t>& data) {
+  uint64_t case_num = (1 << data.size());
+  uint64_t total = CalcTotal(data);
+  std::pair<uint64_t, uint64_t> res{1, total};
+  for (int i = 0; i < case_num; ++i) {
+    uint64_t lhs = 1;
+    for (int j = 0; j < data.size(); ++j) {
+      uint64_t pos = (1 << j);
+      if (i & pos) {
+        lhs *= data[j];
+      }
+    }
+    std::pair<uint64_t, uint64_t> curr = {lhs, total / lhs};
+    if (PairIsSmaller(curr, res)) {
+      res = curr;
     }
   }
   return res;
@@ -59,14 +77,14 @@ void Solution(std::istream& input) {
   int64_t x;
   input >> x;
   std::vector<int64_t> val_to_count = Factorize(x);
-  std::pair<int64_t, int64_t> res = FindPair(val_to_count);
+  std::pair<uint64_t, uint64_t> res = FindPair(val_to_count);
   std::cout << res.first << " " << res.second << '\n';
 }
 
 void RunTests() {
   {
     std::stringstream ss;
-    ss << R"()";
+    ss << R"(1000000000000)";
     Solution(ss);
     std::cout << "expected = 0\n";
   }
