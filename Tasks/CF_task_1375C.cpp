@@ -14,16 +14,6 @@ int main() {
   return 0;
 }
 
-bool CanPartition(const std::vector<int>& prefix,
-                  const std::vector<int>& suffix) {
-  for (int i = 1; i < suffix.size(); ++i) {
-    if (prefix[i - 1] > suffix[i]) {
-      return true;
-    }
-  }
-  return false;
-}
-
 void SolveOne(std::istream& input) {
   int n;
   input >> n;
@@ -32,21 +22,10 @@ void SolveOne(std::istream& input) {
     input >> el;
   }
 
-  std::vector<int> prefix(data.size());  // inclusive
-  prefix.front() = data.front();
-  for (int i = 1; i < data.size(); ++i) {
-    prefix[i] = std::min(prefix[i - 1], data[i]);
-  }
-  std::vector<int> suffix(data.size());  // inclusive
-  suffix.back() = data.back();
-  for (int i = data.size() - 2; i >= 0; --i) {
-    suffix[i] = std::max(suffix[i + 1], data[i]);
-  }
-
-  if (CanPartition(prefix, suffix)) {
-    std::cout << "NO\n";
-  } else {
+  if (data.front() < data.back()) {
     std::cout << "YES\n";
+  } else {
+    std::cout << "NO\n";
   }
 }
 
