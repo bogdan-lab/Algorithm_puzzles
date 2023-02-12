@@ -25,14 +25,6 @@ void Update(std::pair<int, int>& p, int val) {
   p.second = std::min(p.second, val);
 }
 
-std::queue<std::pair<int, int>> BuildQueue(const std::vector<int>& w) {
-  std::queue<std::pair<int, int>> res;
-  for (int i = 0; i < w.size(); ++i) {
-    res.push({w[i], i});
-  }
-  return res;
-}
-
 int64_t CountSum(const std::vector<std::pair<int, int>>& data) {
   int64_t res = 0;
   for (const auto& el : data) {
@@ -55,16 +47,20 @@ void SolveOne(std::istream& input) {
 
   std::sort(num.begin(), num.end(), std::greater<int>());
   std::sort(w.begin(), w.end());
-  std::queue<std::pair<int, int>> buff = BuildQueue(w);
+
   std::vector<std::pair<int, int>> data(k, std::make_pair(kMin, kMax));
 
-  for (const auto& el : num) {
-    std::pair<int, int> top = buff.front();
-    buff.pop();
-    Update(data[top.second], el);
-    --top.first;
-    if (top.first) {
-      buff.push(top);
+  // The first level of maximum values
+  for (int i = 0; i < w.size(); ++i) {
+    --w[i];
+    Update(data[i], num[i]);
+  }
+  // Hide all negative values
+  int j = num.size() - 1;
+  for (int i = w.size() - 1; i >= 0; --i) {
+    for (int l = 0; l < w[i]; ++l) {
+      Update(data[i], num[j]);
+      --j;
     }
   }
 
