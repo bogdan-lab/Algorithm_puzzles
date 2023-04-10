@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <cassert>
-#include <iostream>
+#include <functional>
 #include <limits>
 #include <vector>
 
@@ -26,48 +26,58 @@ Number Create(int prefix, const Number& suffix) {
   return res;
 }
 
-void Print(const Number& data) {
-  for (const auto& el : data) {
-    std::cout << el << ',';
-  }
-  std::cout << std::endl;
-}
-
-Number BuildMaxNumber(const Number& data, size_t k) {
-  // dp[suffix][num_size] = max number
-  std::vector<std::vector<Number>> dp(data.size() + 1,
-                                      std::vector<Number>(k + 1, Number{}));
-  dp[1][1] = {data.back()};
-  for (size_t ss = 2; ss <= data.size(); ++ss) {
-    dp[ss][1] = {std::max(data[data.size() - ss], dp[ss - 1][1][0])};
-  }
-
-  for (size_t ss = 2; ss <= data.size(); ++ss) {
-    for (size_t ns = 2; ns <= std::min(ss, k); ++ns) {
-      Number current = Create(data[data.size() - ss], dp[ss - 1][ns - 1]);
-      if (ns < ss && IsLess(current, dp[ss - 1][ns])) {
-        dp[ss][ns] = dp[ss - 1][ns];
-      } else {
-        dp[ss][ns] = current;
-      }
-      Print(dp[ss][ns]);
+Number BuildMaxNumber(const Number& data, size_t num_size) {
+  assert(num_size <= data.size());
+  Number res;
+  res.reserve(num_size);
+  for (size_t i = 0; i < data.size(); ++i) {
+    size_t elements_left = data.size() - i - 1;
+    while (!res.empty() && res.back() < data[i] &&
+           num_size - res.size() <= elements_left) {
+      res.pop_back();
+    }
+    if (res.size() < num_size) {
+      res.push_back(data[i]);
     }
   }
-  return dp.back().back();
+  return res;
+}
+
+Number Merge(const Number& lhs, const Number& rhs) {
+  Number res;
+  res.reserve(lhs.size() + rhs.size());
+  std::merge(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
+             std::back_inserter(res), std::greater<int>());
+  return res;
+}
+
+Number FindLargestNumber(Number& lhs, Number& rhs, int k) {
+  Number max_num(k, 0);
+  for (size_t left_size = 0; left_size <= k; ++left_size) {
+    size_t right_size = k - left_size;
+    if (left_size > lhs.size() || right_size > rhs.size()) {
+      continue;
+    }
+    Number current =
+        Merge(BuildMaxNumber(lhs, left_size), BuildMaxNumber(rhs, right_size));
+    if (IsLess(max_num, current)) {
+      max_num = std::move(current);
+    }
+  }
+  return max_num;
 }
 
 class Solution {
  public:
   std::vector<int> maxNumber(Number& left, Number& right, int k) {
-    Number best_left = BuildMaxNumber(left, std::min<size_t>(left.size(), k));
-    return best_left;
+    return FindLargestNumber(left, right, k);
   }
 };
 
 int main() {
   Solution s;
   Number left = {7, 3, 4, 6, 5};
-  Number right = {};
-  s.maxNumber(left, right, 3);
+  Number right = {1, 0, 0};
+  s.maxNumber(left, right, 4);
   return 0;
 }
