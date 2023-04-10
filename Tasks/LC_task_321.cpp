@@ -1,10 +1,13 @@
 #include <algorithm>
 #include <cassert>
-#include <functional>
 #include <limits>
 #include <vector>
 
 using Number = std::vector<int>;
+struct EqualRes {
+  size_t count = 0;
+  bool left_is_better = true;
+};
 
 bool IsLess(const std::vector<int>& lhs, const std::vector<int>& rhs) {
   assert(lhs.size() == rhs.size());
@@ -43,11 +46,47 @@ Number BuildMaxNumber(const Number& data, size_t num_size) {
   return res;
 }
 
+EqualRes CountEqual(const Number& lhs, size_t li, const Number& rhs,
+                    size_t ri) {
+  EqualRes res;
+  while (li < lhs.size() && ri < rhs.size() && lhs[li] == rhs[ri]) {
+    ++li;
+    ++ri;
+    ++res.count;
+  }
+  res.left_is_better =
+      ri == rhs.size() ||
+      (li < lhs.size() && ri < rhs.size() && lhs[li] > rhs[ri]);
+  return res;
+}
+
 Number Merge(const Number& lhs, const Number& rhs) {
   Number res;
   res.reserve(lhs.size() + rhs.size());
-  std::merge(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
-             std::back_inserter(res), std::greater<int>());
+  size_t li = 0;
+  size_t ri = 0;
+  while (li < lhs.size() || ri < rhs.size()) {
+    if (li == lhs.size()) {
+      res.push_back(rhs[ri++]);
+    } else if (ri == rhs.size()) {
+      res.push_back(lhs[li++]);
+    } else {
+      if (lhs[li] < rhs[ri]) {
+        res.push_back(rhs[ri++]);
+      } else if (lhs[li] > rhs[ri]) {
+        res.push_back(lhs[li++]);
+      } else {
+        EqualRes eq = CountEqual(lhs, li, rhs, ri);
+        while (eq.count--) {
+          if (eq.left_is_better) {
+            res.push_back(lhs[li++]);
+          } else {
+            res.push_back(rhs[ri++]);
+          }
+        }
+      }
+    }
+  }
   return res;
 }
 
