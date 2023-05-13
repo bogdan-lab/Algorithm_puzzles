@@ -60,11 +60,10 @@ EqualRes CountEqual(const Number& lhs, size_t li, const Number& rhs,
   EqualRes res;
   assert(lhs[li] == rhs[ri]);
   auto val = lhs[li];
-  while (li < lhs.size() && ri < rhs.size() && lhs[li] == val &&
-         rhs[ri] == val) {
+  while (li < lhs.size() && ri < rhs.size() && lhs[li] == rhs[ri]) {
+    res.count += (lhs[li] == val);
     ++li;
     ++ri;
-    ++res.count;
   }
   res.left_is_better =
       ri == rhs.size() ||
@@ -104,8 +103,8 @@ Number Merge(const Number& lhs, const Number& rhs) {
 
 Number FindLargestNumber(Number& lhs, Number& rhs, int k) {
   Number max_num(k, 0);
-  // std::cout << "lhs.size = " << lhs.size() << " rhs.size = " << rhs.size()
-  //           << '\n';
+  std::cout << "lhs.size = " << lhs.size() << " rhs.size = " << rhs.size()
+            << '\n';
   for (size_t left_size = 0; left_size <= k; ++left_size) {
     size_t right_size = k - left_size;
     if (left_size > lhs.size() || right_size > rhs.size()) {
@@ -116,11 +115,11 @@ Number FindLargestNumber(Number& lhs, Number& rhs, int k) {
     // std::cout << "lbest_size = " << lhs_best.size()
     //           << " rbest_size = " << rhs_best.size() << '\n';
     Number current = Merge(lhs_best, rhs_best);
-    // std::cout << "LEFT = ";
-    // PrintNumber(lhs_best);
-    // std::cout << "RIGHT = ";
-    // PrintNumber(rhs_best);
-    // PrintNumber(current);
+    std::cout << "LEFT = ";
+    PrintNumber(lhs_best);
+    std::cout << "RIGHT = ";
+    PrintNumber(rhs_best);
+    PrintNumber(current);
     if (IsLess(max_num, current)) {
       max_num = std::move(current);
       // std::cout << "MAX_NUM = \n";
@@ -139,17 +138,9 @@ class Solution {
 
 int main() {
   Solution s;
-  Number left{3, 3, 3, 2, 3, 7, 3, 8, 6, 0, 5, 0, 7, 8, 9, 2,
-              9, 6, 6, 9, 9, 7, 9, 7, 6, 1, 7, 2, 7, 5, 5, 1};
-  Number right{5, 6, 4, 9, 6, 9, 2, 2, 7, 5, 4, 3, 0, 0, 1, 7, 1, 8, 1, 5,
-               2, 5, 7, 0, 4, 3, 8, 7, 3, 8, 5, 3, 8, 3, 4, 0, 2, 3, 8, 2,
-               7, 1, 2, 3, 8, 7, 6, 7, 1, 1, 3, 9, 0, 5, 2, 8, 2, 8, 7, 5,
-               0, 8, 0, 7, 2, 8, 5, 6, 5, 9, 5, 1, 5, 2, 6, 2, 4, 9, 9, 7,
-               6, 5, 7, 9, 2, 8, 8, 3, 5, 9, 5, 1, 8, 8, 4, 6, 6, 3, 8, 4,
-               6, 6, 1, 3, 4, 1, 6, 7, 0, 8, 0, 3, 3, 1, 8, 2, 2, 4, 5, 7,
-               3, 7, 7, 4, 3, 7, 3, 0, 7, 3, 0, 9, 7, 6, 0, 3, 0, 3, 1, 5,
-               1, 4, 5, 2, 7, 6, 2, 4, 2, 9, 5, 5, 9, 8, 4, 2, 3, 6, 1, 9};
-  auto res = s.maxNumber(left, right, 160);
+  Number left{2, 1, 7, 8, 0, 1, 7, 3, 5, 8, 9, 0, 0, 7, 0, 2, 2, 7, 3, 5, 5};
+  Number right{2, 6, 2, 0, 1, 0, 5, 4, 5, 5, 3, 3, 3, 4};
+  auto res = s.maxNumber(left, right, 35);
   PrintNumber(res);
   return 0;
 }
