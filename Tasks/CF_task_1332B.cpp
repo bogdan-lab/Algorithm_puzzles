@@ -22,44 +22,36 @@ int main() {
   return 0;
 }
 
-int GCD(int lhs, int rhs) {
-  if (lhs > rhs) std::swap(lhs, rhs);
-  while (lhs) {
-    rhs %= lhs;
-    std::swap(lhs, rhs);
-  }
-  return rhs;
-}
-
-Graph BuildGraph(const std::vector<int>& data) {
-  Graph res(data.size());
-
-  for (size_t i = 0; i < data.size(); ++i) {
-    for (size_t j = i + 1; j < data.size(); ++j) {
-      int gcd = GCD(data[i], data[j]);
-      if (gcd > 1) {
-        res[i].push_back(j);
-        res[j].push_back(i);
-      }
+std::vector<int> GetPrimeNumbers(int max_val, int count) {
+  std::vector<int> res;
+  res.reserve(count);
+  std::vector<int> lookup(max_val + 1);
+  lookup[0] = 1;
+  lookup[1] = 1;
+  for (int i = 2; i <= max_val; ++i) {
+    if (lookup[i]) continue;
+    res.push_back(i);
+    if (res.size() == count) break;
+    for (int j = 2 * i; j <= max_val; j += i) {
+      lookup[j] = 1;
     }
   }
   return res;
 }
 
-void DFS(const Graph& g, int i, std::vector<int>& colors, int curr_color) {
-  if (colors[i]) return;
-  colors[i] = curr_color;
-  for (int n : g[i]) {
-    DFS(g, n, colors, curr_color);
-  }
-}
-
-Answer GetColors(const Graph& g) {
-  Answer res(g.size());
-  for (int i = 0; i < g.size(); ++i) {
-    if (res.colors[i]) continue;
-    ++res.max_color;
-    DFS(g, i, res.colors, res.max_color);
+Answer GetColors(const std::vector<int>& primes, const std::vector<int>& data) {
+  Answer res(data.size());
+  int curr_color = 1;
+  for (int p = 0; p < primes.size(); ++p) {
+    for (int i = 0; i < data.size(); ++i) {
+      if (!res.colors[i] && (data[i] % primes[p]) == 0) {
+        res.colors[i] = curr_color;
+        res.max_color = curr_color;
+      }
+    }
+    if (res.max_color == curr_color) {
+      ++curr_color;
+    }
   }
   return res;
 }
@@ -79,9 +71,7 @@ void SolveOne(std::istream& input) {
   for (auto& el : data) {
     input >> el;
   }
-
-  Graph g = BuildGraph(data);
-  Answer ans = GetColors(g);
+  Answer ans = GetColors(GetPrimeNumbers(1000, 11), data);
   PrintAnswer(ans);
 }
 
