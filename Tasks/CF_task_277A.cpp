@@ -55,6 +55,15 @@ int CountTrees(const Graph& g) {
   return count;
 }
 
+bool CheckAllAreEmpty(const EmployeeData& data) {
+  for (const auto& el : data) {
+    for (const auto& i : el) {
+      if (i > 0) return false;
+    }
+  }
+  return true;
+}
+
 void Solution(std::istream& input) {
   int n, m;
   input >> n >> m;
@@ -71,7 +80,8 @@ void Solution(std::istream& input) {
   }
 
   Graph g = BuildGraph(data);
-  std::cout << CountTrees(g) - 1 << '\n';
+  int correction = CheckAllAreEmpty(data) ? 0 : 1;
+  std::cout << CountTrees(g) - correction << '\n';
 }
 
 void RunTests() {
