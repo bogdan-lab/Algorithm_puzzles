@@ -19,17 +19,14 @@ int main() {
   return 0;
 }
 
-void Add(std::vector<int64_t>& data, const DayPill& dp) {
-  data[0] += dp.pills;
-  if (dp.days < data.size()) {
-    data[dp.days] -= dp.pills;
+int64_t GetPillsNum(int day_index, const std::vector<DayPill>& data) {
+  int64_t res = 0;
+  for (const auto& el : data) {
+    if (el.days > day_index) {
+      res += el.pills;
+    }
   }
-}
-
-void BuildPrefix(std::vector<int64_t>& data) {
-  for (int i = 1; i < data.size(); ++i) {
-    data[i] += data[i - 1];
-  }
+  return res;
 }
 
 void Solution(std::istream& input) {
@@ -43,17 +40,17 @@ void Solution(std::istream& input) {
     max_days = std::max(max_days, el.days);
   }
 
-  std::vector<int64_t> total(max_days + 1);
-  for (const auto& el : data) {
-    Add(total, el);
+  int64_t left = -1;
+  int64_t right = max_days + 1;
+  while (right - left > 1) {
+    int64_t mid = (left + right) / 2;
+    if (GetPillsNum(mid, data) <= k) {
+      right = mid;
+    } else {
+      left = mid;
+    }
   }
-
-  BuildPrefix(total);
-
-  auto it = std::find_if(total.begin(), total.end(),
-                         [&](int64_t val) { return val <= k; });
-
-  std::cout << (it - total.begin()) + 1 << '\n';
+  std::cout << right + 1 << '\n';
 }
 
 void RunTests() {
