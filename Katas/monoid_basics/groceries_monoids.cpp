@@ -36,7 +36,7 @@ Products kShopStorage{{kBunWithCheese, 123}, {kBread, 3},       {kCucumber, 1},
 
 Products merge(const Products& lhs, const Products& rhs) {
   Products res = lhs;
-  std::copy(rhs.begin(), rhs.end(), std::inserter(res, res.begin()));
+  for (const auto& [name, count] : rhs) res[name] += count;
   return res;
 }
 
