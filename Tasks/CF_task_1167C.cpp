@@ -1,12 +1,10 @@
+#include <array>
 #include <iostream>
 #include <sstream>
 #include <stack>
 #include <vector>
 
-struct GrPer {
-  int group;
-  int person;
-};
+constexpr int MaxNum = 100'000 + 13;
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
@@ -19,64 +17,51 @@ int main() {
   return 0;
 }
 
-std::vector<int> DFS(std::vector<std::stack<int>>& g_to_f, int person_count) {
-  std::vector<uint8_t> lookup(person_count, 0);
+int get_head(std::array<int, MaxNum>& heads, int curr) {
+  if (heads[curr] == -1) return curr;
+  heads[curr] = get_head(heads, heads[curr]);
+  return heads[curr];
+}
 
-  std::vector<int> totals(person_count, 0);
-  for (int i = 0; i < g_to_f.size(); ++i) {
-    if (g_to_f[i].empty()) {
-      continue;
-    }
-    std::vector<int> curr_persons;
-    int curr_total = 0;
-    int root = g_to_f[i].top();
-    g_to_f[i].pop();
-    lookup[root] = 1;
-    std::stack<GrPer> buff;
-    buff.push({i, root});
-    while (!buff.empty()) {
-      GrPer gr_per = buff.top();
-      while (!g_to_f[gr_per.group].empty() &&
-             lookup[g_to_f[gr_per.group].top()] == 1) {
-        g_to_f[gr_per.person].pop();
-      }
-      if (g_to_f[gr_per.group].empty()) {
-        curr_total += 1;
-        curr_persons.push_back(gr_per.person);
-        buff.pop();
-      } else {
-        GrPer next{gr_per.group, g_to_f[gr_per.group].top()};
-        g_to_f[gr_per.group].pop();
-        lookup[next.person] = 1;
-        buff.push(next);
-      }
-    }
-
-    for (const auto p : curr_persons) {
-      totals[p] = curr_total;
-    }
+void merge(std::array<int, MaxNum>& heads, std::array<int, MaxNum>& counts,
+           int lhs, int rhs) {
+  int l_head = get_head(heads, lhs);
+  int r_head = get_head(heads, rhs);
+  if (counts[l_head] <= counts[r_head]) {
+    heads[l_head] = r_head;
+    counts[r_head] += counts[l_head];
+  } else {
+    heads[r_head] = l_head;
+    counts[l_head] += counts[r_head];
   }
-  return totals;
 }
 
 void Solution(std::istream& input) {
-  int n, m;
-  input >> n >> m;
+  int person_num, m;
+  input >> person_num >> m;
 
-  std::vector<std::stack<int>> groups_to_fr(m);
-  for (int i = 0; i < m; ++i) {
+  std::array<int, MaxNum> heads;
+  heads.fill(-1);
+  std::array<int, MaxNum> counts;
+  counts.fill(1);
+  for (int g = 0; g < m; ++g) {
     int count = 0;
     input >> count;
-    while (--count) {
-      int id = -1;
-      input >> id;
-      groups_to_fr[i].push(id);
+    if (count == 0) continue;
+    int front = 0;
+    input >> front;
+    --front;
+    for (int i = 1; i < count; ++i) {
+      int next = 0;
+      input >> next;
+      --next;
+      merge(heads, counts, front, next);
     }
   }
 
-  std::vector<int> res = DFS(groups_to_fr, n);
-  for (const auto r : res) {
-    std::cout << r << ' ';
+  for (int i = 0; i < person_num; ++i) {
+    int head = get_head(heads, i);
+    std::cout << counts[head] << ' ';
   }
   std::cout << '\n';
 }
