@@ -4,7 +4,7 @@
 #include <stack>
 #include <vector>
 
-constexpr int MaxNum = 100'000 + 13;
+constexpr int MaxNum = 500'000 + 13;
 
 void Solution(std::istream& input = std::cin);
 void RunTests();
@@ -27,6 +27,7 @@ void merge(std::array<int, MaxNum>& heads, std::array<int, MaxNum>& counts,
            int lhs, int rhs) {
   int l_head = get_head(heads, lhs);
   int r_head = get_head(heads, rhs);
+  if (l_head == r_head) return;
   if (counts[l_head] <= counts[r_head]) {
     heads[l_head] = r_head;
     counts[r_head] += counts[l_head];
